@@ -1,0 +1,209 @@
+{
+  "entities": {
+    "User": {
+      "title": "User",
+      "description": "Base user profile for all roles",
+      "type": "object",
+      "properties": {
+        "uid": { "type": "string", "description": "Firebase Auth UID" },
+        "email": { "type": "string", "format": "email" },
+        "phone": { "type": "string" },
+        "role": { "type": "string", "enum": ["client", "tasker", "admin"] },
+        "displayName": { "type": "string" },
+        "photoURL": { "type": "string" },
+        "fcmToken": { "type": "string", "description": "Token for push notifications" },
+        "isVerified": { "type": "boolean" },
+        "isOnline": { "type": "boolean", "description": "Whether the pro is currently online" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["uid", "email", "role"]
+    },
+    "TaskerProfile": {
+      "title": "TaskerProfile",
+      "description": "Detailed profile for service providers",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "serviceCategories": { "type": "array", "items": { "type": "string" } },
+        "experienceYears": { "type": "number" },
+        "serviceRadius": { "type": "number" },
+        "hourlyRate": { "type": "number" },
+        "isApproved": { "type": "boolean" },
+        "backgroundCheckStatus": { "type": "string" },
+        "rating": { "type": "number" },
+        "reviewCount": { "type": "number" }
+      },
+      "required": ["userId", "serviceCategories", "hourlyRate"]
+    },
+    "ServiceRequest": {
+      "title": "ServiceRequest",
+      "description": "A request for service from a client",
+      "type": "object",
+      "properties": {
+        "clientId": { "type": "string" },
+        "serviceType": { "type": "string" },
+        "description": { "type": "string" },
+        "urgency": { "type": "string" },
+        "location": { "type": "object" },
+        "budget": { "type": "number" },
+        "status": { "type": "string", "enum": ["pending", "assigned", "in-progress", "completed", "cancelled"] },
+        "estimatedCompletionAt": { "type": "string", "format": "date-time", "description": "Estimated time when the provider will be free" },
+        "createdAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["clientId", "serviceType", "status"]
+    },
+    "Job": {
+      "title": "Job",
+      "description": "An active job between a client and a tasker",
+      "type": "object",
+      "properties": {
+        "requestId": { "type": "string" },
+        "clientId": { "type": "string" },
+        "taskerId": { "type": "string" },
+        "agreedPrice": { "type": "number" },
+        "status": { "type": "string", "enum": ["assigned", "in-progress", "completed", "cancelled"] },
+        "scheduledTime": { "type": "string", "format": "date-time" },
+        "completedAt": { "type": "string", "format": "date-time" }
+      },
+      "required": ["requestId", "clientId", "taskerId", "status"]
+    },
+    "ChatMessage": {
+      "title": "ChatMessage",
+      "description": "A message in a job-related chat thread",
+      "type": "object",
+      "properties": {
+        "jobId": { "type": "string" },
+        "senderId": { "type": "string" },
+        "text": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["jobId", "senderId", "text", "timestamp"]
+    },
+    "UnlistedServiceRequest": {
+      "title": "UnlistedServiceRequest",
+      "description": "A request for a service not currently listed on the platform",
+      "type": "object",
+      "properties": {
+        "clientId": { "type": "string" },
+        "email": { "type": "string" },
+        "serviceType": { "type": "string" },
+        "rawMessage": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["serviceType", "timestamp"]
+    },
+    "ForumPost": {
+      "title": "ForumPost",
+      "description": "A post or comment in the community forum",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "userName": { "type": "string" },
+        "userAvatar": { "type": "string" },
+        "content": { "type": "string" },
+        "topic": { "type": "string" },
+        "mentions": { "type": "array", "items": { "type": "string" }, "description": "List of userNames mentioned" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "userName", "content", "timestamp"]
+    },
+    "Complaint": {
+      "title": "Complaint",
+      "description": "A formal complaint raised by a user against another on a task",
+      "type": "object",
+      "properties": {
+        "taskId": { "type": "string" },
+        "reporterId": { "type": "string" },
+        "reporterRole": { "type": "string", "enum": ["client", "tasker"] },
+        "targetId": { "type": "string" },
+        "reason": { "type": "string" },
+        "comment": { "type": "string" },
+        "status": { "type": "string", "enum": ["new", "in-progress", "completed"] },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["taskId", "reporterId", "reason", "comment", "status", "timestamp"]
+    },
+    "AnalyticsEvent": {
+      "title": "AnalyticsEvent",
+      "description": "User interaction tracking",
+      "type": "object",
+      "properties": {
+        "type": { "type": "string", "enum": ["visit", "interaction", "view"] },
+        "page": { "type": "string" },
+        "value": { "type": "string" },
+        "visitorInfo": {
+           "type": "object",
+           "properties": {
+             "email": { "type": "string" },
+             "phone": { "type": "string" },
+             "deviceId": { "type": "string" },
+             "userName": { "type": "string" }
+           }
+        },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["type", "timestamp"]
+    },
+    "Notification": {
+      "title": "Notification",
+      "description": "In-app notifications",
+      "type": "object",
+      "properties": {
+        "userId": { "type": "string" },
+        "type": { "type": "string", "enum": ["chat", "task", "tos", "complaint"] },
+        "title": { "type": "string" },
+        "message": { "type": "string" },
+        "read": { "type": "boolean" },
+        "link": { "type": "string" },
+        "timestamp": { "type": "string", "format": "date-time" }
+      },
+      "required": ["userId", "type", "title", "message", "read", "timestamp"]
+    }
+  },
+  "firestore": {
+    "/users/{uid}": {
+      "schema": "User",
+      "description": "User profiles"
+    },
+    "/taskerProfiles/{uid}": {
+      "schema": "TaskerProfile",
+      "description": "Tasker specific details"
+    },
+    "/serviceRequests/{requestId}": {
+      "schema": "ServiceRequest",
+      "description": "Client service requests"
+    },
+    "/jobs/{jobId}": {
+      "schema": "Job",
+      "description": "Active and past jobs"
+    },
+    "/jobs/{jobId}/messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Chat messages for a job"
+    },
+    "/forum/{postId}": {
+      "schema": "ForumPost",
+      "description": "Community forum posts"
+    },
+    "/unlistedServiceRequests/{requestId}": {
+      "schema": "UnlistedServiceRequest",
+      "description": "Requests for unlisted services"
+    },
+    "/complaints/{complaintId}": {
+      "schema": "Complaint",
+      "description": "User complaints"
+    },
+    "/complaints/{complaintId}/messages/{messageId}": {
+      "schema": "ChatMessage",
+      "description": "Admin-User chat inside a complaint"
+    },
+    "/analytics/{eventId}": {
+      "schema": "AnalyticsEvent",
+      "description": "System analytics events"
+    },
+    "/notifications/{notificationId}": {
+      "schema": "Notification",
+      "description": "User notifications"
+    }
+  }
+}

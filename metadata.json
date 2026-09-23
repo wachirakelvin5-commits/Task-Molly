@@ -1,0 +1,9 @@
+{
+  "name": "Task Molly",
+  "description": "A premium domestic services platform for Kenya, connecting clients with verified pros for cleaning, plumbing, electrical work, and more.",
+  "requestFramePermissions": [
+    "camera",
+    "microphone",
+    "geolocation"
+  ]
+}
