@@ -17,13 +17,6 @@ const FOUNDERS = [
     description: 'The heartbeat of our vision, driving the long-term strategy for a more organized Kenya.'
   },
   {
-    name: 'Watty',
-    role: 'CTO',
-    title: 'DIGITAL ARCHITECT',
-    email: 'stephenwatsonwambugu@gmail.com',
-    description: 'The structural genius behind the code that makes booking a pro as easy as sending a text.'
-  },
-  {
     name: 'Kevv',
     role: 'COO',
     title: 'CULTURE CURATOR',

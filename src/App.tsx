@@ -14,6 +14,7 @@ import { UserProfile } from './types';
 import LandingPage from './pages/LandingPage';
 import Dashboard from './pages/Dashboard';
 import ProviderDashboard from './pages/ProviderDashboard';
+import ProviderServices from './pages/ProviderServices';
 import AuthPage from './pages/AuthPage';
 import ChatPage from './pages/ChatPage';
 import ProviderListing from './pages/ProviderListing';
@@ -122,6 +123,10 @@ export default function App() {
             <Route 
               path="/provider-dashboard" 
               element={user ? <ProviderDashboard user={user} /> : <Navigate to="/auth" />} 
+            />
+            <Route 
+              path="/provider-services" 
+              element={user ? <ProviderServices user={user} /> : <Navigate to="/auth" />} 
             />
             <Route 
               path="/providers" 

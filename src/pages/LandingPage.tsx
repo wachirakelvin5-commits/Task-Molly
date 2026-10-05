@@ -1,7 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useAnimationFrame, animate } from 'motion/react';
 import { Search, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
-import AIModal from '../components/AIModal';
+import TaskRequestModal from '../components/TaskRequestModal';
 import HeroVideo from '../components/HeroVideo';
 import BlogView from '../components/BlogView';
 import FunFactsView from '../components/FunFactsView';
@@ -19,7 +19,7 @@ interface LandingPageProps {
 export default function LandingPage({ setHideNavbar }: LandingPageProps) {
   const { isPhone, isTablet, isLaptop } = useDeviceType();
   const [selectedCard, setSelectedCard] = useState<{ title: string; content: string } | null>(null);
-  const [isAIModalOpen, setIsAIModalOpen] = useState(false);
+  const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
   const x = useMotionValue(0);
   const [isPaused, setIsPaused] = useState(false);
   const pauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
@@ -62,8 +62,8 @@ export default function LandingPage({ setHideNavbar }: LandingPageProps) {
   };
 
   useEffect(() => {
-    setHideNavbar(isAIModalOpen);
-  }, [isAIModalOpen, setHideNavbar]);
+    setHideNavbar(isTaskModalOpen);
+  }, [isTaskModalOpen, setHideNavbar]);
 
   useEffect(() => {
     return () => {
@@ -308,19 +308,19 @@ We may update this Privacy Policy from time to time. We will notify you of any m
           transition={{ duration: 0.8, delay: 0.2 }}
           className="relative z-10 text-center max-w-4xl w-full"
         >
-          {/* AI Search Bar with Blurred Placeholder and Cursor */}
+          {/* Task Request Search Bar with Blurred Placeholder and Cursor */}
           <div className="relative max-w-2xl mx-auto group">
             <div className="relative">
               <input 
                 type="text" 
                 className="w-full bg-white/60 backdrop-blur-md border border-warm-gray rounded-full px-10 py-6 text-xl focus:outline-none focus:border-accent-gold transition-all shadow-2xl group-hover:shadow-accent-gold/20 cursor-pointer"
-                onClick={() => setIsAIModalOpen(true)}
+                onClick={() => setIsTaskModalOpen(true)}
                 readOnly
               />
               {/* Custom Placeholder with Blur and Cursor */}
               <div 
                 className="absolute inset-0 flex items-center px-10 pointer-events-none"
-                onClick={() => setIsAIModalOpen(true)}
+                onClick={() => setIsTaskModalOpen(true)}
               >
                 <motion.div
                   animate={{ opacity: [1, 0] }}
@@ -333,22 +333,23 @@ We may update this Privacy Policy from time to time. We will notify you of any m
               </div>
             </div>
             <button 
-              className="absolute right-4 top-1/2 -translate-y-1/2 bg-accent-gold text-white p-4 rounded-full hover:scale-105 transition-transform shadow-lg"
-              onClick={() => setIsAIModalOpen(true)}
+              className="absolute right-4 top-1/2 -translate-y-1/2 bg-accent-gold text-white p-4 rounded-full hover:scale-105 transition-transform shadow-lg cursor-pointer"
+              onClick={() => setIsTaskModalOpen(true)}
+              aria-label="Add your service request"
             >
               <Search size={24} />
             </button>
           </div>
 
           <AnimatePresence>
-            {isAIModalOpen && (
-              <AIModal onClose={() => setIsAIModalOpen(false)} />
+            {isTaskModalOpen && (
+              <TaskRequestModal onClose={() => setIsTaskModalOpen(false)} />
             )}
           </AnimatePresence>
         </motion.div>
 
         {/* Info Cards - Integrated into the bottom of the screen */}
-        {!isAIModalOpen && (
+        {!isTaskModalOpen && (
           <div className="absolute bottom-0 left-0 right-0 py-12 overflow-hidden bg-gradient-to-t from-white via-white/80 to-transparent group/carousel">
             {/* Navigation Arrows */}
             <button 
