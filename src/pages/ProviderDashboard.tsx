@@ -1,20 +1,20 @@
-import { useState, useEffect } from 'react';
+import { useState } from 'react';
 import { motion } from 'motion/react';
 import { UserProfile } from '../types';
 import { 
-  Wallet, 
   Star, 
-  ArrowUpRight, 
   LogOut, 
   Briefcase,
   MessageSquare,
-  ChevronRight
+  ChevronRight,
+  User
 } from 'lucide-react';
 import { auth, db } from '../firebase';
 import { signOut } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
 import { doc, updateDoc } from 'firebase/firestore';
+import EditProfileModal from '../components/EditProfileModal';
 
 interface ProviderDashboardProps {
   user: UserProfile;
@@ -22,7 +22,7 @@ interface ProviderDashboardProps {
 
 export default function ProviderDashboard({ user }: ProviderDashboardProps) {
   const navigate = useNavigate();
-  const [isWithdrawing, setIsWithdrawing] = useState(false);
+  const [showEditProfileModal, setShowEditProfileModal] = useState(false);
 
   // Initialize online status from saved preference or user object
   const [isOnline, setIsOnline] = useState<boolean>(() => {
@@ -55,14 +55,6 @@ export default function ProviderDashboard({ user }: ProviderDashboardProps) {
     }
   };
 
-  const handleWithdraw = () => {
-    setIsWithdrawing(true);
-    setTimeout(() => {
-      toast.success(`KES ${user.walletBalance || 4500} successfully withdrawn to M-Pesa ${user.phone || '07xx xxx xxx'}`);
-      setIsWithdrawing(false);
-    }, 1500);
-  };
-
   const handleLogout = async () => {
     console.log("[ProviderDashboard] Logging out...");
     try {
@@ -81,7 +73,7 @@ export default function ProviderDashboard({ user }: ProviderDashboardProps) {
   };
 
   return (
-    <div className="min-h-[100dvh] h-[100dvh] w-full bg-primary-bg overflow-hidden flex flex-col items-center justify-start pt-20 md:pt-24 pb-4 px-4 md:px-6 relative">
+    <div className="min-h-[100dvh] h-[100dvh] w-full bg-primary-bg overflow-hidden flex flex-col items-center justify-start pt-6 md:pt-8 pb-4 px-4 md:px-6 relative">
       {/* Decorative ambient glow */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full bg-accent-gold/5 blur-3xl pointer-events-none" />
 
@@ -143,33 +135,6 @@ export default function ProviderDashboard({ user }: ProviderDashboardProps) {
           </button>
         </div>
 
-        {/* E-Wallet Balance Card */}
-        <div className="w-full bg-white rounded-2xl p-3.5 border border-warm-gray mb-3 shadow-sm flex items-center justify-between">
-          <div className="flex items-center gap-2.5">
-            <div className="w-9 h-9 rounded-xl bg-accent-gold/10 text-accent-gold flex items-center justify-center shrink-0">
-              <Wallet size={18} />
-            </div>
-            <div className="text-left">
-              <p className="text-[9px] uppercase tracking-widest text-rich-black/40 font-bold">E-Wallet Balance</p>
-              <p className="text-base font-black text-rich-black">KES {user.walletBalance?.toLocaleString() || '4,500'}</p>
-            </div>
-          </div>
-          <button
-            onClick={handleWithdraw}
-            disabled={isWithdrawing}
-            className="px-3.5 py-2 bg-rich-black text-white rounded-xl text-xs font-bold hover:bg-black transition-all flex items-center gap-1.5 disabled:opacity-50 active:scale-95 cursor-pointer shadow-sm"
-          >
-            {isWithdrawing ? (
-              <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
-            ) : (
-              <>
-                <ArrowUpRight size={13} className="text-accent-gold" />
-                <span>Withdraw</span>
-              </>
-            )}
-          </button>
-        </div>
-
         {/* Floating Bubble with Action Buttons - Ending at Log out */}
         <motion.div
           animate={{
@@ -182,6 +147,22 @@ export default function ProviderDashboard({ user }: ProviderDashboardProps) {
           }}
           className="w-full bg-white border border-warm-gray rounded-[2rem] p-4 md:p-5 shadow-[0_15px_40px_rgba(212,175,55,0.06)] flex flex-col gap-2 border-accent-gold/15 shrink-0"
         >
+          {/* Edit Profile */}
+          <button
+            onClick={() => setShowEditProfileModal(true)}
+            className="w-full flex items-center justify-between p-2.5 md:p-3 bg-primary-bg hover:bg-accent-gold/5 border border-warm-gray/50 rounded-xl group transition-all duration-300 active:scale-98 cursor-pointer"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center border border-warm-gray text-accent-gold shadow-sm group-hover:bg-accent-gold/10 group-hover:border-accent-gold/30 transition-all shrink-0">
+                <User size={15} />
+              </div>
+              <span className="text-[11px] font-black uppercase tracking-wider text-rich-black/70 group-hover:text-rich-black transition-colors text-left">
+                Edit Profile
+              </span>
+            </div>
+            <ChevronRight size={14} className="text-rich-black/30 group-hover:text-accent-gold group-hover:translate-x-0.5 transition-all shrink-0" />
+          </button>
+
           {/* Tasks & Requests -> Opens to Pro Workspace */}
           <button
             onClick={() => navigate('/provider-services')}
@@ -231,6 +212,13 @@ export default function ProviderDashboard({ user }: ProviderDashboardProps) {
           </button>
         </motion.div>
       </div>
+
+      {/* Edit Profile Modal */}
+      <EditProfileModal
+        isOpen={showEditProfileModal}
+        onClose={() => setShowEditProfileModal(false)}
+        user={user}
+      />
     </div>
   );
 }

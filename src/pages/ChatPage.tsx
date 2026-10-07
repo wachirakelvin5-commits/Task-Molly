@@ -85,7 +85,7 @@ export default function ChatPage({ user }: ChatPageProps) {
   };
 
   return (
-    <div className="min-h-[100dvh] pt-24 pb-10 px-6 max-w-5xl mx-auto flex flex-col h-[100dvh]">
+    <div className="min-h-[100dvh] pt-6 md:pt-8 pb-10 px-6 max-w-5xl mx-auto flex flex-col h-[100dvh]">
       {/* Thread Header */}
       <div className="bg-white border border-warm-gray p-6 rounded-3xl flex items-center justify-between mb-6 shadow-sm">
         <div className="flex items-center gap-4">

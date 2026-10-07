@@ -130,7 +130,7 @@ export default function AdminComplaints() {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-primary-bg pt-16 md:pt-20 flex">
+    <div className="min-h-[100dvh] bg-primary-bg pt-4 md:pt-6 flex">
       {/* List Panel */}
       <div className={`w-full lg:w-96 flex-shrink-0 bg-white lg:border-r border-warm-gray min-h-[calc(100vh-4rem)] md:min-h-[calc(100vh-5rem)] flex flex-col ${selectedComplaint ? 'hidden lg:flex' : 'flex'}`}>
         <div className="p-4 md:p-6 border-b border-warm-gray">

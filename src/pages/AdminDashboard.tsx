@@ -210,7 +210,7 @@ export default function AdminDashboard() {
   ];
 
   return (
-    <div className="min-h-[100dvh] bg-[#F0F2F5] pt-24 pb-20">
+    <div className="min-h-[100dvh] bg-[#F0F2F5] pt-8 md:pt-10 pb-20">
       <div className="max-w-[1600px] mx-auto px-4 md:px-8">
         
         {/* Header Section */}

@@ -24,12 +24,14 @@ import {
   Wind, 
   User, 
   Phone,
-  ArrowRight
+  ArrowRight,
+  Timer
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { auth, db } from '../firebase';
 import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
+import { savePendingRequest } from '../lib/pendingRequestService';
 
 export interface TaskServiceOption {
   id: string;
@@ -126,7 +128,7 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
       const match = ALL_TASK_SERVICES.find(s => s.name.toLowerCase().includes(initialService.toLowerCase()));
       if (match) return match;
     }
-    return ALL_TASK_SERVICES[0]; // Default to Mama Fua
+    return null;
   });
 
   // Services Dropdown state
@@ -137,13 +139,30 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
 
   // Form fields
   const [taskDescription, setTaskDescription] = useState('');
-  const [urgency, setUrgency] = useState<'ASAP' | 'Emergency' | 'Scheduled'>('ASAP');
+  const [urgency, setUrgency] = useState<'ASAP' | 'Scheduled' | 'Custom'>('ASAP');
   const [scheduledDate, setScheduledDate] = useState(() => {
     const tomorrow = new Date();
     tomorrow.setDate(tomorrow.getDate() + 1);
     return tomorrow.toISOString().split('T')[0];
   });
   const [scheduledTimeSlot, setScheduledTimeSlot] = useState('10:00 AM');
+  
+  // Custom Time fields
+  const [customDate, setCustomDate] = useState(() => {
+    return new Date().toISOString().split('T')[0];
+  });
+  const [customTime, setCustomTime] = useState('14:00');
+
+  // Format 24hr time to friendly 12hr AM/PM format
+  const formatCustomTime = (timeStr: string) => {
+    if (!timeStr) return 'Custom Time';
+    const [h, m] = timeStr.split(':').map(Number);
+    if (isNaN(h)) return timeStr;
+    const period = h >= 12 ? 'PM' : 'AM';
+    const hour12 = h % 12 === 0 ? 12 : h % 12;
+    const minStr = String(m ?? 0).padStart(2, '0');
+    return `${hour12}:${minStr} ${period}`;
+  };
   
   // Location
   const [neighborhood, setNeighborhood] = useState('Kilimani');
@@ -154,7 +173,7 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
   const [clientPhone, setClientPhone] = useState(() => (currentUser as any)?.phoneNumber || '');
   
   // Budget
-  const [budgetKes, setBudgetKes] = useState<number>(() => selectedService?.basePrice || 2500);
+  const [budgetKes, setBudgetKes] = useState<number>(2500);
 
   // Submitting state
   const [isSubmitting, setIsSubmitting] = useState(false);
@@ -225,9 +244,9 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
 
     const formattedScheduledArrival = urgency === 'Scheduled'
       ? `${scheduledDate} • ${scheduledTimeSlot}`
-      : urgency === 'Emergency'
-        ? 'Emergency • Immediate Dispatch'
-        : 'Today • Within 1-2 Hours';
+      : urgency === 'Custom'
+      ? `${customDate} • ${formatCustomTime(customTime)}`
+      : 'Today • Within 1-2 Hours';
 
     const syncId = `req_${Date.now()}_${Math.random().toString(36).substring(2, 8)}`;
     const refCode = `REQ-2026-${Math.floor(100 + Math.random() * 900)}`;
@@ -240,7 +259,8 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
       description: taskDescription.trim(),
       urgency,
       scheduledTime: formattedScheduledArrival,
-      scheduledDate: urgency === 'Scheduled' ? scheduledDate : 'Today',
+      scheduledDate: urgency === 'Scheduled' ? scheduledDate : (urgency === 'Custom' ? customDate : 'Today'),
+      customTime: urgency === 'Custom' ? customTime : undefined,
       location: fullLocation,
       neighborhood,
       specificAddress: specificAddress.trim(),
@@ -257,13 +277,13 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
 
     try {
       if (!currentUser) {
-        // Guest user: Save to session storage and redirect to auth to finalize
-        sessionStorage.setItem('pending_service_request', JSON.stringify(requestPayload));
+        // Guest user: Save to persistent storage and redirect to auth to finalize
+        savePendingRequest(requestPayload);
         toast.success("Task details saved! Log in or sign up to connect with matching pros.");
         setTimeout(() => {
           navigate('/auth?redirect=pending-task');
           onClose();
-        }, 800);
+        }, 600);
         return;
       }
 
@@ -292,9 +312,9 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
       }, 700);
     } catch (error) {
       console.error("Error creating request:", error);
-      // Fallback: save to sessionStorage and open tasks
-      sessionStorage.setItem('pending_service_request', JSON.stringify(requestPayload));
-      toast.success("Task request logged locally. Redirecting to your tasks...");
+      // Fallback: save to storage and open tasks
+      savePendingRequest(requestPayload);
+      toast.success("Task request logged. Redirecting to your tasks...");
       navigate('/tasks');
       onClose();
     } finally {
@@ -303,7 +323,7 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
   };
 
   return (
-    <div className="fixed inset-0 z-[70] flex items-center justify-center p-3 sm:p-4 md:p-6 overflow-y-auto no-scrollbar">
+    <div className="fixed inset-0 z-[70] flex items-center justify-center p-2 sm:p-3 overflow-hidden">
       {/* Backdrop */}
       <motion.div
         initial={{ opacity: 0 }}
@@ -315,122 +335,104 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
 
       {/* Modal Dialog */}
       <motion.div
-        initial={{ opacity: 0, scale: 0.95, y: 15 }}
+        initial={{ opacity: 0, scale: 0.95, y: 10 }}
         animate={{ opacity: 1, scale: 1, y: 0 }}
-        exit={{ opacity: 0, scale: 0.95, y: 15 }}
+        exit={{ opacity: 0, scale: 0.95, y: 10 }}
         transition={{ type: "spring", duration: 0.4 }}
-        className="relative z-10 bg-white border border-warm-gray rounded-[2rem] shadow-2xl max-w-xl w-full p-5 sm:p-7 overflow-hidden max-h-[92vh] flex flex-col my-auto"
+        className="relative z-10 bg-white border border-warm-gray rounded-[1.75rem] shadow-2xl max-w-xl w-full p-4 sm:p-5 overflow-hidden flex flex-col text-[0.875rem] -mt-3 sm:-mt-6"
       >
         {/* Header with Title and Close Button */}
-        <div className="flex items-start justify-between gap-3 pb-3 border-b border-warm-gray/40 shrink-0">
+        <div className="flex items-center justify-between gap-3 pb-2 border-b border-warm-gray/40 shrink-0">
           <div>
-            <span className="text-[10px] font-black uppercase tracking-widest text-accent-gold block">
-              TASK MOLLY CONCIERGE
-            </span>
-            <h2 className="text-xl sm:text-2xl font-black text-rich-black tracking-tight">
+            <h2 className="text-base sm:text-lg font-black text-rich-black tracking-tight leading-tight">
               Add Your <span className="text-accent-gold">Service Request</span>
             </h2>
-            <p className="text-xs text-rich-black/50 mt-0.5">
-              Fill in your task details to match with vetted, certified service providers in Nairobi.
-            </p>
           </div>
 
           <button
             onClick={onClose}
-            className="w-8 h-8 rounded-full bg-neutral-100 hover:bg-neutral-200 text-rich-black/60 hover:text-rich-black flex items-center justify-center transition-colors cursor-pointer shrink-0"
+            className="w-6 h-6 rounded-full bg-neutral-100 hover:bg-neutral-200 text-rich-black/60 hover:text-rich-black flex items-center justify-center transition-colors cursor-pointer shrink-0"
             title="Close"
           >
-            <X size={18} />
+            <X size={15} />
           </button>
         </div>
 
-        {/* Scrollable Form Body */}
-        <form onSubmit={handleSubmit} className="overflow-y-auto no-scrollbar py-3 space-y-4 flex-1 pr-0.5">
+        {/* Compact Form Body - Fits without scrolling */}
+        <form onSubmit={handleSubmit} className="pt-2 space-y-2 flex-1">
           
           {/* SECTION 1: Clickable Dropdown Button labeled 'Services available' */}
           <div className="relative" ref={dropdownRef}>
-            <div className="flex items-center justify-between mb-1.5">
-              <label className="text-xs font-black uppercase tracking-wider text-rich-black/80 flex items-center gap-1.5">
+            <div className="flex items-center justify-between mb-0.5">
+              <label className="text-[9.5px] font-black uppercase tracking-wider text-rich-black/80 flex items-center gap-1">
                 <span>Task Service Type</span>
                 <span className="text-accent-gold font-bold">*</span>
               </label>
-              <span className="text-[10px] font-bold text-accent-gold">
-                {ALL_TASK_SERVICES.length} Task Types Available
-              </span>
             </div>
 
-            {/* THE CLICKABLE DROPDOWN BUTTON LABELED 'Services available' */}
+            {/* THE COMPACT CLICKABLE DROPDOWN BUTTON LABELED 'Services available' */}
             <button
               type="button"
               id="services-available-dropdown-btn"
               onClick={() => setIsServicesDropdownOpen(!isServicesDropdownOpen)}
-              className={`w-full flex items-center justify-between p-3.5 rounded-2xl border-2 transition-all text-left shadow-2xs group cursor-pointer ${
+              className={`w-full flex items-center justify-between px-2.5 py-1.5 rounded-lg border transition-all text-left shadow-2xs group cursor-pointer ${
                 isServicesDropdownOpen
                   ? 'border-accent-gold bg-accent-gold/5 ring-2 ring-accent-gold/20'
                   : 'border-warm-gray hover:border-accent-gold/70 bg-primary-bg/50 hover:bg-neutral-50'
               }`}
               title="Click to view all services available"
             >
-              <div className="flex items-center gap-3 min-w-0">
-                <div className="w-10 h-10 rounded-xl bg-white border border-warm-gray/70 flex items-center justify-center text-accent-gold shadow-2xs shrink-0 group-hover:scale-105 transition-transform">
-                  {selectedService ? getServiceIcon(selectedService.name) : <Sparkles size={18} />}
-                </div>
-                <div className="min-w-0">
-                  {/* Explicit 'Services available' label */}
-                  <span className="text-[10px] uppercase font-black tracking-wider text-accent-gold flex items-center gap-1">
-                    <span>Services available</span>
-                    <span className="w-1.5 h-1.5 rounded-full bg-accent-gold animate-pulse" />
-                  </span>
-                  <p className="text-sm font-black text-rich-black truncate leading-tight">
-                    {selectedService ? selectedService.name : 'Click to select from available services...'}
-                  </p>
-                </div>
-              </div>
-
-              <div className="flex items-center gap-2 shrink-0 pl-2">
+              <div className="flex items-center gap-2 min-w-0">
+                <span className="text-[9.5px] uppercase font-black tracking-wider text-accent-gold flex items-center gap-1.5 shrink-0">
+                  <span>Services available</span>
+                  <span className="w-1.5 h-1.5 rounded-full bg-accent-gold animate-pulse" />
+                </span>
                 {selectedService && (
-                  <span className="text-[11px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200 hidden sm:inline">
-                    Est. KES {selectedService.basePrice.toLocaleString()}
+                  <span className="text-[10.5px] font-bold text-rich-black truncate border-l border-warm-gray pl-2">
+                    {selectedService.name}
                   </span>
                 )}
-                <div className={`w-7 h-7 rounded-lg bg-white border border-warm-gray flex items-center justify-center text-rich-black/60 group-hover:text-accent-gold transition-transform duration-200 ${isServicesDropdownOpen ? 'rotate-180 bg-accent-gold/10 text-accent-gold' : ''}`}>
-                  <ChevronDown size={15} />
+              </div>
+
+              <div className="flex items-center gap-2 shrink-0 pl-1.5">
+                <div className={`w-4.5 h-4.5 rounded-md bg-white border border-warm-gray flex items-center justify-center text-rich-black/60 group-hover:text-accent-gold transition-transform duration-200 ${isServicesDropdownOpen ? 'rotate-180 bg-accent-gold/10 text-accent-gold' : ''}`}>
+                  <ChevronDown size={12} />
                 </div>
               </div>
             </button>
 
-            {/* Dropdown Menu Popup */}
+            {/* Dropdown Menu Popup - showing list of all services available */}
             <AnimatePresence>
               {isServicesDropdownOpen && (
                 <motion.div
-                  initial={{ opacity: 0, y: -8, scale: 0.98 }}
+                  initial={{ opacity: 0, y: -6, scale: 0.98 }}
                   animate={{ opacity: 1, y: 0, scale: 1 }}
-                  exit={{ opacity: 0, y: -8, scale: 0.98 }}
+                  exit={{ opacity: 0, y: -6, scale: 0.98 }}
                   transition={{ duration: 0.15 }}
-                  className="absolute left-0 right-0 top-full mt-2 bg-white border-2 border-accent-gold/40 rounded-2xl shadow-2xl z-50 overflow-hidden flex flex-col max-h-[340px]"
+                  className="absolute left-0 right-0 top-full mt-1 bg-white border-2 border-accent-gold/40 rounded-xl shadow-2xl z-50 overflow-hidden flex flex-col max-h-[290px]"
                 >
                   {/* Dropdown Search & Header */}
-                  <div className="p-3 border-b border-warm-gray/50 bg-neutral-50/80 space-y-2">
+                  <div className="p-2 border-b border-warm-gray/50 bg-neutral-50/80 space-y-1">
                     <div className="relative">
-                      <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-rich-black/40" />
+                      <Search size={12} className="absolute left-2.5 top-1/2 -translate-y-1/2 text-rich-black/40" />
                       <input
                         type="text"
-                        placeholder="Search all 27+ services (e.g. plumbing, mama fua, electrician...)"
+                        placeholder="Search all services available (e.g. plumbing, mama fua, electrician...)"
                         value={serviceSearchQuery}
                         onChange={(e) => setServiceSearchQuery(e.target.value)}
                         autoFocus
-                        className="w-full pl-8 pr-3 py-2 bg-white border border-warm-gray rounded-xl text-xs focus:outline-none focus:border-accent-gold text-rich-black placeholder:text-rich-black/40"
+                        className="w-full pl-7 pr-2.5 py-1 bg-white border border-warm-gray rounded-lg text-[10.5px] focus:outline-none focus:border-accent-gold text-rich-black placeholder:text-rich-black/40"
                       />
                     </div>
 
                     {/* Quick Category Tabs */}
-                    <div className="flex items-center gap-1.5 overflow-x-auto no-scrollbar pb-0.5">
+                    <div className="flex items-center gap-1 overflow-x-auto no-scrollbar pb-0.5">
                       {categories.map((cat) => (
                         <button
                           key={cat}
                           type="button"
                           onClick={() => setSelectedCategoryFilter(cat)}
-                          className={`px-2.5 py-1 rounded-lg text-[10px] font-bold whitespace-nowrap transition-colors cursor-pointer ${
+                          className={`px-2 py-0.5 rounded-md text-[8.5px] font-bold whitespace-nowrap transition-colors cursor-pointer ${
                             selectedCategoryFilter === cat
                               ? 'bg-rich-black text-white shadow-2xs'
                               : 'bg-white text-rich-black/60 border border-warm-gray/60 hover:border-accent-gold'
@@ -443,7 +445,7 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
                   </div>
 
                   {/* Dropdown Options List */}
-                  <div className="overflow-y-auto p-2 divide-y divide-warm-gray/20 no-scrollbar">
+                  <div className="overflow-y-auto p-1 divide-y divide-warm-gray/20 no-scrollbar">
                     {filteredServices.length > 0 ? (
                       filteredServices.map((service) => {
                         const isChosen = selectedService?.id === service.id;
@@ -452,39 +454,39 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
                             key={service.id}
                             type="button"
                             onClick={() => handleSelectService(service)}
-                            className={`w-full flex items-center justify-between p-2.5 rounded-xl text-left transition-all cursor-pointer ${
+                            className={`w-full flex items-center justify-between p-1.5 rounded-lg text-left transition-all cursor-pointer ${
                               isChosen 
                                 ? 'bg-accent-gold/15 text-rich-black font-black' 
                                 : 'hover:bg-primary-bg/70 text-rich-black/80'
                             }`}
                           >
-                            <div className="flex items-center gap-2.5 min-w-0">
-                              <div className={`w-7 h-7 rounded-lg flex items-center justify-center shrink-0 ${isChosen ? 'bg-accent-gold text-white' : 'bg-neutral-100 text-rich-black/60'}`}>
+                            <div className="flex items-center gap-2 min-w-0">
+                              <div className={`w-5.5 h-5.5 rounded-md flex items-center justify-center shrink-0 ${isChosen ? 'bg-accent-gold text-white' : 'bg-neutral-100 text-rich-black/60'}`}>
                                 {getServiceIcon(service.name)}
                               </div>
                               <div className="min-w-0">
-                                <p className="text-xs font-bold truncate leading-tight">
+                                <p className="text-[10.5px] font-bold truncate leading-tight">
                                   {service.name}
                                 </p>
-                                <span className="text-[9px] text-rich-black/40 uppercase font-medium">
+                                <span className="text-[8px] text-rich-black/40 uppercase font-medium">
                                   {service.category}
                                 </span>
                               </div>
                             </div>
 
-                            <div className="flex items-center gap-2 shrink-0">
-                              <span className="text-[10px] font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-md border border-emerald-200">
+                            <div className="flex items-center gap-1.5 shrink-0">
+                              <span className="text-[8.5px] font-black text-emerald-600 bg-emerald-50 px-1.5 py-0.5 rounded border border-emerald-200">
                                 KES {service.basePrice.toLocaleString()}
                               </span>
                               {isChosen && (
-                                <CheckCircle size={14} className="text-accent-gold shrink-0" />
+                                <CheckCircle size={12} className="text-accent-gold shrink-0" />
                               )}
                             </div>
                           </button>
                         );
                       })
                     ) : (
-                      <div className="p-4 text-center text-xs text-rich-black/50">
+                      <div className="p-3 text-center text-[10.5px] text-rich-black/50">
                         No service matching "{serviceSearchQuery}". Try another keyword.
                       </div>
                     )}
@@ -496,64 +498,67 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
 
           {/* SECTION 2: Task Description Details */}
           <div>
-            <label className="block text-xs font-black uppercase tracking-wider text-rich-black/80 mb-1.5">
+            <label className="block text-[9.5px] font-black uppercase tracking-wider text-rich-black/80 mb-0.5">
               Task Details & Requirements <span className="text-accent-gold font-bold">*</span>
             </label>
             <textarea
-              rows={3}
+              rows={2}
               required
               value={taskDescription}
               onChange={(e) => setTaskDescription(e.target.value)}
-              placeholder="Describe the job in detail (e.g., Kitchen sink pipe burst under the cupboard, need urgent replacement with brass fitting; or 3 baskets of laundry wash and steam ironing...)"
-              className="w-full p-3 bg-primary-bg/40 border border-warm-gray rounded-2xl text-xs text-rich-black placeholder:text-rich-black/40 focus:outline-none focus:border-accent-gold transition-all resize-none leading-relaxed"
+              placeholder="Describe what you need done..."
+              className="w-full p-2 bg-primary-bg/40 border border-warm-gray rounded-lg text-[10.5px] text-rich-black placeholder:text-rich-black/40 focus:outline-none focus:border-accent-gold transition-all resize-none leading-relaxed"
             />
           </div>
 
           {/* SECTION 3: Urgency / Timing */}
           <div>
-            <label className="block text-xs font-black uppercase tracking-wider text-rich-black/80 mb-1.5">
+            <label className="block text-[9.5px] font-black uppercase tracking-wider text-rich-black/80 mb-0.5">
               When do you need the service provider?
             </label>
-            <div className="grid grid-cols-3 gap-2">
+            <div className="grid grid-cols-3 gap-1.5">
               <button
                 type="button"
                 onClick={() => setUrgency('ASAP')}
-                className={`py-2 px-2 rounded-xl text-xs font-bold transition-all text-center border cursor-pointer ${
+                className={`py-1.5 px-1.5 rounded-lg text-[9.5px] font-bold transition-all text-center border cursor-pointer ${
                   urgency === 'ASAP'
-                    ? 'bg-rich-black text-white border-rich-black shadow-sm'
-                    : 'bg-white text-rich-black/70 border-warm-gray hover:border-accent-gold'
+                    ? 'border-accent-gold bg-accent-gold/10 text-rich-black shadow-2xs font-black ring-1 ring-accent-gold/25'
+                    : 'bg-white text-rich-black/70 border-warm-gray hover:border-accent-gold hover:text-rich-black'
                 }`}
               >
                 <div className="flex items-center justify-center gap-1">
-                  <Clock size={12} className={urgency === 'ASAP' ? 'text-accent-gold' : 'text-rich-black/40'} />
+                  <Clock size={10} className={urgency === 'ASAP' ? 'text-accent-gold' : 'text-rich-black/40'} />
                   <span>ASAP (Today)</span>
                 </div>
               </button>
 
               <button
                 type="button"
-                onClick={() => setUrgency('Emergency')}
-                className={`py-2 px-2 rounded-xl text-xs font-bold transition-all text-center border cursor-pointer ${
-                  urgency === 'Emergency'
-                    ? 'bg-red-600 text-white border-red-600 shadow-sm'
-                    : 'bg-white text-red-600/80 border-red-200 hover:border-red-400'
+                onClick={() => setUrgency('Scheduled')}
+                className={`py-1.5 px-1.5 rounded-lg text-[9.5px] font-bold transition-all text-center border cursor-pointer ${
+                  urgency === 'Scheduled'
+                    ? 'border-accent-gold bg-accent-gold/10 text-rich-black shadow-2xs font-black ring-1 ring-accent-gold/25'
+                    : 'bg-white text-rich-black/70 border-warm-gray hover:border-accent-gold hover:text-rich-black'
                 }`}
               >
-                <span>Emergency ⚡</span>
+                <div className="flex items-center justify-center gap-1">
+                  <Calendar size={10} className={urgency === 'Scheduled' ? 'text-accent-gold' : 'text-rich-black/40'} />
+                  <span>Scheduled</span>
+                </div>
               </button>
 
               <button
                 type="button"
-                onClick={() => setUrgency('Scheduled')}
-                className={`py-2 px-2 rounded-xl text-xs font-bold transition-all text-center border cursor-pointer ${
-                  urgency === 'Scheduled'
-                    ? 'bg-rich-black text-white border-rich-black shadow-sm'
-                    : 'bg-white text-rich-black/70 border-warm-gray hover:border-accent-gold'
+                onClick={() => setUrgency('Custom')}
+                className={`py-1.5 px-1.5 rounded-lg text-[9.5px] font-bold transition-all text-center border cursor-pointer ${
+                  urgency === 'Custom'
+                    ? 'border-accent-gold bg-accent-gold/10 text-rich-black shadow-2xs font-black ring-1 ring-accent-gold/25'
+                    : 'bg-white text-rich-black/70 border-warm-gray hover:border-accent-gold hover:text-rich-black'
                 }`}
               >
                 <div className="flex items-center justify-center gap-1">
-                  <Calendar size={12} className={urgency === 'Scheduled' ? 'text-accent-gold' : 'text-rich-black/40'} />
-                  <span>Scheduled</span>
+                  <Timer size={10} className={urgency === 'Custom' ? 'text-accent-gold' : 'text-rich-black/40'} />
+                  <span>Custom Time</span>
                 </div>
               </button>
             </div>
@@ -563,11 +568,11 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
               <motion.div
                 initial={{ opacity: 0, height: 0 }}
                 animate={{ opacity: 1, height: 'auto' }}
-                className="mt-2.5 p-3 bg-neutral-50 rounded-2xl border border-warm-gray/60 space-y-2"
+                className="mt-1.5 p-1.5 bg-neutral-50 rounded-lg border border-warm-gray/60 space-y-1"
               >
                 <div className="grid grid-cols-2 gap-2">
                   <div>
-                    <label className="block text-[10px] font-bold text-rich-black/60 uppercase mb-1">
+                    <label className="block text-[8px] font-bold text-rich-black/60 uppercase mb-0.5">
                       Preferred Date
                     </label>
                     <input
@@ -575,18 +580,18 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
                       min={new Date().toISOString().split('T')[0]}
                       value={scheduledDate}
                       onChange={(e) => setScheduledDate(e.target.value)}
-                      className="w-full p-2 bg-white border border-warm-gray rounded-xl text-xs text-rich-black focus:outline-none focus:border-accent-gold"
+                      className="w-full p-1 bg-white border border-warm-gray rounded-md text-[10px] text-rich-black focus:outline-none focus:border-accent-gold"
                     />
                   </div>
 
                   <div>
-                    <label className="block text-[10px] font-bold text-rich-black/60 uppercase mb-1">
+                    <label className="block text-[8px] font-bold text-rich-black/60 uppercase mb-0.5">
                       Arrival Time Slot
                     </label>
                     <select
                       value={scheduledTimeSlot}
                       onChange={(e) => setScheduledTimeSlot(e.target.value)}
-                      className="w-full p-2 bg-white border border-warm-gray rounded-xl text-xs text-rich-black focus:outline-none focus:border-accent-gold cursor-pointer"
+                      className="w-full p-1 bg-white border border-warm-gray rounded-md text-[10px] text-rich-black focus:outline-none focus:border-accent-gold cursor-pointer"
                     >
                       <option value="08:30 AM">Morning (08:30 AM)</option>
                       <option value="10:00 AM">Morning (10:00 AM)</option>
@@ -598,25 +603,63 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
                 </div>
               </motion.div>
             )}
+
+            {/* Custom exact date & time picker */}
+            {urgency === 'Custom' && (
+              <motion.div
+                initial={{ opacity: 0, height: 0 }}
+                animate={{ opacity: 1, height: 'auto' }}
+                className="mt-1.5 p-1.5 bg-neutral-50 rounded-lg border border-warm-gray/60 space-y-1"
+              >
+                <div className="grid grid-cols-2 gap-2">
+                  <div>
+                    <label className="block text-[8px] font-bold text-rich-black/60 uppercase mb-0.5">
+                      Preferred Date
+                    </label>
+                    <input
+                      type="date"
+                      min={new Date().toISOString().split('T')[0]}
+                      value={customDate}
+                      onChange={(e) => setCustomDate(e.target.value)}
+                      className="w-full p-1 bg-white border border-warm-gray rounded-md text-[10px] text-rich-black focus:outline-none focus:border-accent-gold"
+                    />
+                  </div>
+
+                  <div>
+                    <label className="block text-[8px] font-bold text-rich-black/60 uppercase mb-0.5">
+                      Exact Time
+                    </label>
+                    <input
+                      type="time"
+                      value={customTime}
+                      onChange={(e) => setCustomTime(e.target.value)}
+                      className="w-full p-1 bg-white border border-warm-gray rounded-md text-[10px] text-rich-black focus:outline-none focus:border-accent-gold cursor-pointer"
+                    />
+                  </div>
+                </div>
+                <div className="text-[9px] text-accent-gold font-bold text-right px-0.5">
+                  Arrival: {customDate} at {formatCustomTime(customTime)}
+                </div>
+              </motion.div>
+            )}
           </div>
 
           {/* SECTION 4: Location in Nairobi */}
           <div>
-            <label className="block text-xs font-black uppercase tracking-wider text-rich-black/80 mb-1.5 flex items-center justify-between">
+            <label className="block text-[9.5px] font-black uppercase tracking-wider text-rich-black/80 mb-0.5 flex items-center justify-between">
               <span className="flex items-center gap-1">
-                <MapPin size={12} className="text-accent-gold" />
-                <span>Service Location (Nairobi & Surrounding)</span>
+                <MapPin size={10} className="text-accent-gold" />
+                <span>Client Home Address</span>
               </span>
-              <span className="text-[10px] font-normal text-rich-black/50">Same Client Home Address</span>
             </label>
 
-            <div className="space-y-2">
+            <div className="space-y-1">
               <div className="grid grid-cols-2 gap-2">
                 <div>
                   <select
                     value={neighborhood}
                     onChange={(e) => setNeighborhood(e.target.value)}
-                    className="w-full p-2.5 bg-primary-bg/50 border border-warm-gray rounded-xl text-xs font-bold text-rich-black focus:outline-none focus:border-accent-gold cursor-pointer"
+                    className="w-full p-1.5 bg-primary-bg/50 border border-warm-gray rounded-lg text-[10.5px] font-bold text-rich-black focus:outline-none focus:border-accent-gold cursor-pointer"
                   >
                     {POPULAR_NEIGHBORHOODS.map((n) => (
                       <option key={n} value={n}>{n}</option>
@@ -631,18 +674,18 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
                     value={specificAddress}
                     onChange={(e) => setSpecificAddress(e.target.value)}
                     placeholder="Street / Court / Apt (e.g. Chania Ave)"
-                    className="w-full p-2.5 bg-primary-bg/50 border border-warm-gray rounded-xl text-xs text-rich-black focus:outline-none focus:border-accent-gold"
+                    className="w-full p-1.5 bg-primary-bg/50 border border-warm-gray rounded-lg text-[10.5px] text-rich-black focus:outline-none focus:border-accent-gold"
                   />
                 </div>
               </div>
             </div>
           </div>
 
-          {/* SECTION 5: Contact Details (For guests or update) */}
+          {/* SECTION 5: Contact Details */}
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <div>
-              <label className="block text-[11px] font-black uppercase tracking-wider text-rich-black/80 mb-1 flex items-center gap-1">
-                <User size={11} className="text-accent-gold" />
+              <label className="block text-[9.5px] font-black uppercase tracking-wider text-rich-black/80 mb-0.5 flex items-center gap-1">
+                <User size={9.5} className="text-accent-gold" />
                 <span>Your Name</span>
               </label>
               <input
@@ -651,13 +694,13 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
                 value={clientName}
                 onChange={(e) => setClientName(e.target.value)}
                 placeholder="e.g. Kelvin Wachira"
-                className="w-full p-2.5 bg-primary-bg/50 border border-warm-gray rounded-xl text-xs text-rich-black focus:outline-none focus:border-accent-gold"
+                className="w-full p-1.5 bg-primary-bg/50 border border-warm-gray rounded-lg text-[10.5px] text-rich-black focus:outline-none focus:border-accent-gold"
               />
             </div>
 
             <div>
-              <label className="block text-[11px] font-black uppercase tracking-wider text-rich-black/80 mb-1 flex items-center gap-1">
-                <Phone size={11} className="text-accent-gold" />
+              <label className="block text-[9.5px] font-black uppercase tracking-wider text-rich-black/80 mb-0.5 flex items-center gap-1">
+                <Phone size={9.5} className="text-accent-gold" />
                 <span>M-Pesa Phone Number</span>
               </label>
               <input
@@ -666,55 +709,52 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
                 value={clientPhone}
                 onChange={(e) => setClientPhone(e.target.value)}
                 placeholder="0712 345 678"
-                className="w-full p-2.5 bg-primary-bg/50 border border-warm-gray rounded-xl text-xs text-rich-black font-mono focus:outline-none focus:border-accent-gold"
+                className="w-full p-1.5 bg-primary-bg/50 border border-warm-gray rounded-lg text-[10.5px] text-rich-black font-mono focus:outline-none focus:border-accent-gold"
               />
             </div>
           </div>
 
           {/* SECTION 6: Estimated Budget Guide */}
-          <div className="p-3 bg-neutral-50 rounded-2xl border border-warm-gray/60 flex items-center justify-between gap-3">
+          <div className="p-2 bg-neutral-50 rounded-lg border border-warm-gray/60 flex items-center justify-between gap-2">
             <div>
-              <span className="text-[10px] uppercase font-black text-rich-black/50 block">
+              <span className="text-[8.5px] uppercase font-black text-rich-black/50 block">
                 Estimated Task Budget
               </span>
-              <p className="text-[11px] text-rich-black/60">
+              <p className="text-[9.5px] text-rich-black/60">
                 Payment held securely until work is completed to your satisfaction
               </p>
             </div>
 
-            <div className="flex items-center gap-1 bg-white px-3 py-1.5 rounded-xl border border-warm-gray shrink-0 shadow-2xs">
-              <span className="text-xs font-bold text-rich-black/50">KES</span>
+            <div className="flex items-center gap-1 bg-white px-2 py-0.5 rounded-md border border-warm-gray shrink-0 shadow-2xs">
+              <span className="text-[10px] font-bold text-rich-black/50">KES</span>
               <input
                 type="number"
                 min="500"
                 step="100"
                 value={budgetKes}
                 onChange={(e) => setBudgetKes(Number(e.target.value))}
-                className="w-20 text-sm font-black text-rich-black focus:outline-none text-right"
+                className="w-14 text-[11px] font-black text-rich-black focus:outline-none text-right"
               />
             </div>
           </div>
 
           {/* Submit CTA */}
-          <div className="pt-2">
+          <div className="pt-1">
             <button
               type="submit"
               disabled={isSubmitting}
-              className="w-full py-3.5 px-6 rounded-2xl bg-rich-black hover:bg-black text-white text-xs font-black uppercase tracking-wider transition-all shadow-lg hover:shadow-xl active:scale-98 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+              className="w-full py-2 px-4 rounded-lg bg-rich-black hover:bg-black text-white text-[10.5px] font-black uppercase tracking-wider transition-all shadow-md hover:shadow-lg active:scale-98 flex items-center justify-center gap-1.5 cursor-pointer disabled:opacity-50"
             >
               {isSubmitting ? (
-                <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                <div className="w-3.5 h-3.5 border-2 border-white border-t-transparent rounded-full animate-spin" />
               ) : (
                 <>
-                  <Send size={15} className="text-accent-gold" />
+                  <Send size={12} className="text-accent-gold" />
                   <span>Find Service Provider Now</span>
-                  <ArrowRight size={14} className="text-accent-gold" />
+                  <ArrowRight size={12} className="text-accent-gold" />
                 </>
               )}
             </button>
-            <p className="text-[10px] text-center text-rich-black/40 mt-1.5">
-              Verified providers respond in an average of 8-15 minutes across Nairobi.
-            </p>
           </div>
         </form>
       </motion.div>

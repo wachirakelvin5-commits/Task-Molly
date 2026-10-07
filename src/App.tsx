@@ -3,8 +3,8 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
-import { useState, useEffect } from 'react';
+import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'react-router-dom';
+import { useState, useEffect, lazy, Suspense } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from './firebase';
 import { doc, getDoc, getDocFromServer } from 'firebase/firestore';
@@ -12,17 +12,17 @@ import { UserProfile } from './types';
 
 // Pages
 import LandingPage from './pages/LandingPage';
-import Dashboard from './pages/Dashboard';
-import ProviderDashboard from './pages/ProviderDashboard';
-import ProviderServices from './pages/ProviderServices';
-import AuthPage from './pages/AuthPage';
-import ChatPage from './pages/ChatPage';
-import ProviderListing from './pages/ProviderListing';
-import BlogPage from './pages/BlogPage';
-import ClientTasks from './pages/ClientTasks';
-import AdminDashboard from './pages/AdminDashboard';
-import AdminComplaints from './pages/AdminComplaints';
-import AdminAnalytics from './pages/AdminAnalytics';
+const Dashboard = lazy(() => import('./pages/Dashboard'));
+const ProviderDashboard = lazy(() => import('./pages/ProviderDashboard'));
+const ProviderServices = lazy(() => import('./pages/ProviderServices'));
+const AuthPage = lazy(() => import('./pages/AuthPage'));
+const ChatPage = lazy(() => import('./pages/ChatPage'));
+const ProviderListing = lazy(() => import('./pages/ProviderListing'));
+const BlogPage = lazy(() => import('./pages/BlogPage'));
+const ClientTasks = lazy(() => import('./pages/ClientTasks'));
+const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
+const AdminComplaints = lazy(() => import('./pages/AdminComplaints'));
+const AdminAnalytics = lazy(() => import('./pages/AdminAnalytics'));
 
 // Components
 import Navbar from './components/Navbar';
@@ -30,6 +30,15 @@ import { InstallPrompt } from './components/InstallPrompt';
 import { QueryClient, QueryClientProvider } from '@tanstack/react-query';
 import { Toaster } from 'sonner';
 import { useNotifications } from './hooks/useNotifications';
+
+function NavbarWrapper({ user, hideNavbar }: { user: UserProfile | null; hideNavbar: boolean }) {
+  const location = useLocation();
+  // The header only remains on the first landing page
+  if (location.pathname !== '/' || hideNavbar) {
+    return null;
+  }
+  return <Navbar user={user} />;
+}
 
 const queryClient = new QueryClient();
 
@@ -105,54 +114,60 @@ export default function App() {
       <InstallPrompt />
       <Router>
         <div className="min-h-[100dvh] bg-primary-bg no-scrollbar overflow-y-auto">
-          {!hideNavbar && <Navbar user={user} />}
-          <Routes>
-            <Route path="/" element={<LandingPage setHideNavbar={setHideNavbar} />} />
-            <Route 
-              path="/auth" 
-              element={user ? <Navigate to={user.role === 'tasker' ? '/provider-dashboard' : '/dashboard'} /> : <AuthPage />} 
-            />
-            <Route 
-              path="/dashboard" 
-              element={user ? <Dashboard user={user} /> : <Navigate to="/auth" />} 
-            />
-            <Route 
-              path="/tasks" 
-              element={user ? <ClientTasks user={user} /> : <Navigate to="/auth" />} 
-            />
-            <Route 
-              path="/provider-dashboard" 
-              element={user ? <ProviderDashboard user={user} /> : <Navigate to="/auth" />} 
-            />
-            <Route 
-              path="/provider-services" 
-              element={user ? <ProviderServices user={user} /> : <Navigate to="/auth" />} 
-            />
-            <Route 
-              path="/providers" 
-              element={<ProviderListing />} 
-            />
-            <Route 
-              path="/chat/:jobId" 
-              element={user ? <ChatPage user={user} /> : <Navigate to="/auth" />} 
-            />
-            <Route 
-              path="/blog" 
-              element={<BlogPage />} 
-            />
-            <Route 
-              path="/admin-dashboard" 
-              element={user?.role === 'admin' || user?.email === 'wachirakelvin5@gmail.com' ? <AdminDashboard /> : <Navigate to="/auth" />} 
-            />
-            <Route 
-              path="/admin-complaints" 
-              element={user?.role === 'admin' || user?.email === 'wachirakelvin5@gmail.com' ? <AdminComplaints /> : <Navigate to="/auth" />} 
-            />
-            <Route 
-              path="/admin-analytics" 
-              element={user?.role === 'admin' || user?.email === 'wachirakelvin5@gmail.com' ? <AdminAnalytics /> : <Navigate to="/auth" />} 
-            />
-          </Routes>
+          <NavbarWrapper user={user} hideNavbar={hideNavbar} />
+          <Suspense fallback={
+            <div className="flex items-center justify-center min-h-[60vh]">
+              <div className="w-10 h-10 border-3 border-accent-gold border-t-transparent rounded-full animate-spin"></div>
+            </div>
+          }>
+            <Routes>
+              <Route path="/" element={<LandingPage setHideNavbar={setHideNavbar} />} />
+              <Route 
+                path="/auth" 
+                element={user ? <Navigate to={user.role === 'tasker' ? '/provider-dashboard' : '/dashboard'} /> : <AuthPage />} 
+              />
+              <Route 
+                path="/dashboard" 
+                element={user ? <Dashboard user={user} /> : <Navigate to="/auth" />} 
+              />
+              <Route 
+                path="/tasks" 
+                element={user ? <ClientTasks user={user} /> : <Navigate to="/auth" />} 
+              />
+              <Route 
+                path="/provider-dashboard" 
+                element={user ? <ProviderDashboard user={user} /> : <Navigate to="/auth" />} 
+              />
+              <Route 
+                path="/provider-services" 
+                element={user ? <ProviderServices user={user} /> : <Navigate to="/auth" />} 
+              />
+              <Route 
+                path="/providers" 
+                element={<ProviderListing />} 
+              />
+              <Route 
+                path="/chat/:jobId" 
+                element={user ? <ChatPage user={user} /> : <Navigate to="/auth" />} 
+              />
+              <Route 
+                path="/blog" 
+                element={<BlogPage />} 
+              />
+              <Route 
+                path="/admin-dashboard" 
+                element={user?.role === 'admin' || user?.email === 'wachirakelvin5@gmail.com' ? <AdminDashboard /> : <Navigate to="/auth" />} 
+              />
+              <Route 
+                path="/admin-complaints" 
+                element={user?.role === 'admin' || user?.email === 'wachirakelvin5@gmail.com' ? <AdminComplaints /> : <Navigate to="/auth" />} 
+              />
+              <Route 
+                path="/admin-analytics" 
+                element={user?.role === 'admin' || user?.email === 'wachirakelvin5@gmail.com' ? <AdminAnalytics /> : <Navigate to="/auth" />} 
+              />
+            </Routes>
+          </Suspense>
         </div>
       </Router>
     </QueryClientProvider>

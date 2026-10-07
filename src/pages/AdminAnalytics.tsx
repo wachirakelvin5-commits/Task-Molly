@@ -86,7 +86,7 @@ export default function AdminAnalytics() {
   const uniqueVisitors = 1240;
 
   return (
-    <div className="min-h-[100dvh] bg-[#F8F9FA] pt-16 md:pt-24 px-4 md:px-8 pb-16 md:pb-20">
+    <div className="min-h-[100dvh] bg-[#F8F9FA] pt-6 md:pt-8 px-4 md:px-8 pb-16 md:pb-20">
       <div className="max-w-7xl mx-auto">
         
         {/* Header */}

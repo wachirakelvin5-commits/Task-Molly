@@ -18,6 +18,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { UserRole, UserProfile } from '../types';
 import { Phone, Mail, ArrowRight, CheckCircle2, Beaker, User, Briefcase, ChevronLeft, Lock, UserPlus, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
+import { finalizePendingRequest as syncPendingRequestService } from '../lib/pendingRequestService';
 
 declare global {
   interface Window {
@@ -67,51 +68,20 @@ export default function AuthPage() {
     }
   }, [step]);
 
-  const finalizePendingRequest = async (uid: string, displayName: string) => {
-    const pendingData = sessionStorage.getItem('pending_service_request');
-    if (pendingData) {
-      console.log(`[Auth Sync Log] 🔍 Data detected for ${displayName} (UID: ${uid}). Preparing sync...`);
-      try {
-        const request = JSON.parse(pendingData);
-        const payload = {
-          clientId: uid,
-          clientName: displayName || 'Client',
-          ...request
-        };
-
-        console.log("[Auth Sync Log] 🚀 Sending Concierge Request to API:", request.syncId || 'no-id');
-        toast.info("Finalizing your concierge request...", { id: 'auth-sync' });
-        
-        const res = await fetch('/api/service-request', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-
-        const resData = await res.json().catch(() => ({}));
-        
-        if (res.ok) {
-          console.log("[Auth Sync Log] ✅ Sync SUCCESS! ID:", resData.id);
-          sessionStorage.removeItem('pending_service_request');
-          toast.success("Request created! Redirecting...", { id: 'auth-sync' });
-          
-          // Give a delay for Firestore propagation
-          await new Promise(resolve => setTimeout(resolve, 1500));
-          return true;
-        } else {
-          console.error("[Auth Sync Log] ❌ Sync failed:", resData);
-          if (res.status === 400 || res.status === 409) {
-            sessionStorage.removeItem('pending_service_request');
-          }
-          toast.error("Could not sync your request automatically.", { id: 'auth-sync' });
-          return false;
-        }
-      } catch (err) {
-        console.error("[Auth Sync Log] ❌ Exception:", err);
-        return false;
-      }
+  const finalizePendingRequest = async (uid: string, displayName?: string, userEmail?: string, userPhone?: string) => {
+    try {
+      console.log(`[Auth Sync Log] Finalizing pending request for ${displayName || 'user'} (UID: ${uid})...`);
+      const result = await syncPendingRequestService({
+        uid,
+        displayName: displayName || undefined,
+        email: userEmail || email || undefined,
+        phoneNumber: userPhone || phoneNumber || undefined
+      });
+      return result.success;
+    } catch (err) {
+      console.error("[Auth Sync Log] Exception finalizing request:", err);
+      return false;
     }
-    return true;
   };
 
   const handleFirestoreError = (error: any, operation: string, path: string) => {

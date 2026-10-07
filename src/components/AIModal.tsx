@@ -4,8 +4,10 @@ import { X, Send, Sparkles } from 'lucide-react';
 import { askMollyStream } from '../services/geminiService';
 import { checkProviderAvailability, formatWaitTime } from '../services/availabilityService';
 import { useNavigate } from 'react-router-dom';
-import { auth } from '../firebase';
+import { auth, db } from '../firebase';
+import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
 import { toast } from 'sonner';
+import { savePendingRequest } from '../lib/pendingRequestService';
 
 interface Message {
   role: 'user' | 'model';
@@ -67,39 +69,39 @@ export default function AIModal({ onClose }: AIModalProps) {
     try {
       if (!currentUser) {
         console.log("[AIModal Sync Log] No user found. Storing pending request and redirecting to login:", requestData.syncId);
-        sessionStorage.setItem('pending_service_request', JSON.stringify(requestData));
+        savePendingRequest(requestData);
         toast.success("Charge accepted! Log in to finalize your request.");
         setTimeout(() => {
           navigate('/auth?redirect=pending-task');
           onClose();
-        }, 1500);
+        }, 1200);
         return;
       }
 
-      console.log("[AIModal Sync Log] User logged in. Direct creation attempt...");
-      const res = await fetch('/api/service-request', {
+      console.log("[AIModal Sync Log] User logged in. Direct Firestore creation attempt...");
+      const firestorePayload = {
+        clientId: currentUser.uid,
+        clientName: currentUser.displayName || 'Client',
+        ...requestData,
+        createdAt: serverTimestamp(),
+        updatedAt: serverTimestamp()
+      };
+
+      const docRef = await addDoc(collection(db, 'serviceRequests'), firestorePayload);
+      console.log("[AIModal Sync Log] Direct creation success! ID:", docRef.id);
+
+      // Best effort notify API
+      fetch('/api/service-request', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          clientId: currentUser.uid,
-          clientName: currentUser.displayName || 'Client',
-          ...requestData
-        })
-      });
+        body: JSON.stringify(firestorePayload)
+      }).catch(err => console.warn("API notification skipped:", err));
 
-      if (res.ok) {
-        const resData = await res.json();
-        console.log("[AIModal Sync Log] Direct creation success! ID:", resData.id);
-        toast.success("Task created! Redirecting to your dashboard...");
-        setTimeout(() => {
-          navigate('/dashboard');
-          onClose();
-        }, 2000);
-      } else {
-        const errData = await res.json().catch(() => ({}));
-        console.error("[AIModal Sync Log] Direct creation failed:", errData);
-        toast.error(errData.message || "Failed to create task. Please try again.");
-      }
+      toast.success("Task created! Redirecting to your dashboard...");
+      setTimeout(() => {
+        navigate('/dashboard');
+        onClose();
+      }, 1500);
     } catch (err) {
       console.error("[AIModal Sync Log] Exception during direct creation:", err);
       toast.error("An error occurred. Please try again.");

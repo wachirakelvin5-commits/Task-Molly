@@ -947,31 +947,22 @@ export default function ProviderServices({ user }: ProviderServicesProps) {
   };
 
   return (
-    <div className="min-h-[100dvh] bg-primary-bg pt-20 md:pt-24 pb-16 px-4 md:px-6">
-      <div className="max-w-5xl mx-auto w-full">
+    <div className="h-[100dvh] max-h-[100dvh] overflow-hidden bg-primary-bg pt-5 md:pt-6 pb-3 px-3 md:px-6 flex flex-col justify-between">
+      <div className="max-w-5xl mx-auto w-full h-full flex flex-col justify-between overflow-hidden">
         
-        {/* Header: Clean Pro Dashboard Title (Top-left arrow and extra wordings removed) */}
-        <div className="flex items-center justify-between gap-4 mb-6 pb-4 border-b border-warm-gray/40">
-          <div>
-            <h1 className="text-2xl md:text-3xl font-black text-rich-black tracking-tight">
-              Pro <span className="text-accent-gold">Dashboard</span>
-            </h1>
-          </div>
-
-          <div className="flex items-center gap-2">
-            <div className="px-4 py-2 bg-white rounded-2xl border border-warm-gray text-right shadow-sm">
-              <p className="text-[9px] uppercase tracking-wider text-rich-black/40 font-bold">Total Earnings</p>
-              <p className="text-sm font-black text-emerald-600">KES {totalEarningsKes.toLocaleString()}</p>
-            </div>
-          </div>
+        {/* Header: Pro Dashboard Title Centered */}
+        <div className="flex items-center justify-center mb-2 pb-2 border-b border-warm-gray/40 shrink-0 text-center">
+          <h1 className="text-xl md:text-2xl font-black text-rich-black tracking-tight">
+            Pro <span className="text-accent-gold">Dashboard</span>
+          </h1>
         </div>
 
         {/* Tab Navigation */}
-        <div className="flex items-center gap-2 overflow-x-auto no-scrollbar pb-3 mb-6">
+        <div className="flex items-center gap-1.5 md:gap-2 overflow-x-auto no-scrollbar shrink-0 mb-2">
           {/* Tab 1: Available Tasks */}
           <button
             onClick={() => setActiveTab('available')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'available'
                 ? 'bg-rich-black text-white shadow-md'
                 : 'bg-white text-rich-black/60 border border-warm-gray hover:border-accent-gold'
@@ -986,7 +977,7 @@ export default function ProviderServices({ user }: ProviderServicesProps) {
           {/* Tab 2: Ongoing Tasks */}
           <button
             onClick={() => setActiveTab('active')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'active'
                 ? 'bg-rich-black text-white shadow-md'
                 : 'bg-white text-rich-black/60 border border-warm-gray hover:border-accent-gold'
@@ -998,10 +989,10 @@ export default function ProviderServices({ user }: ProviderServicesProps) {
             </span>
           </button>
 
-          {/* Tab 3: Task History (Renamed from Complete Earnings) */}
+          {/* Tab 3: Task History */}
           <button
             onClick={() => setActiveTab('history')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'history'
                 ? 'bg-rich-black text-white shadow-md'
                 : 'bg-white text-rich-black/60 border border-warm-gray hover:border-accent-gold'
@@ -1016,7 +1007,7 @@ export default function ProviderServices({ user }: ProviderServicesProps) {
           {/* Tab 4: Offered Categories */}
           <button
             onClick={() => setActiveTab('services')}
-            className={`px-4 py-2 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-2 cursor-pointer ${
+            className={`px-3 py-1.5 rounded-xl text-xs font-bold transition-all whitespace-nowrap flex items-center gap-1.5 cursor-pointer ${
               activeTab === 'services'
                 ? 'bg-rich-black text-white shadow-md'
                 : 'bg-white text-rich-black/60 border border-warm-gray hover:border-accent-gold'
@@ -1031,37 +1022,32 @@ export default function ProviderServices({ user }: ProviderServicesProps) {
 
         {/* Tab 1 Content: Available Tasks - Scrollable Right to Left */}
         {activeTab === 'available' && (
-          <div className="space-y-3">
+          <div className="flex-1 min-h-0 flex flex-col justify-between overflow-hidden">
             {/* Top controls: Numbering before arrows */}
-            <div className="flex items-center justify-between px-1">
-              <div className="text-left">
-                <h2 className="text-sm font-bold text-rich-black">Available Client Requests</h2>
-                <p className="text-[11px] text-rich-black/40">Real-time matching in your service area</p>
-              </div>
-
+            <div className="flex items-center justify-end px-1 mb-1.5 shrink-0">
               {displayedAvailableTasks.length > 0 && (
-                <div className="flex items-center gap-1.5 bg-neutral-100 px-3 py-1.5 rounded-full border border-warm-gray/60">
-                  <span className="text-[11px] font-black text-rich-black">
+                <div className="flex items-center gap-1.5 bg-neutral-100 px-2.5 py-1 rounded-full border border-warm-gray/60">
+                  <span className="text-[10px] md:text-[11px] font-black text-rich-black">
                     {currentAvailableIndex + 1}
                   </span>
-                  <span className="text-[10px] text-rich-black/40 font-bold">/</span>
-                  <span className="text-[10px] text-rich-black/40 font-bold">
+                  <span className="text-[9px] text-rich-black/40 font-bold">/</span>
+                  <span className="text-[9px] text-rich-black/40 font-bold">
                     {displayedAvailableTasks.length}
                   </span>
-                  <div className="flex items-center gap-1 ml-1.5">
+                  <div className="flex items-center gap-1 ml-1">
                     <button
                       onClick={() => scrollAvailable('left')}
                       className="w-5 h-5 rounded-full hover:bg-white flex items-center justify-center text-rich-black/60 hover:text-rich-black transition-colors cursor-pointer"
                       title="Previous Task"
                     >
-                      <ChevronLeft size={14} />
+                      <ChevronLeft size={13} />
                     </button>
                     <button
                       onClick={() => scrollAvailable('right')}
                       className="w-5 h-5 rounded-full hover:bg-white flex items-center justify-center text-rich-black/60 hover:text-rich-black transition-colors cursor-pointer"
                       title="Next Task"
                     >
-                      <ChevronRight size={14} />
+                      <ChevronRight size={13} />
                     </button>
                   </div>
                 </div>
@@ -1072,40 +1058,40 @@ export default function ProviderServices({ user }: ProviderServicesProps) {
               <div 
                 ref={availableScrollRef}
                 onScroll={handleAvailableScroll}
-                className="flex gap-4 overflow-x-auto pb-4 pt-1 px-1 scroll-smooth snap-x snap-mandatory no-scrollbar"
+                className="flex-1 min-h-0 flex gap-3 overflow-x-auto pb-1 pt-0.5 px-0.5 scroll-smooth snap-x snap-mandatory no-scrollbar items-stretch"
                 style={{ scrollSnapType: 'x mandatory' }}
               >
                 {displayedAvailableTasks.map((task) => (
                   <div
                     key={task.id}
-                    className="w-[300px] sm:w-[325px] shrink-0 snap-start bg-white border border-warm-gray hover:border-accent-gold/50 rounded-[2rem] p-5 shadow-sm transition-all flex flex-col justify-between group hover:shadow-md"
+                    className="w-[280px] sm:w-[310px] shrink-0 snap-start bg-white border border-warm-gray hover:border-accent-gold/50 rounded-2xl p-3.5 shadow-sm transition-all flex flex-col justify-between group hover:shadow-md"
                   >
                     <div>
                       {/* Card Header: Icon & Full Task Name */}
-                      <div className="flex items-start gap-3 mb-2.5">
-                        <div className="w-10 h-10 rounded-2xl bg-primary-bg flex items-center justify-center text-accent-gold border border-warm-gray/60 shrink-0">
+                      <div className="flex items-start gap-2.5 mb-2">
+                        <div className="w-8 h-8 rounded-xl bg-primary-bg flex items-center justify-center text-accent-gold border border-warm-gray/60 shrink-0">
                           {getServiceIcon(task.service)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <span className="text-[9px] uppercase tracking-wider font-extrabold text-accent-gold block">
+                          <span className="text-[8px] uppercase tracking-wider font-extrabold text-accent-gold block leading-tight">
                             {task.refCode}
                           </span>
-                          <h3 className="text-sm font-bold text-rich-black leading-snug break-words">
+                          <h3 className="text-xs md:text-sm font-bold text-rich-black leading-snug line-clamp-2">
                             {task.service}
                           </h3>
                         </div>
                       </div>
 
                       {/* Prominent Scheduled Time Placard */}
-                      <div className="mb-3 p-3 bg-neutral-50/90 rounded-2xl border border-warm-gray/60 group-hover:border-accent-gold/40 transition-colors">
-                        <div className="flex items-center justify-between gap-2 mb-1">
-                          <div className="flex items-center gap-1.5 min-w-0">
-                            <Clock size={13} className="text-accent-gold shrink-0" />
-                            <span className="text-[9px] uppercase tracking-widest font-black text-accent-gold truncate">
+                      <div className="mb-2 p-2 bg-neutral-50/90 rounded-xl border border-warm-gray/60 group-hover:border-accent-gold/40 transition-colors">
+                        <div className="flex items-center justify-between gap-1.5 mb-0.5">
+                          <div className="flex items-center gap-1 min-w-0">
+                            <Clock size={11} className="text-accent-gold shrink-0" />
+                            <span className="text-[8px] uppercase tracking-widest font-black text-accent-gold truncate">
                               Scheduled Arrival
                             </span>
                           </div>
-                          <span className={`text-[9px] uppercase font-black px-2 py-0.5 rounded-full ${
+                          <span className={`text-[8px] uppercase font-black px-1.5 py-0.2 rounded-full ${
                             task.time === 'ASAP' 
                               ? 'bg-red-500/15 text-red-600 border border-red-200' 
                               : 'bg-accent-gold/15 text-accent-gold border border-accent-gold/30'
@@ -1113,61 +1099,71 @@ export default function ProviderServices({ user }: ProviderServicesProps) {
                             {task.time || 'ASAP'}
                           </span>
                         </div>
-                        <p className="text-xs sm:text-[13px] font-black text-rich-black leading-snug">
+                        <p className="text-xs font-black text-rich-black leading-tight">
                           {task.scheduledTime || 'Today • Within 1 Hour'}
                         </p>
                       </div>
 
-                      {/* Client Info & Price */}
-                      <div className="space-y-1.5 mb-3">
+                      {/* Client Info & Location (Service cost removed) */}
+                      <div className="space-y-0.5 mb-2">
                         {task.clientName && (
-                          <p className="text-xs text-rich-black/70 font-medium">
+                          <p className="text-[11px] text-rich-black/70 font-medium truncate">
                             Client: <span className="font-bold text-rich-black">{task.clientName}</span>
                           </p>
                         )}
-                        <div className="flex items-center justify-between text-xs text-rich-black/60 pt-0.5">
-                          <span className="flex items-center gap-1 truncate">
-                            <MapPin size={13} className="text-accent-gold shrink-0" />
-                            <span className="font-semibold text-rich-black/80 truncate">{task.location || 'Nairobi Area'}</span>
-                          </span>
-                          <span className="flex items-center gap-0.5 font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200 shrink-0">
-                            <DollarSign size={12} />
-                            KES {task.price?.toLocaleString()}
-                          </span>
+                        <div className="flex items-center text-[11px] text-rich-black/60 pt-0.5">
+                          <MapPin size={11} className="text-accent-gold shrink-0 mr-1" />
+                          <span className="font-semibold text-rich-black/80 truncate">{task.location || 'Nairobi Area'}</span>
                         </div>
                       </div>
 
                       {/* Description Quote */}
                       {task.description && (
-                        <p className="text-xs text-rich-black/60 italic leading-relaxed bg-primary-bg p-2.5 rounded-xl border border-warm-gray/40 line-clamp-3 mb-4">
+                        <p className="text-[11px] text-rich-black/60 italic leading-snug bg-primary-bg p-2 rounded-lg border border-warm-gray/40 line-clamp-2 mb-2">
                           "{task.description}"
                         </p>
                       )}
                     </div>
 
-                    {/* Action Buttons */}
-                    <div className="flex items-center gap-2 pt-2 border-t border-warm-gray/30 w-full">
+                    {/* Action Buttons: Chat with Client + Accept / Pass */}
+                    <div className="space-y-1.5 pt-1.5 border-t border-warm-gray/30 w-full shrink-0">
                       <button
-                        onClick={() => handleAcceptTask(task)}
-                        className="flex-1 py-2.5 px-3 rounded-xl bg-rich-black hover:bg-black text-accent-gold text-xs font-black uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer text-center"
+                        onClick={() => {
+                          if (task.clientPhone) {
+                            window.open(`https://wa.me/${task.clientPhone.replace(/\D/g, '')}`, '_blank');
+                          } else {
+                            navigate(`/chat/${task.id}`);
+                          }
+                        }}
+                        className="w-full py-1.5 px-3 rounded-xl border border-warm-gray hover:border-accent-gold text-xs font-bold text-rich-black flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs bg-white hover:bg-neutral-50 active:scale-98"
                       >
-                        Accept Job
+                        <MessageSquare size={13} className="text-accent-gold" />
+                        <span>Chat with Client</span>
                       </button>
-                      <button
-                        onClick={() => handleDeclineTask(task)}
-                        className="py-2.5 px-3 rounded-xl border border-warm-gray text-xs font-bold text-rich-black/60 hover:text-red-500 hover:border-red-200 transition-all cursor-pointer text-center"
-                      >
-                        Pass
-                      </button>
+
+                      <div className="flex items-center gap-2 w-full">
+                        <button
+                          onClick={() => handleAcceptTask(task)}
+                          className="flex-1 py-2 px-3 rounded-xl bg-rich-black hover:bg-black text-accent-gold text-xs font-black uppercase tracking-wider transition-all shadow-md active:scale-95 cursor-pointer text-center"
+                        >
+                          Accept Job
+                        </button>
+                        <button
+                          onClick={() => handleDeclineTask(task)}
+                          className="py-2 px-3 rounded-xl border border-warm-gray text-xs font-bold text-rich-black/60 hover:text-red-500 hover:border-red-200 transition-all cursor-pointer text-center"
+                        >
+                          Pass
+                        </button>
+                      </div>
                     </div>
                   </div>
                 ))}
               </div>
             ) : (
-              <div className="bg-white border border-dashed border-warm-gray rounded-3xl p-10 text-center">
-                <Activity size={32} className="mx-auto text-rich-black/20 mb-3" />
-                <h3 className="text-base font-bold text-rich-black">No Available Tasks Right Now</h3>
-                <p className="text-xs text-rich-black/40 mt-1 max-w-sm mx-auto">
+              <div className="flex-1 min-h-0 bg-white border border-dashed border-warm-gray rounded-2xl p-6 text-center flex flex-col items-center justify-center">
+                <Activity size={28} className="text-rich-black/20 mb-2" />
+                <h3 className="text-sm font-bold text-rich-black">No Available Tasks Right Now</h3>
+                <p className="text-[11px] text-rich-black/40 mt-1 max-w-sm">
                   New incoming client requests in your area will appear here automatically.
                 </p>
               </div>
@@ -1177,37 +1173,37 @@ export default function ProviderServices({ user }: ProviderServicesProps) {
 
         {/* Tab 2 Content: Ongoing Tasks - Scrollable Right to Left */}
         {activeTab === 'active' && (
-          <div className="space-y-3">
+          <div className="flex-1 min-h-0 flex flex-col justify-between overflow-hidden">
             {/* Top controls: Numbering before arrows */}
-            <div className="flex items-center justify-between px-1">
+            <div className="flex items-center justify-between px-1 mb-1.5 shrink-0">
               <div className="text-left">
-                <h2 className="text-sm font-bold text-rich-black">Ongoing Tasks & Dispatches</h2>
-                <p className="text-[11px] text-rich-black/40">Manage your active jobs and client communications</p>
+                <h2 className="text-xs md:text-sm font-bold text-rich-black">Ongoing Tasks & Dispatches</h2>
+                <p className="text-[10px] md:text-[11px] text-rich-black/40">Manage your active jobs and client communications</p>
               </div>
 
               {displayedOngoingTasks.length > 0 && (
-                <div className="flex items-center gap-1.5 bg-neutral-100 px-3 py-1.5 rounded-full border border-warm-gray/60">
-                  <span className="text-[11px] font-black text-rich-black">
+                <div className="flex items-center gap-1.5 bg-neutral-100 px-2.5 py-1 rounded-full border border-warm-gray/60">
+                  <span className="text-[10px] md:text-[11px] font-black text-rich-black">
                     {currentOngoingIndex + 1}
                   </span>
-                  <span className="text-[10px] text-rich-black/40 font-bold">/</span>
-                  <span className="text-[10px] text-rich-black/40 font-bold">
+                  <span className="text-[9px] text-rich-black/40 font-bold">/</span>
+                  <span className="text-[9px] text-rich-black/40 font-bold">
                     {displayedOngoingTasks.length}
                   </span>
-                  <div className="flex items-center gap-1 ml-1.5">
+                  <div className="flex items-center gap-1 ml-1">
                     <button
                       onClick={() => scrollOngoing('left')}
                       className="w-5 h-5 rounded-full hover:bg-white flex items-center justify-center text-rich-black/60 hover:text-rich-black transition-colors cursor-pointer"
                       title="Previous Task"
                     >
-                      <ChevronLeft size={14} />
+                      <ChevronLeft size={13} />
                     </button>
                     <button
                       onClick={() => scrollOngoing('right')}
                       className="w-5 h-5 rounded-full hover:bg-white flex items-center justify-center text-rich-black/60 hover:text-rich-black transition-colors cursor-pointer"
                       title="Next Task"
                     >
-                      <ChevronRight size={14} />
+                      <ChevronRight size={13} />
                     </button>
                   </div>
                 </div>
@@ -1218,83 +1214,77 @@ export default function ProviderServices({ user }: ProviderServicesProps) {
               <div 
                 ref={ongoingScrollRef}
                 onScroll={handleOngoingScroll}
-                className="flex gap-4 overflow-x-auto pb-4 pt-1 px-1 scroll-smooth snap-x snap-mandatory no-scrollbar"
+                className="flex-1 min-h-0 flex gap-3 overflow-x-auto pb-1 pt-0.5 px-0.5 scroll-smooth snap-x snap-mandatory no-scrollbar items-stretch"
                 style={{ scrollSnapType: 'x mandatory' }}
               >
                 {displayedOngoingTasks.map((task) => (
                   <div
                     key={task.id}
-                    className="w-[300px] sm:w-[325px] shrink-0 snap-start bg-white border border-warm-gray hover:border-accent-gold/50 rounded-[2rem] p-5 shadow-sm transition-all flex flex-col justify-between group hover:shadow-md"
+                    className="w-[280px] sm:w-[310px] shrink-0 snap-start bg-white border border-warm-gray hover:border-accent-gold/50 rounded-2xl p-3.5 shadow-sm transition-all flex flex-col justify-between group hover:shadow-md"
                   >
                     <div>
                       {/* Card Header: Icon & Full Task Name */}
-                      <div className="flex items-start gap-3 mb-2.5">
-                        <div className="w-10 h-10 rounded-2xl bg-primary-bg flex items-center justify-center text-accent-gold border border-warm-gray/60 shrink-0">
+                      <div className="flex items-start gap-2.5 mb-2">
+                        <div className="w-8 h-8 rounded-xl bg-primary-bg flex items-center justify-center text-accent-gold border border-warm-gray/60 shrink-0">
                           {getServiceIcon(task.service)}
                         </div>
                         <div className="flex-1 min-w-0">
-                          <span className="text-[9px] uppercase tracking-wider font-extrabold text-accent-gold block">
+                          <span className="text-[8px] uppercase tracking-wider font-extrabold text-accent-gold block leading-tight">
                             {task.refCode}
                           </span>
-                          <h3 className="text-sm font-bold text-rich-black leading-snug break-words">
+                          <h3 className="text-xs md:text-sm font-bold text-rich-black leading-snug line-clamp-2">
                             {task.service}
                           </h3>
                         </div>
                       </div>
 
                       {/* Prominent Scheduled Arrival Time */}
-                      <div className="mb-3 p-3 bg-neutral-50/90 rounded-2xl border border-warm-gray/60 group-hover:border-accent-gold/40 transition-colors">
-                        <div className="flex items-center gap-1.5 mb-1">
-                          <Clock size={13} className="text-accent-gold shrink-0" />
-                          <span className="text-[9px] uppercase tracking-widest font-black text-accent-gold">
+                      <div className="mb-2 p-2 bg-neutral-50/90 rounded-xl border border-warm-gray/60 group-hover:border-accent-gold/40 transition-colors">
+                        <div className="flex items-center gap-1 mb-0.5">
+                          <Clock size={11} className="text-accent-gold shrink-0" />
+                          <span className="text-[8px] uppercase tracking-widest font-black text-accent-gold">
                             Scheduled Arrival Time
                           </span>
                         </div>
-                        <p className="text-xs sm:text-[13px] font-black text-rich-black leading-snug">
+                        <p className="text-xs font-black text-rich-black leading-tight">
                           {task.scheduledTime || '4th October, Sunday 4pm'}
                         </p>
                       </div>
 
                       {/* Status Badge */}
-                      <div className="flex items-center gap-1.5 mb-2.5 bg-green-50/60 border border-green-200/60 px-2.5 py-1 rounded-xl w-fit">
-                        <span className="w-2 h-2 rounded-full bg-emerald-500 animate-pulse" />
-                        <span className="text-[10px] font-extrabold uppercase tracking-wider text-emerald-700">
+                      <div className="flex items-center gap-1.5 mb-2 bg-green-50/60 border border-green-200/60 px-2 py-0.5 rounded-lg w-fit">
+                        <span className="w-1.5 h-1.5 rounded-full bg-emerald-500 animate-pulse" />
+                        <span className="text-[9px] font-extrabold uppercase tracking-wider text-emerald-700">
                           {task.status === 'in-progress' ? 'In Progress' : 'Assigned & Dispatched'}
                         </span>
                       </div>
 
-                      {/* Client Info */}
-                      <div className="space-y-1 mb-3">
-                        <p className="text-xs text-rich-black/70 font-medium">
+                      {/* Client Info & Location (Service cost removed) */}
+                      <div className="space-y-0.5 mb-2">
+                        <p className="text-[11px] text-rich-black/70 font-medium truncate">
                           Client: <span className="font-bold text-rich-black">{task.clientName || 'Private Client'}</span>
                         </p>
                         {task.clientPhone && (
-                          <p className="text-[11px] font-mono text-rich-black/50">
+                          <p className="text-[10px] font-mono text-rich-black/50">
                             Phone: {task.clientPhone}
                           </p>
                         )}
-                        <div className="flex items-center justify-between text-xs text-rich-black/60 pt-0.5">
-                          <span className="flex items-center gap-1 truncate">
-                            <MapPin size={13} className="text-accent-gold shrink-0" />
-                            <span className="font-semibold text-rich-black/80 truncate">{task.location || 'Kilimani, Nairobi'}</span>
-                          </span>
-                          <span className="flex items-center gap-0.5 font-black text-emerald-600 bg-emerald-50 px-2 py-0.5 rounded-lg border border-emerald-200 shrink-0">
-                            <DollarSign size={12} />
-                            KES {task.price?.toLocaleString()}
-                          </span>
+                        <div className="flex items-center text-[11px] text-rich-black/60 pt-0.5">
+                          <MapPin size={11} className="text-accent-gold shrink-0 mr-1" />
+                          <span className="font-semibold text-rich-black/80 truncate">{task.location || 'Kilimani, Nairobi'}</span>
                         </div>
                       </div>
 
                       {/* Description */}
                       {task.description && (
-                        <p className="text-xs text-rich-black/60 italic leading-relaxed bg-primary-bg p-2.5 rounded-xl border border-warm-gray/40 line-clamp-3 mb-4">
+                        <p className="text-[11px] text-rich-black/60 italic leading-snug bg-primary-bg p-2 rounded-lg border border-warm-gray/40 line-clamp-2 mb-2">
                           "{task.description}"
                         </p>
                       )}
                     </div>
 
                     {/* Action Buttons: Chat with Client & Mark Complete */}
-                    <div className="space-y-2 pt-2 border-t border-warm-gray/30 w-full">
+                    <div className="space-y-1.5 pt-1.5 border-t border-warm-gray/30 w-full shrink-0">
                       <button
                         onClick={() => {
                           if (task.clientPhone) {
@@ -1303,15 +1293,15 @@ export default function ProviderServices({ user }: ProviderServicesProps) {
                             navigate(`/chat/${task.id}`);
                           }
                         }}
-                        className="w-full py-2.5 px-3 rounded-xl border border-warm-gray hover:border-accent-gold text-xs font-bold text-rich-black flex items-center justify-center gap-2 transition-all cursor-pointer shadow-2xs bg-white hover:bg-neutral-50 active:scale-98"
+                        className="w-full py-1.5 px-3 rounded-xl border border-warm-gray hover:border-accent-gold text-xs font-bold text-rich-black flex items-center justify-center gap-1.5 transition-all cursor-pointer shadow-2xs bg-white hover:bg-neutral-50 active:scale-98"
                       >
-                        <MessageSquare size={14} className="text-accent-gold" />
+                        <MessageSquare size={13} className="text-accent-gold" />
                         <span>Chat with Client</span>
                       </button>
 
                       <button
                         onClick={() => handleCompleteTask(task)}
-                        className="w-full py-2.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-wider transition-all shadow-sm cursor-pointer text-center active:scale-98"
+                        className="w-full py-1.5 px-3 rounded-xl bg-emerald-600 hover:bg-emerald-700 text-white text-xs font-black uppercase tracking-wider transition-all shadow-sm cursor-pointer text-center active:scale-98"
                       >
                         Mark Complete
                       </button>
@@ -1320,10 +1310,10 @@ export default function ProviderServices({ user }: ProviderServicesProps) {
                 ))}
               </div>
             ) : (
-              <div className="bg-white border border-dashed border-warm-gray rounded-3xl p-10 text-center">
-                <CheckCircle size={32} className="mx-auto text-rich-black/20 mb-3" />
-                <h3 className="text-base font-bold text-rich-black">No Active Tasks</h3>
-                <p className="text-xs text-rich-black/40 mt-1 max-w-sm mx-auto">
+              <div className="flex-1 min-h-0 bg-white border border-dashed border-warm-gray rounded-2xl p-6 text-center flex flex-col items-center justify-center">
+                <CheckCircle size={28} className="text-rich-black/20 mb-2" />
+                <h3 className="text-sm font-bold text-rich-black">No Active Tasks</h3>
+                <p className="text-[11px] text-rich-black/40 mt-1 max-w-sm">
                   Accept a new task from the "Available Tasks" tab to start servicing clients.
                 </p>
               </div>
@@ -1331,129 +1321,109 @@ export default function ProviderServices({ user }: ProviderServicesProps) {
           </div>
         )}
 
-        {/* Tab 3 Content: Task History (Rendered like the sheet for Client view) */}
+        {/* Tab 3 Content: Task History */}
         {activeTab === 'history' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between mb-2">
+          <div className="flex-1 min-h-0 flex flex-col justify-between overflow-hidden">
+            <div className="flex items-center justify-between mb-1.5 shrink-0">
               <div>
-                <h2 className="text-lg font-bold text-rich-black">Task History & Reconciled Earnings</h2>
-                <p className="text-xs text-rich-black/40">Verified completed jobs, ratings, and official remittance vouchers</p>
-              </div>
-              <div className="text-right">
-                <span className="text-xs font-black text-emerald-600 bg-emerald-50 border border-emerald-200 px-3.5 py-1.5 rounded-full shadow-2xs">
-                  Total Reconciled: KES {totalEarningsKes.toLocaleString()}
-                </span>
+                <h2 className="text-xs md:text-sm font-bold text-rich-black">Task History</h2>
+                <p className="text-[10px] md:text-[11px] text-rich-black/40">Verified completed jobs, ratings, and official remittance vouchers</p>
               </div>
             </div>
 
             {/* Statement Itemized Ledger Table (Sheet like Client View) */}
-            <div className="bg-white border border-warm-gray rounded-3xl overflow-hidden shadow-sm">
-              <div className="overflow-x-auto">
-                <table className="w-full text-left text-xs border-collapse">
-                  <thead>
-                    <tr className="bg-primary-bg/70 border-b border-warm-gray/60 text-[10px] uppercase tracking-wider font-black text-rich-black/50">
-                      <th className="py-3 px-4">Ref Code</th>
-                      <th className="py-3 px-4">Date & Time</th>
-                      <th className="py-3 px-4">Service & Context</th>
-                      <th className="py-3 px-4">Client</th>
-                      <th className="py-3 px-4">Location</th>
-                      <th className="py-3 px-4">M-Pesa Receipt</th>
-                      <th className="py-3 px-4 text-right">Payout (KES)</th>
-                      <th className="py-3 px-4 text-center">Rating</th>
-                      <th className="py-3 px-4 text-center">Status</th>
-                      <th className="py-3 px-4 text-center">Voucher</th>
-                    </tr>
-                  </thead>
-                  <tbody className="divide-y divide-warm-gray/30 text-rich-black font-medium">
-                    {taskHistory.map((item, idx) => (
-                      <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-primary-bg/20'}>
-                        <td className="py-3 px-4 font-mono font-bold text-accent-gold whitespace-nowrap">
-                          {item.refCode}
-                        </td>
-                        <td className="py-3 px-4 whitespace-nowrap text-rich-black/70">
-                          <div>{item.date}</div>
-                          <div className="text-[10px] text-rich-black/40">{item.time}</div>
-                        </td>
-                        <td className="py-3 px-4 max-w-[220px]">
-                          <div className="font-bold text-rich-black truncate">{item.service}</div>
-                          <div className="text-[10px] text-rich-black/50 truncate italic">{item.description}</div>
-                        </td>
-                        <td className="py-3 px-4 whitespace-nowrap">
-                          <div className="font-semibold text-rich-black">{item.client}</div>
-                          <div className="text-[10px] text-rich-black/40 font-mono">{item.clientPhone}</div>
-                        </td>
-                        <td className="py-3 px-4 text-rich-black/60 whitespace-nowrap">
-                          {item.location}
-                        </td>
-                        <td className="py-3 px-4 font-mono text-[11px] text-rich-black/50 whitespace-nowrap">
-                          {item.mpesaReceipt}
-                        </td>
-                        <td className="py-3 px-4 text-right font-black text-rich-black whitespace-nowrap">
-                          KES {item.price.toLocaleString()}
-                        </td>
-                        <td className="py-3 px-4 text-center whitespace-nowrap">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-lg text-[10px] font-bold bg-neutral-50 text-accent-gold border border-warm-gray/60">
-                            <Star size={11} fill="currentColor" />
-                            <span>{item.rating}</span>
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-center whitespace-nowrap">
-                          <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
-                            Settled ✓
-                          </span>
-                        </td>
-                        <td className="py-3 px-4 text-center whitespace-nowrap">
-                          <button
-                            onClick={() => handleDownloadTaskReceipt(item)}
-                            className="px-2.5 py-1.5 bg-primary-bg hover:bg-rich-black hover:text-accent-gold border border-warm-gray hover:border-rich-black text-rich-black rounded-xl text-[10px] font-bold uppercase tracking-wider transition-all inline-flex items-center gap-1.5 cursor-pointer shadow-xs active:scale-95 group"
-                            title={`Download voucher for ${item.refCode}`}
-                          >
-                            <Download size={12} className="text-accent-gold group-hover:text-accent-gold" />
-                            <span>Voucher</span>
-                          </button>
-                        </td>
-                      </tr>
-                    ))}
-                  </tbody>
-                  <tfoot>
-                    <tr className="bg-primary-bg/90 border-t-2 border-warm-gray text-rich-black font-bold">
-                      <td colSpan={6} className="py-3 px-4 text-right text-xs uppercase tracking-wider text-rich-black/60">
-                        Total Reconciled ({taskHistory.length} Jobs Settled):
+            <div className="flex-1 min-h-0 bg-white border border-warm-gray rounded-2xl overflow-auto shadow-sm">
+              <table className="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr className="bg-primary-bg/70 border-b border-warm-gray/60 text-[10px] uppercase tracking-wider font-black text-rich-black/50 sticky top-0 bg-primary-bg">
+                    <th className="py-2.5 px-3">Ref Code</th>
+                    <th className="py-2.5 px-3">Date & Time</th>
+                    <th className="py-2.5 px-3">Service & Context</th>
+                    <th className="py-2.5 px-3">Client</th>
+                    <th className="py-2.5 px-3">Location</th>
+                    <th className="py-2.5 px-3">M-Pesa Receipt</th>
+                    <th className="py-2.5 px-3 text-right">Payout (KES)</th>
+                    <th className="py-2.5 px-3 text-center">Rating</th>
+                    <th className="py-2.5 px-3 text-center">Status</th>
+                    <th className="py-2.5 px-3 text-center">Voucher</th>
+                  </tr>
+                </thead>
+                <tbody className="divide-y divide-warm-gray/30 text-rich-black font-medium">
+                  {taskHistory.map((item, idx) => (
+                    <tr key={item.id} className={idx % 2 === 0 ? 'bg-white' : 'bg-primary-bg/20'}>
+                      <td className="py-2 px-3 font-mono font-bold text-accent-gold whitespace-nowrap">
+                        {item.refCode}
                       </td>
-                      <td className="py-3 px-4 text-right text-sm font-black text-rich-black">
-                        KES {totalEarningsKes.toLocaleString()}
+                      <td className="py-2 px-3 whitespace-nowrap text-rich-black/70">
+                        <div>{item.date}</div>
+                        <div className="text-[9px] text-rich-black/40">{item.time}</div>
                       </td>
-                      <td className="py-3 px-4 text-center">
-                        <span className="text-[10px] font-bold text-accent-gold">4.96 ★</span>
+                      <td className="py-2 px-3 max-w-[200px]">
+                        <div className="font-bold text-rich-black truncate">{item.service}</div>
+                        <div className="text-[9px] text-rich-black/50 truncate italic">{item.description}</div>
                       </td>
-                      <td className="py-3 px-4 text-center">
-                        <span className="text-[9px] font-black text-emerald-700 uppercase">Paid in Full</span>
+                      <td className="py-2 px-3 whitespace-nowrap">
+                        <div className="font-semibold text-rich-black">{item.client}</div>
+                        <div className="text-[9px] text-rich-black/40 font-mono">{item.clientPhone}</div>
                       </td>
-                      <td className="py-3 px-4 text-center">
-                        <span className="text-[9px] text-rich-black/40 font-mono">{taskHistory.length} Vouchers</span>
+                      <td className="py-2 px-3 text-rich-black/60 whitespace-nowrap">
+                        {item.location}
+                      </td>
+                      <td className="py-2 px-3 font-mono text-[10px] text-rich-black/50 whitespace-nowrap">
+                        {item.mpesaReceipt}
+                      </td>
+                      <td className="py-2 px-3 text-right font-black text-rich-black whitespace-nowrap">
+                        KES {item.price.toLocaleString()}
+                      </td>
+                      <td className="py-2 px-3 text-center whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 px-1.5 py-0.5 rounded-lg text-[9px] font-bold bg-neutral-50 text-accent-gold border border-warm-gray/60">
+                          <Star size={10} fill="currentColor" />
+                          <span>{item.rating}</span>
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 text-center whitespace-nowrap">
+                        <span className="inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-[9px] font-black uppercase tracking-wider bg-emerald-50 text-emerald-700 border border-emerald-200">
+                          Settled ✓
+                        </span>
+                      </td>
+                      <td className="py-2 px-3 text-center whitespace-nowrap">
+                        <button
+                          onClick={() => handleDownloadTaskReceipt(item)}
+                          className="px-2 py-1 bg-primary-bg hover:bg-rich-black hover:text-accent-gold border border-warm-gray hover:border-rich-black text-rich-black rounded-lg text-[9px] font-bold uppercase tracking-wider transition-all inline-flex items-center gap-1 cursor-pointer shadow-xs active:scale-95 group"
+                          title={`Download voucher for ${item.refCode}`}
+                        >
+                          <Download size={11} className="text-accent-gold group-hover:text-accent-gold" />
+                          <span>Voucher</span>
+                        </button>
                       </td>
                     </tr>
-                  </tfoot>
-                </table>
-              </div>
+                  ))}
+                </tbody>
+                <tfoot>
+                  <tr className="bg-primary-bg/90 border-t border-warm-gray text-rich-black font-bold sticky bottom-0">
+                    <td colSpan={7} className="py-2.5 px-3 text-left text-xs uppercase tracking-wider text-rich-black/60">
+                      Completed ({taskHistory.length} Jobs Settled)
+                    </td>
+                    <td className="py-2.5 px-3 text-center">
+                      <span className="text-[10px] font-bold text-accent-gold">4.96 ★</span>
+                    </td>
+                    <td className="py-2.5 px-3 text-center">
+                      <span className="text-[9px] font-black text-emerald-700 uppercase">Paid in Full</span>
+                    </td>
+                    <td className="py-2.5 px-3 text-center">
+                      <span className="text-[9px] text-rich-black/40 font-mono">{taskHistory.length} Vouchers</span>
+                    </td>
+                  </tr>
+                </tfoot>
+              </table>
             </div>
           </div>
         )}
 
         {/* Tab 4 Content: Offered Categories */}
         {activeTab === 'services' && (
-          <div className="space-y-4">
-            <div className="flex items-center justify-between mb-2">
-              <div>
-                <h2 className="text-lg font-bold text-rich-black">Your Service Offerings</h2>
-                <p className="text-xs text-rich-black/40">Select which categories of tasks you are qualified and ready to service</p>
-              </div>
-              <span className="text-xs font-bold text-accent-gold bg-accent-gold/10 px-2.5 py-1 rounded-full border border-accent-gold/20">
-                {proServices.length} Active Services
-              </span>
-            </div>
-
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
+          <div className="flex-1 min-h-0 flex flex-col justify-between overflow-hidden">
+            <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar grid grid-cols-2 md:grid-cols-4 gap-2.5 p-0.5">
               {ALL_AVAILABLE_CATEGORIES.map((cat) => {
                 const Icon = cat.icon;
                 const isSelected = proServices.some(s => s.toLowerCase().includes(cat.name.toLowerCase()) || cat.name.toLowerCase().includes(s.toLowerCase()));
@@ -1462,17 +1432,17 @@ export default function ProviderServices({ user }: ProviderServicesProps) {
                   <button
                     key={cat.id}
                     onClick={() => toggleServiceOffering(cat.name)}
-                    className={`p-4 rounded-2xl border-2 text-left transition-all flex flex-col justify-between gap-3 cursor-pointer ${
+                    className={`p-3 rounded-2xl border-2 text-left transition-all flex flex-col justify-between gap-2 cursor-pointer ${
                       isSelected
                         ? 'bg-accent-gold/10 border-accent-gold shadow-sm'
                         : 'bg-white border-warm-gray/60 hover:border-warm-gray'
                     }`}
                   >
                     <div className="flex items-center justify-between">
-                      <div className={`w-9 h-9 rounded-xl flex items-center justify-center ${isSelected ? 'bg-accent-gold text-white' : 'bg-primary-bg text-rich-black/60'}`}>
-                        <Icon size={18} />
+                      <div className={`w-8 h-8 rounded-xl flex items-center justify-center ${isSelected ? 'bg-accent-gold text-white' : 'bg-primary-bg text-rich-black/60'}`}>
+                        <Icon size={16} />
                       </div>
-                      <div className={`w-5 h-5 rounded-full border flex items-center justify-center text-[10px] font-bold ${
+                      <div className={`w-4 h-4 rounded-full border flex items-center justify-center text-[9px] font-bold ${
                         isSelected 
                           ? 'bg-accent-gold border-accent-gold text-white' 
                           : 'border-warm-gray text-transparent'
@@ -1482,7 +1452,7 @@ export default function ProviderServices({ user }: ProviderServicesProps) {
                     </div>
                     <div>
                       <p className="text-xs font-bold text-rich-black">{cat.name}</p>
-                      <p className="text-[10px] text-rich-black/40 mt-0.5">
+                      <p className="text-[9px] text-rich-black/40 mt-0.5">
                         {isSelected ? 'Active & Receiving Requests' : 'Click to Activate'}
                       </p>
                     </div>
@@ -1494,27 +1464,23 @@ export default function ProviderServices({ user }: ProviderServicesProps) {
         )}
 
         {/* Bottom Navigation */}
-        <div className="mt-12 pt-4 pb-2 border-t border-warm-gray/40 flex items-center justify-between">
+        <div className="mt-2 pt-2 border-t border-warm-gray/40 flex items-center justify-between shrink-0">
           <button
             onClick={() => navigate('/provider-dashboard')}
-            className="flex items-center gap-2.5 px-5 py-2.5 bg-white border border-warm-gray hover:border-accent-gold rounded-full text-xs font-bold uppercase tracking-wider text-rich-black/70 hover:text-rich-black shadow-sm transition-all active:scale-95 group cursor-pointer"
+            className="flex items-center gap-2 px-4 py-1.5 bg-white border border-warm-gray hover:border-accent-gold rounded-full text-xs font-bold uppercase tracking-wider text-rich-black/70 hover:text-rich-black shadow-sm transition-all active:scale-95 group cursor-pointer"
           >
-            <ArrowLeft size={16} className="text-rich-black/50 group-hover:text-accent-gold transition-colors" />
+            <ArrowLeft size={14} className="text-rich-black/50 group-hover:text-accent-gold transition-colors" />
             <span>Back</span>
           </button>
 
-          {activeTab === 'history' ? (
+          {activeTab === 'history' && (
             <button
               onClick={handleDownloadPDFStatement}
-              className="flex items-center gap-2.5 px-5 py-2.5 bg-rich-black hover:bg-black text-white hover:text-accent-gold border border-rich-black hover:border-accent-gold/40 rounded-full text-xs font-bold uppercase tracking-wider shadow-md transition-all active:scale-95 group cursor-pointer"
+              className="flex items-center gap-2 px-4 py-1.5 bg-rich-black hover:bg-black text-white hover:text-accent-gold border border-rich-black hover:border-accent-gold/40 rounded-full text-xs font-bold uppercase tracking-wider shadow-md transition-all active:scale-95 group cursor-pointer"
             >
-              <Download size={15} className="text-accent-gold group-hover:scale-110 transition-transform" />
+              <Download size={14} className="text-accent-gold group-hover:scale-110 transition-transform" />
               <span>Download History</span>
             </button>
-          ) : (
-            <span className="text-[10px] text-rich-black/40 font-semibold">
-              Tasks & Requests • Pro Workspace
-            </span>
           )}
         </div>
       </div>

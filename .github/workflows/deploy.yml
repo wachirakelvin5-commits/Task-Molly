@@ -31,16 +31,21 @@ jobs:
           npm install --legacy-peer-deps
           npm install react-is --legacy-peer-deps
 
+      - name: Setup Pages
+        uses: actions/configure-pages@v5
+
       - name: Build
         run: npm run build
 
-      - name: Setup Pages
-        uses: actions/configure-pages@v5
+      - name: Verify build artifacts
+        run: |
+          ls -la dist
+          test -f dist/index.html || exit 1
 
       - name: Upload artifact
         uses: actions/upload-pages-artifact@v3
         with:
-          path: dist
+          path: ./dist
 
   deploy:
     needs: build

@@ -15,6 +15,7 @@ import AIModal from '../components/AIModal';
 import EditProfileModal from '../components/EditProfileModal';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { toast } from 'sonner';
+import { getPendingRequest, finalizePendingRequest as syncPendingRequestService } from '../lib/pendingRequestService';
 
 const QUICK_SERVICES = [
   { id: 'electrical', label: 'Electrical', icon: Zap },
@@ -76,16 +77,8 @@ export default function Dashboard({ user }: DashboardProps) {
 
   // Load pending request info for display
   useEffect(() => {
-    const data = sessionStorage.getItem('pending_service_request');
-    if (data) {
-      try {
-        setPendingRequestInfo(JSON.parse(data));
-      } catch (e) {
-        setPendingRequestInfo(null);
-      }
-    } else {
-      setPendingRequestInfo(null);
-    }
+    const data = getPendingRequest();
+    setPendingRequestInfo(data);
   }, [syncStatus, isSyncing]);
 
   // Debugging user data visibility
@@ -100,71 +93,28 @@ export default function Dashboard({ user }: DashboardProps) {
   const finalizePendingRequest = async () => {
     if (isSyncing || syncStatus !== 'idle') return;
     
-    const pendingData = sessionStorage.getItem('pending_service_request');
+    const pendingData = getPendingRequest();
     if (pendingData && user.uid) {
-      setSyncStatus('checking');
-      console.log(`[Dashboard Sync Log] Found pending data. UID: ${user.uid}. Checking for duplicates...`);
+      setSyncStatus('syncing');
+      setIsSyncing(true);
+      console.log(`[Dashboard Sync Log] Finalizing pending request directly for ${user.uid}...`);
+      toast.info("Finalizing your service request...", { id: 'finalizing-task' });
+
       try {
-        const request = JSON.parse(pendingData);
-        
-        // Final check for duplicates in the current list
-        // This is critical to prevent infinite loops if the snapshot is slow
-        const isDuplicate = realJobs.some(j => {
-          if (request.syncId && j.syncId === request.syncId) return true;
-          return j.serviceType?.toLowerCase() === (request.serviceType || request.service)?.toLowerCase() && 
-                 Math.abs(new Date(j.createdAt).getTime() - Date.now()) < 600000; // 10 min window
-        });
-
-        if (isDuplicate) {
-          console.log("[Dashboard Sync Log] Duplicate found in realJobs. Clearing session storage.");
-          sessionStorage.removeItem('pending_service_request');
+        const result = await syncPendingRequestService(user);
+        if (result.success) {
           setSyncStatus('done');
-          return;
-        }
-
-        console.log("[Dashboard Sync Log] No duplicate found. Triggering API call...");
-        setSyncStatus('syncing');
-        toast.info("Finalizing your concierge request...", { id: 'finalizing-task' });
-        setIsSyncing(true);
-        
-        const res = await fetch('/api/service-request', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            clientId: user.uid,
-            clientName: user.displayName || 'Client',
-            ...request
-          })
-        });
-
-        const resData = await res.json().catch(() => ({}));
-        console.log("[Dashboard Sync Log] API Status:", res.status, "Response:", resData);
-
-        if (res.ok) {
-          console.log("[Dashboard Sync Log] Success! ID:", resData.id);
-          sessionStorage.removeItem('pending_service_request');
-          toast.success("Task created from concierge consultation!", { id: 'finalizing-task' });
-          
-          setSyncStatus('done');
-          // We keep isSyncing true for a bit longer to let Firestore catch up
-          setTimeout(() => {
-            setIsSyncing(false);
-          }, 5000);
+          toast.success("Task created and active!", { id: 'finalizing-task' });
         } else {
-          console.error("[Dashboard Sync Log] API error:", resData);
-          if (res.status === 400 || res.status === 409) {
-            console.log("[Dashboard Sync Log] Critical error or conflict. Clearing storage.");
-            sessionStorage.removeItem('pending_service_request');
-          }
-          const errorMsg = resData.message || resData.error || 'Server error';
-          toast.error(`Sync failed: ${errorMsg}`, { id: 'finalizing-task' });
-          setIsSyncing(false);
           setSyncStatus('idle');
         }
       } catch (err) {
         console.error("[Dashboard Sync Log] Exception:", err);
-        setIsSyncing(false);
         setSyncStatus('idle');
+      } finally {
+        setTimeout(() => {
+          setIsSyncing(false);
+        }, 1500);
       }
     }
   };
@@ -300,6 +250,28 @@ export default function Dashboard({ user }: DashboardProps) {
           isExpired
         };
       }).sort((a, b) => b.createdAt.getTime() - a.createdAt.getTime());
+
+      // Merge locally cached jobs for instant display
+      try {
+        const localSaved = JSON.parse(localStorage.getItem('taskmolly_saved_requests') || '[]');
+        const userLocal = localSaved.filter((lj: any) => lj.clientId === user.uid);
+        userLocal.forEach((lj: any) => {
+          if (!jobs.some(j => j.id === lj.id || (lj.syncId && (j as any).syncId === lj.syncId))) {
+            jobs.unshift({
+              id: lj.id,
+              status: lj.status || 'pending',
+              ...lj,
+              service: lj.serviceType || lj.service || 'General Service',
+              price: lj.clientPrice || lj.budget || 0,
+              date: lj.date || new Date().toLocaleDateString(),
+              createdAt: new Date(lj.createdAt || Date.now()),
+              isExpired: false
+            });
+          }
+        });
+      } catch (cacheErr) {
+        console.warn("Local jobs merge skipped:", cacheErr);
+      }
 
       setRealJobs(jobs);
       setLoading(false);
@@ -601,7 +573,7 @@ export default function Dashboard({ user }: DashboardProps) {
   }
 
   return (
-    <div className="min-h-[100dvh] h-[100dvh] w-full bg-primary-bg overflow-hidden flex flex-col items-center justify-start pt-20 md:pt-28 pb-4 relative px-4 md:px-6">
+    <div className="min-h-[100dvh] h-[100dvh] w-full bg-primary-bg overflow-hidden flex flex-col items-center justify-start pt-6 md:pt-8 pb-4 relative px-4 md:px-6">
       {/* Decorative ambient glow */}
       <div className="absolute top-1/4 left-1/2 -translate-x-1/2 -translate-y-1/2 w-72 h-72 rounded-full bg-accent-gold/5 blur-3xl pointer-events-none" />
 
