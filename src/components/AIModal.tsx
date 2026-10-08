@@ -4,8 +4,8 @@ import { X, Send, Sparkles } from 'lucide-react';
 import { askMollyStream } from '../services/geminiService';
 import { checkProviderAvailability, formatWaitTime } from '../services/availabilityService';
 import { useNavigate } from 'react-router-dom';
-import { auth, db } from '../firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { auth } from '../firebase';
+import { createServiceRequest } from '../lib/serviceRequests';
 import { toast } from 'sonner';
 import { savePendingRequest } from '../lib/pendingRequestService';
 
@@ -79,27 +79,15 @@ export default function AIModal({ onClose }: AIModalProps) {
       }
 
       console.log("[AIModal Sync Log] User logged in. Direct Firestore creation attempt...");
-      const firestorePayload = {
-        clientId: currentUser.uid,
+      const requestId = await createServiceRequest(currentUser.uid, {
         clientName: currentUser.displayName || 'Client',
         ...requestData,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      };
+      });
+      console.log("[AIModal Sync Log] Direct creation success! ID:", requestId);
 
-      const docRef = await addDoc(collection(db, 'serviceRequests'), firestorePayload);
-      console.log("[AIModal Sync Log] Direct creation success! ID:", docRef.id);
-
-      // Best effort notify API
-      fetch('/api/service-request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify(firestorePayload)
-      }).catch(err => console.warn("API notification skipped:", err));
-
-      toast.success("Task created! Redirecting to your dashboard...");
+      toast.success("Task created! Opening your tasks...");
       setTimeout(() => {
-        navigate('/dashboard');
+        navigate('/tasks');
         onClose();
       }, 1500);
     } catch (err) {

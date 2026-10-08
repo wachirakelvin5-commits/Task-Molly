@@ -4,6 +4,7 @@ import { io, Socket } from 'socket.io-client';
 import { motion } from 'motion/react';
 import { Send, X, CheckCircle, Trash2 } from 'lucide-react';
 import { UserProfile, ChatMessage } from '../types';
+import { cancelRequest } from '../lib/serviceRequests';
 
 interface ChatPageProps {
   user: UserProfile;
@@ -64,22 +65,11 @@ export default function ChatPage({ user }: ChatPageProps) {
     
     setIsCancelling(true);
     try {
-      const res = await fetch(`/api/cancel-service-request`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ taskId: jobId, clientId: user.uid })
-      });
-      
-      if (res.ok) {
-        navigate('/dashboard');
-      } else {
-        const data = await res.json().catch(() => ({}));
-        alert(data.error || "Failed to cancel request");
-        setIsCancelling(false);
-      }
+      await cancelRequest(jobId);
+      navigate('/tasks');
     } catch (err) {
       console.error("Cancel error:", err);
-      alert("An error occurred");
+      alert("This request can no longer be cancelled.");
       setIsCancelling(false);
     }
   };

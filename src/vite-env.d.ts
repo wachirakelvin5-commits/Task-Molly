@@ -3,6 +3,7 @@
 
 interface ImportMetaEnv {
   readonly VITE_VAPID_KEY: string;
+  readonly VITE_USE_FIREBASE_EMULATORS?: string;
   // more env variables...
 }
 

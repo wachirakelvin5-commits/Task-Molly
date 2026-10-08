@@ -30,13 +30,22 @@ export interface TaskerProfile {
 export interface ServiceRequest {
   id: string;
   clientId: string;
+  clientName?: string;
   serviceType: string;
+  serviceCategory?: string;
   description: string;
   urgency: string;
-  location?: { lat: number; lng: number; address: string };
+  location?: string;
   budget: number;
-  status: 'pending' | 'assigned' | 'in-progress' | 'completed' | 'cancelled';
-  createdAt: string;
+  clientPrice?: number;
+  providerPrice?: number;
+  status: 'pending' | 'accepted' | 'assigned' | 'in-progress' | 'awaiting-confirmation' | 'completed' | 'cancelled';
+  providerId?: string;
+  providerName?: string;
+  rejectedProviderIds?: string[];
+  issueReportedAt?: any;
+  createdAt: any;
+  postedAt?: any;
 }
 
 export interface Job {
