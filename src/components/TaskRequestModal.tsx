@@ -28,8 +28,8 @@ import {
   Timer
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
-import { auth, db } from '../firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { auth } from '../firebase';
+import { createServiceRequest } from '../lib/serviceRequests';
 import { toast } from 'sonner';
 import { savePendingRequest } from '../lib/pendingRequestService';
 
@@ -287,23 +287,7 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
         return;
       }
 
-      // Logged in user: Write to Firestore serviceRequests
-      await addDoc(collection(db, 'serviceRequests'), {
-        clientId: currentUser.uid,
-        ...requestPayload,
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp()
-      });
-
-      // Best effort notify API
-      fetch('/api/service-request', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          clientId: currentUser.uid,
-          ...requestPayload
-        })
-      }).catch(err => console.warn("API notification skipped:", err));
+      await createServiceRequest(currentUser.uid, requestPayload);
 
       toast.success(`Request for ${selectedService.name} posted successfully! Matching verified pros...`);
       setTimeout(() => {

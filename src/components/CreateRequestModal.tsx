@@ -2,8 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { X, Clock, MapPin, DollarSign, ShieldCheck, AlertCircle, Send, Zap, Droplet, Wrench, Hammer, Paintbrush, Leaf, Shield, Wind, Layout, Bug, Truck, Sparkles, WashingMachine } from 'lucide-react';
 import { toast } from 'sonner';
-import { db } from '../firebase';
-import { collection, addDoc, serverTimestamp } from 'firebase/firestore';
+import { createServiceRequest } from '../lib/serviceRequests';
 
 interface CreateRequestModalProps {
   isOpen: boolean;
@@ -52,25 +51,16 @@ export default function CreateRequestModal({ isOpen, onClose, userId, userName, 
 
     setIsSubmitting(true);
     try {
-      const requestData = {
-        clientId: userId,
+      await createServiceRequest(userId, {
         clientName: userName,
         serviceType: service,
         description,
         budget: Number(budget),
-        clientPrice: Number(budget),
-        providerPrice: Number(budget) * 0.85, // 15% commission
         location,
         urgency,
-        status: 'pending',
-        createdAt: serverTimestamp(),
-        updatedAt: serverTimestamp(),
         date: new Date().toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
-        syncStatus: 'done'
-      };
-
-      await addDoc(collection(db, 'serviceRequests'), requestData);
-      toast.success("Request created successfully! Checking for matching pros...");
+      });
+      toast.success("Request posted! Matching pros will see it under New Tasks.");
       onClose();
       // Reset form
       setService('');

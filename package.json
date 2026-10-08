@@ -9,6 +9,7 @@
     "preview": "vite preview",
     "clean": "rm -rf dist build",
     "lint": "tsc --noEmit",
+    "test:rules": "npx -y firebase-tools@13.29.1 emulators:exec --only firestore --project demo-taskmolly \"tsx --test tests/firestore.rules.test.ts\"",
     "start": "node server.ts"
   },
   "dependencies": {
@@ -45,6 +46,7 @@
   },
   "devDependencies": {
     "@firebase/eslint-plugin-security-rules": "^0.0.2",
+    "@firebase/rules-unit-testing": "^5.0.2",
     "@types/cors": "^2.8.19",
     "@types/express": "^4.17.21",
     "@types/node": "^22.14.0",

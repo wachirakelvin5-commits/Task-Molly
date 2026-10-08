@@ -12,6 +12,7 @@ interface ComplaintModalProps {
   targetId: string;
   isOpen: boolean;
   onClose: () => void;
+  onSubmitted?: () => void;
 }
 
 const CLIENT_REASONS = [
@@ -32,7 +33,8 @@ export default function ComplaintModal({
   reporterRole, 
   targetId, 
   isOpen, 
-  onClose 
+  onClose,
+  onSubmitted
 }: ComplaintModalProps) {
   const [reason, setReason] = useState('');
   const [comment, setComment] = useState('');
@@ -61,6 +63,7 @@ export default function ComplaintModal({
       toast.success('Complaint submitted to admin for review. Admin will reach out within 24 hours.', {
         duration: 5000
       });
+      onSubmitted?.();
       onClose();
     } catch (err) {
       console.error('Error submitting complaint:', err);

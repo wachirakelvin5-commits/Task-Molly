@@ -16,7 +16,7 @@ import { doc, setDoc, getDoc, collection, query, where, getDocs } from 'firebase
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { UserRole, UserProfile } from '../types';
-import { Phone, Mail, ArrowRight, CheckCircle2, Beaker, User, Briefcase, ChevronLeft, Lock, UserPlus, Sparkles } from 'lucide-react';
+import { Phone, Mail, ArrowRight, CheckCircle2, User, Briefcase, ChevronLeft, Lock, UserPlus, Sparkles } from 'lucide-react';
 import { toast } from 'sonner';
 import { finalizePendingRequest as syncPendingRequestService } from '../lib/pendingRequestService';
 
@@ -26,7 +26,7 @@ declare global {
   }
 }
 
-type AuthStep = 'role-selection' | 'method-selection' | 'phone-input' | 'otp-input' | 'email-input' | 'password-input' | 'registration-confirm' | 'profile-setup' | 'manual-login';
+type AuthStep = 'role-selection' | 'method-selection' | 'phone-input' | 'otp-input' | 'email-input' | 'password-input' | 'registration-confirm' | 'profile-setup';
 
 export default function AuthPage() {
   const [loading, setLoading] = useState(false);
@@ -236,106 +236,6 @@ export default function AuthPage() {
     }
   };
 
-  const handleAdminBypass = () => {
-    setLoading(true);
-    const mockAdmin: UserProfile = {
-      uid: 'admin_bypass',
-      email: 'wachirakelvin5@gmail.com', // Using user's email which is already treated as admin in App.tsx
-      displayName: 'System Administrator',
-      role: 'admin' as any,
-      isVerified: true,
-      createdAt: new Date().toISOString(),
-    };
-    
-    localStorage.setItem('taskmolly_mock_user', JSON.stringify(mockAdmin));
-    toast.success("Admin Bypass Successful");
-    window.location.href = '/admin-dashboard';
-  };
-
-  const handleDeveloperLogin = async (roleOverride?: UserRole) => {
-    const role = roleOverride || selectedRole;
-    console.log("Starting Developer Login for role:", role);
-    if (!role) {
-      toast.error("Please select a role first");
-      return;
-    }
-    
-    setLoading(true);
-    try {
-      // Use a more stable ID for testing persistence across sessions
-      const mockId = `dev_${role}_stable`;
-      console.log("Using stable mockId:", mockId);
-      
-      const mockUser: UserProfile = {
-        uid: mockId,
-        email: email || `dev_${role}@taskmolly.test`,
-        displayName: displayName || `Dev ${role === 'tasker' ? 'Pro' : 'Client'}`,
-        photoURL: `https://picsum.photos/seed/${mockId}/200`,
-        role: role,
-        isVerified: true,
-        createdAt: new Date().toISOString(),
-      };
-
-      if (role === 'tasker') {
-        mockUser.walletBalance = 4500;
-        mockUser.services = ['Mama Fua', 'Plumbing', 'Electrician', 'Gardener'];
-      }
-
-      console.log("Saving mock user to localStorage...");
-      localStorage.setItem('taskmolly_mock_user', JSON.stringify(mockUser));
-      
-      const targetPath = role === 'tasker' ? '/provider-dashboard' : '/dashboard';
-      
-      // Attempt Firestore write
-      console.log("Attempting to save mock user to Firestore...");
-      setLoading(true);
-      try {
-        await Promise.race([
-          setDoc(doc(db, 'users', mockId), mockUser),
-          new Promise((_, reject) => setTimeout(() => reject(new Error("Firestore Write Timeout")), 5000))
-        ]);
-        console.log("Firestore write successful for mock user");
-      } catch (fErr) {
-        console.warn("Firestore write for dev session failed/timed out (proceeding with local session):", fErr);
-      }
-      
-      // Finalize any pending AI concierge requests before redirecting
-      console.log("[Auth] Checking for pending service requests in session storage storage...");
-      const pendingData = sessionStorage.getItem('pending_service_request');
-      if (pendingData) {
-        console.log("[Auth] Data found. Triggering sync for UID:", mockId);
-        await finalizePendingRequest(mockId, mockUser.displayName || `Dev ${role === 'tasker' ? 'Pro' : 'Client'}`);
-        // Significant delay to ensure Firestore propagation before dashboard fetch
-        console.log("[Auth] Sync complete. Waiting for propagation...");
-        await new Promise(resolve => setTimeout(resolve, 1500));
-      } else {
-        console.log("[Auth] No pending data found in session storage.");
-      }
-      
-      toast.success("Developer Login Successful", { id: 'dev-login-toast' });
-      
-      const queryParams = new URLSearchParams(window.location.search);
-      const redirectPath = queryParams.get('redirect');
-      
-      let finalTarget = targetPath;
-      if (redirectPath === 'pending-task') {
-        finalTarget = '/dashboard';
-      } else if (redirectPath && redirectPath.startsWith('/')) {
-        finalTarget = redirectPath;
-      }
-      
-      console.log("[Auth] finalTarget for redirect:", finalTarget);
-      
-      // Redirect
-      window.location.href = finalTarget;
-      
-    } catch (err: any) {
-      console.error("Dev login critical error:", err);
-      toast.error("Developer login failed: " + (err.message || "Unknown error"));
-      setLoading(false);
-    }
-  };
-
   const [socialAuthModal, setSocialAuthModal] = useState<{
     isOpen: boolean;
     provider: 'google' | 'apple';
@@ -401,13 +301,6 @@ export default function AuthPage() {
   };
 
   const handleGoogleLogin = async () => {
-    if (selectedRole === 'client') {
-      // For client login, open the smooth Google account selector
-      setSocialAuthModal({ isOpen: true, provider: 'google' });
-      return;
-    }
-    
-    // For provider login, try standard flow
     if (!selectedRole) return;
     setLoading(true);
     const provider = new GoogleAuthProvider();
@@ -415,8 +308,10 @@ export default function AuthPage() {
       const result = await signInWithPopup(auth, provider);
       await handleUserCreation(result.user, selectedRole);
     } catch (err: any) {
-      console.warn("Google popup rejected, falling back to account selector:", err);
-      setSocialAuthModal({ isOpen: true, provider: 'google' });
+      console.warn("Google sign-in failed:", err);
+      if (err?.code !== 'auth/popup-closed-by-user' && err?.code !== 'auth/cancelled-popup-request') {
+        toast.error("Google sign-in failed. Please allow pop-ups and try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -472,7 +367,6 @@ export default function AuthPage() {
     if (step === 'method-selection') setStep('role-selection');
     if (step === 'phone-input') setStep('method-selection');
     if (step === 'email-input') setStep('method-selection');
-    if (step === 'manual-login') setStep('method-selection');
     if (step === 'password-input') setStep('email-input');
     if (step === 'otp-input') setStep('phone-input');
     if (step === 'registration-confirm') {
@@ -538,7 +432,7 @@ export default function AuthPage() {
                 <Sparkles size={20} />
               </div>
               <p className="text-xs text-rich-black/70 font-medium leading-relaxed">
-                Finalize your <span className="text-accent-gold font-bold">concierge request</span>! Log in below. Dev Login is available for instant testing.
+                Finalize your <span className="text-accent-gold font-bold">concierge request</span>! Log in below.
               </p>
             </div>
           </motion.div>
@@ -581,37 +475,6 @@ export default function AuthPage() {
                 <ArrowRight className="ml-auto text-white/20 group-hover:text-accent-gold transition-all group-hover:translate-x-1" size={20} />
               </button>
 
-              <div className="pt-8 space-y-3">
-                <div className="relative py-4">
-                  <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-warm-gray/50"></div></div>
-                  <div className="relative flex justify-center text-[10px] uppercase tracking-[0.3em] font-bold text-rich-black/30"><span className="bg-white px-4 text-center leading-tight">Dev & Admin Entry</span></div>
-                </div>
-
-                <div className="grid grid-cols-2 gap-3">
-                   <button 
-                    onClick={() => handleDeveloperLogin('client')}
-                    className="flex flex-col items-center justify-center gap-1 p-4 bg-primary-bg border border-warm-gray rounded-2xl hover:border-accent-gold transition-all group"
-                  >
-                    <Beaker size={18} className="text-accent-gold group-hover:scale-110 transition-transform" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-rich-black/60">Dev Client</span>
-                  </button>
-                  <button 
-                    onClick={() => handleDeveloperLogin('tasker')}
-                    className="flex flex-col items-center justify-center gap-1 p-4 bg-primary-bg border border-warm-gray rounded-2xl hover:border-accent-gold transition-all group"
-                  >
-                    <Beaker size={18} className="text-accent-gold group-hover:scale-110 transition-transform" />
-                    <span className="text-[10px] font-bold uppercase tracking-wider text-rich-black/60">Dev Provider</span>
-                  </button>
-                </div>
-
-                <button 
-                  onClick={handleAdminBypass}
-                  className="w-full flex items-center justify-center gap-3 bg-accent-gold/5 border border-accent-gold/20 text-accent-gold py-4 rounded-2xl hover:bg-accent-gold/10 transition-all font-bold text-xs tracking-widest uppercase"
-                >
-                  <Lock size={16} />
-                  Admin Dashboard Login
-                </button>
-              </div>
             </motion.div>
           )}
 
@@ -665,29 +528,6 @@ export default function AuthPage() {
                   </>
                 ) : (
                   <>
-                    <button 
-                      onClick={() => handleDeveloperLogin()}
-                      className="w-full flex items-center justify-between p-6 bg-rich-black text-white border border-rich-black rounded-[2rem] hover:bg-rich-black/90 hover:shadow-xl hover:shadow-rich-black/20 transition-all group scale-[1.02]"
-                    >
-                      <div className="flex items-center gap-4">
-                        <div className="w-12 h-12 bg-white/10 rounded-2xl flex items-center justify-center text-accent-gold">
-                          <Beaker size={24} />
-                        </div>
-                        <div className="text-left">
-                          <p className="text-[10px] font-bold uppercase tracking-widest text-accent-gold">Testing Environment</p>
-                          <h4 className="font-semibold text-lg">Quick Dev Provider Login</h4>
-                        </div>
-                      </div>
-                      <ArrowRight size={20} className="text-accent-gold group-hover:translate-x-1 transition-transform" />
-                    </button>
-
-                    <div className="relative py-6">
-                      <div className="absolute inset-0 flex items-center"><div className="w-full border-t border-warm-gray/50"></div></div>
-                      <div className="relative flex justify-center text-[10px] uppercase tracking-[0.3em] font-bold text-rich-black/30">
-                        <span className="bg-white px-6">Production Provider Login</span>
-                      </div>
-                    </div>
-                    
                     <div className="grid grid-cols-2 gap-4">
                       <button 
                         onClick={handleGoogleLogin}
@@ -717,62 +557,8 @@ export default function AuthPage() {
                       Continue with Phone
                     </button>
 
-                    <button 
-                      onClick={() => setStep('manual-login')}
-                      className="w-full text-center text-[10px] font-bold uppercase tracking-widest text-rich-black/20 hover:text-accent-gold transition-all"
-                    >
-                      Other Login Options
-                    </button>
                   </>
                 )}
-              </div>
-            </motion.div>
-          )}
-
-          {step === 'manual-login' && (
-            <motion.div 
-              key="manual"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-6"
-            >
-              <button 
-                onClick={goBack}
-                className="flex items-center gap-2 text-xs text-rich-black/40 hover:text-accent-gold transition-colors"
-              >
-                <ChevronLeft size={14} /> Back
-              </button>
-
-              <div className="space-y-4">
-                <div className="text-left">
-                  <label className="text-[10px] uppercase tracking-widest text-rich-black/40 font-bold ml-4 mb-2 block">Identifier (Email or Phone)</label>
-                  <input 
-                    type="text" 
-                    placeholder="Enter anything for testing..."
-                    value={email}
-                    onChange={(e) => setEmail(e.target.value)}
-                    className="w-full bg-primary-bg border border-warm-gray rounded-2xl py-4 px-6 focus:outline-none focus:border-accent-gold transition-all"
-                  />
-                </div>
-                <div className="text-left">
-                  <label className="text-[10px] uppercase tracking-widest text-rich-black/40 font-bold ml-4 mb-2 block">Display Name</label>
-                  <input 
-                    type="text" 
-                    placeholder="Guest User"
-                    value={displayName}
-                    onChange={(e) => setDisplayName(e.target.value)}
-                    className="w-full bg-primary-bg border border-warm-gray rounded-2xl py-4 px-6 focus:outline-none focus:border-accent-gold transition-all"
-                  />
-                </div>
-                <button 
-                  onClick={() => handleDeveloperLogin()}
-                  disabled={loading || !email}
-                  className="w-full bg-rich-black text-white py-4 rounded-full font-bold uppercase tracking-widest text-xs hover:bg-rich-black/90 transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Instant Access'}
-                  {!loading && <ArrowRight size={18} />}
-                </button>
               </div>
             </motion.div>
           )}

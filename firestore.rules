@@ -45,6 +45,7 @@ service cloud.firestore {
       allow create: if (isOwner(uid) || isAdmin()) && isValidUser(incoming());
       allow update: if (isOwner(uid) || isAdmin()) && 
         incoming().role == existing().role &&
+        (!('services' in incoming()) || (incoming().services is list && incoming().services.size() <= 20)) &&
         (!('fcmToken' in incoming()) || (incoming().fcmToken is string && incoming().fcmToken.size() <= 500));
     }
 
@@ -55,12 +56,30 @@ service cloud.firestore {
 
     // ===============================================================
     // Collection: Service Requests
+    // Lifecycle (see src/lib/serviceRequests.ts):
+    //   pending -> accepted (provider) -> assigned (client confirms)
+    //   accepted -> pending (client rejects / provider withdraws)
+    //   assigned -> in-progress -> awaiting-confirmation (provider)
+    //   awaiting-confirmation -> completed (client signs off)
+    //   pending | accepted | assigned -> cancelled (client)
     // ===============================================================
     match /serviceRequests/{requestId} {
+      function categories() {
+        return ['Cleaning & Domestic', 'Plumbing & Water', 'Electrical & Solar', 'Repairs & Fundi', 'Outdoor & Relocation'];
+      }
+
+      function callerProfile() {
+        return get(/databases/$(database)/documents/users/$(request.auth.uid)).data;
+      }
+
+      function isTasker() {
+        return isSignedIn() && callerProfile().role == 'tasker';
+      }
+
       function isValidRequest(data) {
         return data.serviceType is string && data.serviceType.size() <= 100 &&
                data.clientId is string && data.clientId.size() <= 128 &&
-               data.status in ['pending', 'assigned', 'in-progress', 'completed', 'cancelled'] &&
+               data.status in ['pending', 'accepted', 'assigned', 'in-progress', 'awaiting-confirmation', 'completed', 'cancelled'] &&
                (!('budget' in data) || data.budget is number) &&
                (!('location' in data) || (data.location is string && data.location.size() <= 200)) &&
                (!('clientPrice' in data) || data.clientPrice is number) &&
@@ -69,32 +88,91 @@ service cloud.firestore {
                (!('syncId' in data) || (data.syncId == null || (data.syncId is string && data.syncId.size() <= 128)));
       }
 
-      // Allow creation if data is valid. 
-      // Note: We remove the strict request.auth check here to allow our server-side API 
-      // (which may not have a user context in our environment's Admin SDK configuration) 
-      // to create requests. Security is managed at the API layer.
-      allow create: if isValidRequest(incoming()) && (isSignedIn() || true); 
-      
-      allow read: if (isSignedIn() && (
-        resource.data.clientId == request.auth.uid || 
-        resource.data.get('providerId', '') == request.auth.uid || 
-        isAdmin()
-      )) || 
-      (resource.data.status in ['pending', 'assigned']);
+      function changed() { return incoming().diff(existing()).affectedKeys(); }
+      function fromTo(from, to) { return existing().status == from && incoming().status == to; }
+      function stampedNow(field) { return incoming()[field] == request.time; }
+      function isAssignedProvider() { return existing().get('providerId', '') == request.auth.uid; }
 
-      allow update: if (isSignedIn() && (
-        // Client actions
-        (existing().clientId == request.auth.uid && (
-          (existing().status == 'pending' && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'description', 'budget', 'clientPrice', 'updatedAt'])) ||
-          (incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt']) && incoming().status == 'cancelled')
-        )) ||
-        // Provider actions
-        (existing().status == 'pending' && incoming().status == 'assigned' && incoming().providerId == request.auth.uid) ||
-        (existing().providerId == request.auth.uid && incoming().status in ['in-progress', 'completed'] && incoming().diff(existing()).affectedKeys().hasOnly(['status', 'updatedAt'])) ||
-        isAdmin()
-      ));
+      // Open = pending and posted (or reposted) within the last 3 hours.
+      function isOpen(data) {
+        let posted = data.get('postedAt', data.get('createdAt', null));
+        return data.status == 'pending' && posted is timestamp && request.time < posted + duration.value(3, 'h');
+      }
 
-      allow delete: if isAdmin() || (isSignedIn() && existing().clientId == request.auth.uid);
+      function clientTransition() {
+        let previouslyRejected = existing().get('rejectedProviderIds', []);
+        return existing().clientId == request.auth.uid && (
+          // Edit or repost while still waiting for a pro
+          (fromTo('pending', 'pending') &&
+            changed().hasOnly(['description', 'budget', 'clientPrice', 'providerPrice', 'postedAt', 'updatedAt']) &&
+            (!changed().hasAny(['postedAt']) || stampedNow('postedAt')) &&
+            isValidRequest(incoming())) ||
+          // Cancel before work starts
+          (existing().status in ['pending', 'accepted', 'assigned'] && incoming().status == 'cancelled' &&
+            changed().hasOnly(['status', 'cancelledAt', 'updatedAt']) && stampedNow('cancelledAt')) ||
+          // Confirm the pro who accepted
+          (fromTo('accepted', 'assigned') &&
+            changed().hasOnly(['status', 'confirmedAt', 'updatedAt']) && stampedNow('confirmedAt')) ||
+          // Reject the pro who accepted: reopen and never offer it to them again
+          (fromTo('accepted', 'pending') &&
+            changed().hasOnly(['status', 'providerId', 'providerName', 'acceptedAt', 'rejectedProviderIds', 'updatedAt']) &&
+            !('providerId' in incoming()) &&
+            incoming().rejectedProviderIds.hasAll(previouslyRejected) &&
+            incoming().rejectedProviderIds.size() == previouslyRejected.size() + 1 &&
+            existing().providerId in incoming().rejectedProviderIds) ||
+          // Sign off completed work
+          (fromTo('awaiting-confirmation', 'completed') &&
+            changed().hasOnly(['status', 'completedAt', 'updatedAt']) && stampedNow('completedAt')) ||
+          // Flag a problem with work marked complete (a complaint is filed separately)
+          (fromTo('awaiting-confirmation', 'awaiting-confirmation') &&
+            changed().hasOnly(['issueReportedAt', 'updatedAt']) && stampedNow('issueReportedAt'))
+        );
+      }
+
+      function providerTransition() {
+        return
+          // Accept an open request in one of the provider's categories
+          (fromTo('pending', 'accepted') && isOpen(existing()) && isTasker() &&
+            existing().clientId != request.auth.uid &&
+            !(request.auth.uid in existing().get('rejectedProviderIds', [])) &&
+            existing().get('serviceCategory', '') in callerProfile().get('services', []) &&
+            incoming().providerId == request.auth.uid &&
+            incoming().providerName is string && incoming().providerName.size() <= 100 &&
+            changed().hasOnly(['status', 'providerId', 'providerName', 'acceptedAt', 'updatedAt']) &&
+            stampedNow('acceptedAt')) ||
+          // Withdraw before the client confirms
+          (fromTo('accepted', 'pending') && isAssignedProvider() &&
+            changed().hasOnly(['status', 'providerId', 'providerName', 'acceptedAt', 'updatedAt']) &&
+            !('providerId' in incoming())) ||
+          // Start the job
+          (fromTo('assigned', 'in-progress') && isAssignedProvider() &&
+            changed().hasOnly(['status', 'startedAt', 'updatedAt']) && stampedNow('startedAt')) ||
+          // Mark the work done; the client then signs off
+          (fromTo('in-progress', 'awaiting-confirmation') && isAssignedProvider() &&
+            changed().hasOnly(['status', 'providerCompletedAt', 'updatedAt']) && stampedNow('providerCompletedAt'));
+      }
+
+      allow create: if isSignedIn() &&
+        incoming().clientId == request.auth.uid &&
+        incoming().status == 'pending' &&
+        isValidRequest(incoming()) &&
+        incoming().get('serviceCategory', '') in categories() &&
+        !('providerId' in incoming()) &&
+        stampedNow('createdAt') && stampedNow('postedAt') && stampedNow('updatedAt');
+
+      // Providers may browse pending requests; everything else is limited to the two parties.
+      allow read: if isSignedIn() && (
+        resource.data.clientId == request.auth.uid ||
+        resource.data.get('providerId', '') == request.auth.uid ||
+        isAdmin() ||
+        (resource.data.status == 'pending' && isTasker())
+      );
+
+      allow update: if isAdmin() ||
+        (isSignedIn() && stampedNow('updatedAt') && (clientTransition() || providerTransition()));
+
+      allow delete: if isAdmin() ||
+        (isSignedIn() && existing().clientId == request.auth.uid && existing().status in ['pending', 'cancelled']);
     }
 
     // ===============================================================
