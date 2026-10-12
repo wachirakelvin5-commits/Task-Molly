@@ -1,551 +1,923 @@
-import { useState, useEffect, useRef } from 'react';
-import { motion, AnimatePresence } from 'motion/react';
-import { 
-  BarChart3, 
-  Users, 
-  Briefcase, 
-  AlertTriangle, 
-  TrendingUp, 
-  ArrowRight,
-  ShieldCheck,
-  Zap,
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
+import { Link } from 'react-router-dom';
+import {
   Activity,
-  DollarSign,
-  Clock,
-  Layers,
+  AlertTriangle,
+  Ban,
+  CheckCircle2,
   ChevronRight,
-  Filter,
+  Clock,
   Download,
-  Calendar,
+  Hourglass,
+  Info,
+  Layers,
+  RefreshCw,
+  Search,
+  ShieldCheck,
+  Timer,
+  UserX,
+  Wallet,
+  Wrench,
   X,
-  FileText,
-  Table,
-  CheckCircle2
 } from 'lucide-react';
-import { 
-  ResponsiveContainer, 
-  AreaChart, 
-  Area, 
-  XAxis, 
-  YAxis, 
-  Tooltip, 
-  CartesianGrid,
-  BarChart,
+import {
   Bar,
-  PieChart,
-  Pie,
-  Cell
+  BarChart,
+  CartesianGrid,
+  Legend,
+  ResponsiveContainer,
+  Tooltip,
+  XAxis,
+  YAxis,
 } from 'recharts';
-import { db, handleFirestoreError, OperationType, auth } from '../firebase';
-import { collection, query, onSnapshot, where } from 'firebase/firestore';
-import { Link, useNavigate } from 'react-router-dom';
-import DatePicker from 'react-datepicker';
-import 'react-datepicker/dist/react-datepicker.css';
-import { jsPDF } from 'jspdf';
-import 'jspdf-autotable';
+import { collection, deleteField, doc, onSnapshot, query, serverTimestamp, updateDoc, where } from 'firebase/firestore';
+import { toast } from 'sonner';
 import * as XLSX from 'xlsx';
-import { format, subDays, isWithinInterval } from 'date-fns';
-import { useDeviceType } from '../hooks/useDeviceType';
+import { db, handleFirestoreError, OperationType } from '../firebase';
+import {
+  ACTIVE_STAGES,
+  AdminRequest,
+  LiveRow,
+  LiveStage,
+  PERIOD_LABELS,
+  PeriodKey,
+  STAGE_LABELS,
+  change,
+  exportRows,
+  formatDateTime,
+  formatDuration,
+  formatKES,
+  formatPercent,
+  inPeriod,
+  liveSummary,
+  makePeriod,
+  money,
+  normalizeRequest,
+  performance,
+  previousPeriod,
+  toCSV,
+} from '../lib/adminMetrics';
+import { SERVICE_CATEGORIES, toDate } from '../lib/requestModel';
 
-// Superset-inspired color palette
-const COLORS = ['#FFC700', '#2D3142', '#EF4444', '#10B981', '#3B82F6', '#8B5CF6'];
+type Tab = 'live' | 'performance' | 'money';
 
-const REVENUE_DATA = [
-  { name: 'Mon', revenue: 4000, tasks: 24 },
-  { name: 'Tue', revenue: 3000, tasks: 18 },
-  { name: 'Wed', revenue: 2000, tasks: 22 },
-  { name: 'Thu', revenue: 2780, tasks: 30 },
-  { name: 'Fri', revenue: 1890, tasks: 42 },
-  { name: 'Sat', revenue: 2390, tasks: 35 },
-  { name: 'Sun', revenue: 3490, tasks: 48 },
+const TABS: { id: Tab; label: string }[] = [
+  { id: 'live', label: 'Live operations' },
+  { id: 'performance', label: 'Performance' },
+  { id: 'money', label: 'Money' },
 ];
 
-const CATEGORY_DATA = [
-  { name: 'Cleaning', value: 400 },
-  { name: 'Electrical', value: 300 },
-  { name: 'Plumbing', value: 300 },
-  { name: 'Moving', value: 200 },
-  { name: 'Laundry', value: 150 },
-];
+// Chart colours (validated for colour-blind separation and contrast on white).
+const INK = '#2D3142';
+const OUTCOME_COLORS = { completed: '#0F9D6E', cancelled: '#7C6FD6', expired: '#D97706' };
+const AXIS_TICK = { fontSize: 11, fill: '#6B7280' };
+const GRID = '#ECEDEF';
+
+/** Visual treatment per live stage: needs-action stages are red/amber, the rest neutral. */
+const STAGE_STYLE: Record<LiveStage, { badge: string; icon: typeof Activity; urgent?: boolean }> = {
+  issue: { badge: 'bg-red-50 text-red-700 border-red-200', icon: AlertTriangle, urgent: true },
+  expired: { badge: 'bg-red-50 text-red-700 border-red-200', icon: UserX, urgent: true },
+  expiring: { badge: 'bg-amber-50 text-amber-800 border-amber-200', icon: Hourglass, urgent: true },
+  open: { badge: 'bg-amber-50 text-amber-800 border-amber-200', icon: Search },
+  accepted: { badge: 'bg-blue-50 text-blue-700 border-blue-200', icon: Clock },
+  assigned: { badge: 'bg-slate-100 text-slate-700 border-slate-200', icon: ShieldCheck },
+  'in-progress': { badge: 'bg-slate-100 text-slate-700 border-slate-200', icon: Wrench },
+  'awaiting-confirmation': { badge: 'bg-blue-50 text-blue-700 border-blue-200', icon: CheckCircle2 },
+  completed: { badge: 'bg-green-50 text-green-700 border-green-200', icon: CheckCircle2 },
+  cancelled: { badge: 'bg-slate-100 text-slate-500 border-slate-200', icon: Ban },
+};
+
+interface Complaint {
+  id: string;
+  taskId?: string;
+  reason?: string;
+  reporterRole?: string;
+  timestamp: Date | null;
+}
+
+// ---------------------------------------------------------------------------
+// Small building blocks
+// ---------------------------------------------------------------------------
+
+function Card({ children, className = '' }: { children: ReactNode; className?: string }) {
+  return <div className={`bg-white border border-warm-gray/60 rounded-2xl md:rounded-3xl p-5 md:p-6 shadow-sm ${className}`}>{children}</div>;
+}
+
+function SectionTitle({ title, subtitle, right }: { title: string; subtitle?: string; right?: ReactNode }) {
+  return (
+    <div className="flex flex-wrap items-end justify-between gap-3 mb-5">
+      <div>
+        <h2 className="text-base md:text-lg font-bold text-rich-black">{title}</h2>
+        {subtitle && <p className="text-xs text-rich-black/50 mt-0.5">{subtitle}</p>}
+      </div>
+      {right}
+    </div>
+  );
+}
+
+function ChangeBadge({ value, goodWhenUp = true }: { value: number | null; goodWhenUp?: boolean }) {
+  if (value === null) return <span className="text-[11px] text-rich-black/40">no earlier data</span>;
+  const up = value >= 0;
+  const good = up === goodWhenUp;
+  return (
+    <span className={`text-[11px] font-semibold ${value === 0 ? 'text-rich-black/50' : good ? 'text-green-700' : 'text-red-600'}`}>
+      {up ? '▲' : '▼'} {Math.abs(Math.round(value * 100))}% <span className="font-normal text-rich-black/40">vs previous period</span>
+    </span>
+  );
+}
+
+function StatTile({
+  label,
+  value,
+  hint,
+  icon: Icon,
+  tone = 'neutral',
+  onClick,
+  active,
+}: {
+  label: string;
+  value: ReactNode;
+  hint?: ReactNode;
+  icon?: typeof Activity;
+  tone?: 'neutral' | 'urgent' | 'warn';
+  onClick?: () => void;
+  active?: boolean;
+  /** Listed so tiles can be rendered in loops (the project has no React type package). */
+  key?: string;
+}) {
+  const toneRing = tone === 'urgent' ? 'border-red-200' : tone === 'warn' ? 'border-amber-200' : 'border-warm-gray/60';
+  const iconTone = tone === 'urgent' ? 'text-red-600 bg-red-50' : tone === 'warn' ? 'text-amber-700 bg-amber-50' : 'text-rich-black/60 bg-primary-bg';
+  const Tag = onClick ? 'button' : 'div';
+  return (
+    <Tag
+      onClick={onClick}
+      className={`text-left bg-white border ${active ? 'border-rich-black ring-2 ring-rich-black/10' : toneRing} rounded-2xl p-4 shadow-sm min-w-0 ${
+        onClick ? 'hover:border-rich-black/40 transition-colors cursor-pointer' : ''
+      }`}
+    >
+      <div className="flex items-start justify-between gap-2">
+        <p className="text-[11px] font-semibold text-rich-black/55 leading-tight">{label}</p>
+        {Icon && (
+          <span className={`p-1.5 rounded-lg shrink-0 ${iconTone}`}>
+            <Icon size={14} />
+          </span>
+        )}
+      </div>
+      <p className="text-2xl font-black text-rich-black mt-1.5 tabular-nums truncate">{value}</p>
+      {hint && <div className="mt-1 text-[11px] text-rich-black/50">{hint}</div>}
+    </Tag>
+  );
+}
+
+function StageBadge({ stage }: { stage: LiveStage }) {
+  const s = STAGE_STYLE[stage];
+  const Icon = s.icon;
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full border text-[11px] font-semibold whitespace-nowrap ${s.badge}`}>
+      <Icon size={11} /> {STAGE_LABELS[stage]}
+    </span>
+  );
+}
+
+function EmptyState({ text }: { text: string }) {
+  return <div className="py-10 text-center text-sm text-rich-black/45">{text}</div>;
+}
+
+const kesTick = (v: number) => (v >= 1000 ? `${Math.round(v / 1000)}k` : String(v));
+
+// ---------------------------------------------------------------------------
+// Page
+// ---------------------------------------------------------------------------
 
 export default function AdminDashboard() {
-  const { isPhone } = useDeviceType();
-  const navigate = useNavigate();
-  const [startDate, setStartDate] = useState<Date | null>(subDays(new Date(), 7));
-  const [endDate, setEndDate] = useState<Date | null>(new Date());
-  const [showExportModal, setShowExportModal] = useState(false);
-  const [stats, setStats] = useState({
-    liveTasks: 0,
-    requestedUnassigned: 0,
-    completedValue: 0,
-    onlineProviders: 14,
-    complaintsCount: 0
-  });
+  const [requests, setRequests] = useState<AdminRequest[]>([]);
+  const [complaints, setComplaints] = useState<Complaint[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [loadError, setLoadError] = useState<string | null>(null);
+  const [now, setNow] = useState(() => Date.now());
 
+  const [tab, setTab] = useState<Tab>('live');
+  const [periodKey, setPeriodKey] = useState<PeriodKey>('30d');
+
+  // Live table filters
+  const [stageFilter, setStageFilter] = useState<LiveStage | 'all'>('all');
+  const [categoryFilter, setCategoryFilter] = useState<string>('all');
+  const [search, setSearch] = useState('');
+  const [busyId, setBusyId] = useState<string | null>(null);
+
+  // ---- Data: one live feed of every request, plus new complaints ----
   useEffect(() => {
-    if (!auth.currentUser) return;
-    
-    // Listen for complaints
-    const qComplaints = query(collection(db, 'complaints'), where('status', '==', 'new'));
-    const unsubComplaints = onSnapshot(qComplaints, (snap) => {
-      setStats(prev => ({ ...prev, complaintsCount: snap.size }));
-    }, (err) => {
-      handleFirestoreError(err, OperationType.LIST, 'complaints');
-    });
-
-    // Listen for service requests (KPIs)
-    const qRequests = query(collection(db, 'serviceRequests'));
-    const unsubRequests = onSnapshot(qRequests, (snap) => {
-      const all = snap.docs.map(doc => doc.data());
-      const live = all.filter(r => r.status === 'assigned' || r.status === 'in-progress').length;
-      const pending = all.filter(r => r.status === 'pending').length;
-      const completedValue = all.filter(r => r.status === 'completed')
-                               .reduce((sum, r) => sum + (r.clientPrice || 0), 0);
-      
-      setStats(prev => ({
-        ...prev,
-        liveTasks: live,
-        requestedUnassigned: pending,
-        completedValue: completedValue
-      }));
-    }, (err) => {
-      handleFirestoreError(err, OperationType.LIST, 'serviceRequests');
-    });
-
+    const unsubRequests = onSnapshot(
+      collection(db, 'serviceRequests'),
+      (snap) => {
+        setRequests(snap.docs.map((d) => normalizeRequest(d.id, d.data())));
+        setLoading(false);
+        setLoadError(null);
+      },
+      (err) => {
+        handleFirestoreError(err, OperationType.LIST, 'serviceRequests');
+        setLoadError('Could not load requests. Make sure you are signed in with the admin account.');
+        setLoading(false);
+      }
+    );
+    const unsubComplaints = onSnapshot(
+      query(collection(db, 'complaints'), where('status', '==', 'new')),
+      (snap) => {
+        setComplaints(
+          snap.docs
+            .map((d) => {
+              const data = d.data();
+              return { id: d.id, taskId: data.taskId, reason: data.reason, reporterRole: data.reporterRole, timestamp: toDate(data.timestamp) };
+            })
+            .sort((a, b) => (b.timestamp?.getTime() || 0) - (a.timestamp?.getTime() || 0))
+        );
+      },
+      (err) => handleFirestoreError(err, OperationType.LIST, 'complaints')
+    );
+    // Waiting times and expiry move on their own, so refresh the clock every minute.
+    const tick = setInterval(() => setNow(Date.now()), 60 * 1000);
     return () => {
-      unsubComplaints();
       unsubRequests();
+      unsubComplaints();
+      clearInterval(tick);
     };
   }, []);
 
-  const handleClearFilters = () => {
-    setStartDate(subDays(new Date(), 7));
-    setEndDate(new Date());
-  };
+  // ---- Metrics ----
+  const live = useMemo(() => liveSummary(requests, now), [requests, now]);
+  const period = useMemo(() => makePeriod(periodKey, new Date(now)), [periodKey, now]);
+  const prev = useMemo(() => previousPeriod(period), [period]);
+  const perf = useMemo(() => performance(requests, period), [requests, period]);
+  const perfPrev = useMemo(() => (prev ? performance(requests, prev) : null), [requests, prev]);
+  const cash = useMemo(() => money(requests, period), [requests, period]);
+  const cashPrev = useMemo(() => (prev ? money(requests, prev) : null), [requests, prev]);
 
-  const exportData = (formatType: 'csv' | 'xlsx' | 'pdf') => {
-    const dataToExport = [
-      ...METRICS.map(m => ({ Metric: m.label, Value: m.value, Change: m.change })),
-      ...CATEGORY_DATA.map(c => ({ Category: c.name, Value: c.value }))
-    ];
+  const complaintTaskIds = useMemo(() => new Set(complaints.map((c) => c.taskId).filter(Boolean)), [complaints]);
 
-    const fileName = `Dashboard_Report_${format(new Date(), 'yyyy-MM-dd')}`;
+  const filteredRows = useMemo(() => {
+    const q = search.trim().toLowerCase();
+    return live.rows.filter(
+      (r) =>
+        (stageFilter === 'all' || r.stage === stageFilter) &&
+        (categoryFilter === 'all' || r.category === categoryFilter) &&
+        (!q ||
+          [r.serviceType, r.clientName, r.providerName || '', r.location, r.id].some((v) => v.toLowerCase().includes(q)))
+    );
+  }, [live.rows, stageFilter, categoryFilter, search]);
 
-    if (formatType === 'csv') {
-      const headers = Object.keys(dataToExport[0]).join(',');
-      const rows = dataToExport.map(obj => Object.values(obj).join(',')).join('\n');
-      const csvContent = "data:text/csv;charset=utf-8," + headers + "\n" + rows;
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement("a");
-      link.setAttribute("href", encodedUri);
-      link.setAttribute("download", `${fileName}.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
-    } else if (formatType === 'xlsx') {
-      const ws = XLSX.utils.json_to_sheet(dataToExport);
-      const wb = XLSX.utils.book_new();
-      XLSX.utils.book_append_sheet(wb, ws, "Dashboard Data");
-      XLSX.writeFile(wb, `${fileName}.xlsx`);
-    } else if (formatType === 'pdf') {
-      const doc = new jsPDF() as any;
-      doc.setFontSize(20);
-      doc.text("Executive Dashboard Report", 14, 22);
-      doc.setFontSize(11);
-      doc.setTextColor(100);
-      doc.text(`Generated on: ${format(new Date(), 'PPP p')}`, 14, 30);
-      doc.text(`Period: ${format(startDate!, 'PP')} - ${format(endDate!, 'PP')}`, 14, 37);
+  // ---- Admin actions (firestore.rules let the admin update any request) ----
+  async function runAction(r: LiveRow, action: 'repost' | 'reopen' | 'cancel') {
+    const messages = {
+      repost: `Re-offer "${r.serviceType}" to providers for another 3 hours?`,
+      reopen: `Remove ${r.providerName || 'the provider'} from "${r.serviceType}" and offer it to other providers?`,
+      cancel: `Cancel "${r.serviceType}" for ${r.clientName || 'this client'}? This cannot be undone from the dashboard.`,
+    };
+    if (!window.confirm(messages[action])) return;
 
-      (doc as any).autoTable({
-        startY: 45,
-        head: [['Label', 'Value', 'Trend']],
-        body: METRICS.map(m => [m.label, m.value, m.change]),
-        theme: 'striped',
-        headStyles: { fillStyle: '#2D3142' }
-      });
+    const fields: Record<string, any> =
+      action === 'repost'
+        ? { postedAt: serverTimestamp() }
+        : action === 'reopen'
+          ? {
+              status: 'pending',
+              providerId: deleteField(),
+              providerName: deleteField(),
+              acceptedAt: deleteField(),
+              confirmedAt: deleteField(),
+              postedAt: serverTimestamp(),
+            }
+          : { status: 'cancelled', cancelledAt: serverTimestamp(), cancelledBy: 'admin' };
 
-      doc.save(`${fileName}.pdf`);
+    setBusyId(r.id);
+    try {
+      await updateDoc(doc(db, 'serviceRequests', r.id), { ...fields, updatedAt: serverTimestamp() });
+      toast.success(action === 'cancel' ? 'Request cancelled' : action === 'reopen' ? 'Request reopened for other providers' : 'Request re-offered for 3 hours');
+    } catch (err) {
+      handleFirestoreError(err, OperationType.UPDATE, `serviceRequests/${r.id}`);
+      toast.error('That change was not saved. Check your connection and admin access.');
+    } finally {
+      setBusyId(null);
     }
-    setShowExportModal(false);
-  };
+  }
 
-  const METRICS = [
-    { 
-      label: 'Gross Volume', 
-      value: `KES ${stats.completedValue.toLocaleString()}`, 
-      change: '+18.2%',
-      isPositive: true,
-      icon: DollarSign, 
-      color: 'text-green-600', 
-      bg: 'bg-green-50/50',
-    },
-    { 
-      label: 'Live Operations', 
-      value: stats.liveTasks, 
-      change: 'Active Now',
-      isPositive: true,
-      icon: Briefcase, 
-      color: 'text-blue-600', 
-      bg: 'bg-blue-50/50',
-    },
-    { 
-      label: 'Unassigned Tasks', 
-      value: stats.requestedUnassigned, 
-      change: stats.requestedUnassigned > 0 ? 'Action Needed' : 'Normal',
-      isPositive: false,
-      icon: Activity, 
-      color: 'text-accent-gold', 
-      bg: 'bg-accent-gold/5',
-    },
-    { 
-      label: 'Pending Cases', 
-      value: stats.complaintsCount, 
-      change: stats.complaintsCount > 0 ? 'Resolution Req.' : 'All clear',
-      isPositive: false,
-      icon: AlertTriangle, 
-      color: 'text-red-600', 
-      bg: 'bg-red-50/50',
-      link: '/admin-complaints'
+  // ---- Export ----
+  function exportData(kind: 'csv' | 'xlsx') {
+    const scope =
+      tab === 'live'
+        ? filteredRows
+        : requests.filter((r) => inPeriod(r.createdAt, period) || inPeriod(r.completedAt, period) || inPeriod(r.cancelledAt, period));
+    if (!scope.length) {
+      toast.info('Nothing to export for this view.');
+      return;
     }
-  ];
+    const rows = exportRows(scope, now);
+    const stamp = formatDateTime(new Date(now)).slice(0, 10);
+    const name = tab === 'live' ? `TaskMolly_live_requests_${stamp}` : `TaskMolly_${tab}_${period.key}_${stamp}`;
+
+    if (kind === 'csv') {
+      const blob = new Blob([toCSV(rows)], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `${name}.csv`;
+      a.click();
+      URL.revokeObjectURL(url);
+      return;
+    }
+
+    const wb = XLSX.utils.book_new();
+    XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(rows), 'Requests');
+    if (tab !== 'live') {
+      XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.json_to_sheet([
+          { Metric: 'Period', Value: PERIOD_LABELS[period.key] },
+          { Metric: 'Requests posted', Value: perf.posted },
+          { Metric: 'Completed jobs', Value: perf.completed },
+          { Metric: 'Cancelled', Value: perf.cancelled },
+          { Metric: 'Expired with no pro', Value: perf.expired },
+          { Metric: 'Completion rate', Value: formatPercent(perf.completionRate) },
+          { Metric: 'Agreed value of completed jobs (KES)', Value: cash.gross },
+          { Metric: 'Task Molly commission (KES)', Value: cash.commission },
+          { Metric: 'Provider payouts (KES)', Value: cash.payouts },
+          { Metric: 'Average job value (KES)', Value: cash.average === null ? '' : Math.round(cash.average) },
+        ]),
+        'Summary'
+      );
+      XLSX.utils.book_append_sheet(
+        wb,
+        XLSX.utils.json_to_sheet(
+          perf.byCategory.map((c) => {
+            const m = cash.byCategory.find((x) => x.category === c.category);
+            return {
+              Category: c.category,
+              Completed: c.completed,
+              Cancelled: c.cancelled,
+              Expired: c.expired,
+              'Completion rate': formatPercent(c.completionRate),
+              'Median time to accept': formatDuration(c.medianAcceptMs),
+              'Agreed value (KES)': m?.gross ?? 0,
+              'Commission (KES)': m?.commission ?? 0,
+            };
+          })
+        ),
+        'By category'
+      );
+    }
+    XLSX.writeFile(wb, `${name}.xlsx`);
+  }
+
+  // ---------------------------------------------------------------------------
+  // Render
+  // ---------------------------------------------------------------------------
+
+  const needsAction = live.counts.issue + live.counts.expired + live.counts.expiring;
 
   return (
-    <div className="min-h-[100dvh] bg-[#F0F2F5] pt-8 md:pt-10 pb-20">
-      <div className="max-w-[1600px] mx-auto px-4 md:px-8">
-        
-        {/* Header Section */}
-        <div className="flex flex-col md:flex-row md:items-center justify-between gap-6 mb-8 md:mb-10">
+    <div className="min-h-[100dvh] bg-[#F0F2F5] pt-6 md:pt-10 pb-20">
+      <div className="max-w-[1400px] mx-auto px-4 md:px-8">
+        {/* Header */}
+        <div className="flex flex-col lg:flex-row lg:items-end justify-between gap-4 mb-6">
           <div>
-            <div className="flex items-center gap-2 text-rich-black/40 text-[9px] md:text-[10px] font-bold uppercase tracking-[0.2em] mb-1.5 md:mb-2">
-              <ShieldCheck size={isPhone ? 10 : 12} className="text-accent-gold" />
-              Monitoring
+            <div className="flex items-center gap-2 text-rich-black/45 text-[11px] font-semibold mb-1">
+              <ShieldCheck size={13} className="text-accent-gold" /> Admin
             </div>
-            <h1 className="text-2xl md:text-4xl font-black text-rich-black tracking-tighter">
-              Admin <span className="text-accent-gold">Dashboard</span>
-            </h1>
+            <h1 className="text-2xl md:text-3xl font-black text-rich-black tracking-tight">Operations dashboard</h1>
+            <p className="text-xs text-rich-black/50 mt-1">
+              Live from Firestore · {requests.length.toLocaleString()} requests in total
+            </p>
           </div>
-          
-          <div className="flex flex-wrap items-center gap-2 md:gap-3">
-            <div className="relative z-20 flex-1 sm:flex-initial">
-              <DatePicker
-                selectsRange={true}
-                startDate={startDate}
-                endDate={endDate}
-                onChange={(update) => {
-                  const [start, end] = update;
-                  setStartDate(start);
-                  setEndDate(end);
-                }}
-                customInput={
-                  <button className="w-full flex items-center justify-center gap-2 bg-white border border-warm-gray px-3 md:px-4 py-2 md:py-2.5 rounded-xl hover:border-accent-gold transition-all font-bold text-[9px] md:text-[10px] uppercase tracking-widest text-rich-black shadow-sm group">
-                    <Calendar size={14} className="text-accent-gold group-hover:scale-110 transition-transform" /> 
-                    {startDate && endDate 
-                      ? `${format(startDate, 'MMM d')} - ${format(endDate, 'MMM d')}` 
-                      : 'Date Range'}
-                  </button>
-                }
-                shouldCloseOnSelect={true}
-                popperPlacement="bottom-end"
-                popperClassName="custom-datepicker-popper"
-              />
-            </div>
-            
-            <button 
-              onClick={handleClearFilters}
-              className="flex-1 sm:flex-initial flex items-center justify-center gap-2 bg-white border border-warm-gray px-3 md:px-4 py-2 md:py-2.5 rounded-xl hover:bg-primary-bg transition-all font-bold text-[9px] md:text-[10px] uppercase tracking-widest text-rich-black shadow-sm"
+
+          <div className="flex flex-wrap items-center gap-2">
+            {tab !== 'live' && (
+              <select
+                value={periodKey}
+                onChange={(e) => setPeriodKey(e.target.value as PeriodKey)}
+                className="bg-white border border-warm-gray rounded-xl px-3 py-2 text-xs font-semibold text-rich-black"
+                aria-label="Period"
+              >
+                {(Object.keys(PERIOD_LABELS) as PeriodKey[]).map((k) => (
+                  <option key={k} value={k}>
+                    {PERIOD_LABELS[k]}
+                  </option>
+                ))}
+              </select>
+            )}
+            <button
+              onClick={() => exportData('csv')}
+              className="flex items-center gap-1.5 bg-white border border-warm-gray px-3 py-2 rounded-xl text-xs font-semibold text-rich-black hover:border-rich-black/40"
             >
-              <X size={14} className="text-red-500" />
-              <span className="hidden sm:inline">Clear Filters</span>
-              <span className="sm:hidden">Reset</span>
+              <Download size={13} /> CSV
             </button>
-            
-            <button 
-              onClick={() => setShowExportModal(true)}
-              className="w-full sm:w-auto flex items-center justify-center gap-2 bg-rich-black text-white px-4 md:px-5 py-2.5 rounded-xl hover:bg-rich-black/90 transition-all font-bold text-[9px] md:text-[10px] uppercase tracking-widest shadow-lg shadow-rich-black/20"
+            <button
+              onClick={() => exportData('xlsx')}
+              className="flex items-center gap-1.5 bg-rich-black text-white px-3 py-2 rounded-xl text-xs font-semibold hover:bg-rich-black/90"
             >
-              <Download size={14} /> Export
+              <Download size={13} /> Excel
             </button>
           </div>
         </div>
 
-        <AnimatePresence>
-          {showExportModal && (
-            <motion.div
-              initial={{ opacity: 0 }}
-              animate={{ opacity: 1 }}
-              exit={{ opacity: 0 }}
-              className="fixed inset-0 z-[100] flex items-center justify-center bg-rich-black/40 backdrop-blur-sm p-4"
+        {/* Tabs */}
+        <div className="flex gap-1 bg-white border border-warm-gray/60 rounded-2xl p-1 mb-6 w-full sm:w-fit overflow-x-auto">
+          {TABS.map((t) => (
+            <button
+              key={t.id}
+              onClick={() => setTab(t.id)}
+              className={`px-4 py-2 rounded-xl text-sm font-semibold whitespace-nowrap transition-colors ${
+                tab === t.id ? 'bg-rich-black text-white' : 'text-rich-black/60 hover:text-rich-black'
+              }`}
             >
-              <motion.div
-                initial={{ scale: 0.9, opacity: 0, y: 20 }}
-                animate={{ scale: 1, opacity: 1, y: 0 }}
-                exit={{ scale: 0.9, opacity: 0, y: 20 }}
-                className="bg-white rounded-[2.5rem] p-8 w-full max-w-md shadow-2xl relative"
-              >
-                <button 
-                  onClick={() => setShowExportModal(false)}
-                  className="absolute top-6 right-6 p-2 hover:bg-primary-bg rounded-full transition-colors"
-                >
-                  <X size={20} className="text-rich-black/40" />
-                </button>
-
-                <div className="mb-8 text-center sm:text-left">
-                  <h3 className="text-xl font-black text-rich-black">Export Analytics</h3>
-                  <p className="text-xs text-rich-black/40 font-medium mt-1">Select your preferred document format</p>
-                </div>
-
-                <div className="grid gap-4">
-                  {[
-                    { id: 'csv', label: 'CSV Spreadsheet', desc: 'Raw data for Excel/Numbers', icon: Table, color: 'text-blue-600', bg: 'bg-blue-50' },
-                    { id: 'xlsx', label: 'Microsoft Excel', desc: 'Formatted XLSX workbook', icon: Layers, color: 'text-green-600', bg: 'bg-green-50' },
-                    { id: 'pdf', label: 'PDF Report', desc: 'Printable executive summary', icon: FileText, color: 'text-red-600', bg: 'bg-red-50' }
-                  ].map((format) => (
-                    <button
-                      key={format.id}
-                      onClick={() => exportData(format.id as any)}
-                      className="flex items-center gap-4 p-5 border border-warm-gray rounded-2xl hover:border-accent-gold hover:bg-primary-bg transition-all group text-left"
-                    >
-                      <div className={`w-12 h-12 rounded-xl ${format.bg} ${format.color} flex items-center justify-center shrink-0`}>
-                        <format.icon size={24} />
-                      </div>
-                      <div className="flex-1">
-                        <p className="font-bold text-rich-black">{format.label}</p>
-                        <p className="text-[10px] text-rich-black/40 font-medium">{format.desc}</p>
-                      </div>
-                      <Download size={16} className="text-rich-black/20 group-hover:text-accent-gold transition-colors" />
-                    </button>
-                  ))}
-                </div>
-
-                <div className="mt-8 pt-6 border-t border-warm-gray/50 flex items-center gap-3 text-[10px] text-rich-black/30 font-bold uppercase tracking-widest justify-center">
-                  <ShieldCheck size={14} className="text-green-500" /> Secure Data Transmission Verified
-                </div>
-              </motion.div>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Global KPI Stats */}
-        <div className="grid grid-cols-2 md:grid-cols-2 lg:grid-cols-4 gap-3 md:gap-6 mb-8 md:mb-12">
-          {METRICS.map((m, i) => (
-            <motion.div
-              key={m.label}
-              initial={{ opacity: 0, y: 20 }}
-              animate={{ opacity: 1, y: 0 }}
-              transition={{ delay: i * 0.1 }}
-              onClick={() => m.link && navigate(m.link)}
-              className={`bg-white border border-warm-gray/60 rounded-2xl md:rounded-[2rem] p-4 md:p-6 shadow-sm hover:shadow-xl hover:shadow-rich-black/5 transition-all cursor-pointer relative overflow-hidden group`}
-            >
-              <div className="flex flex-col-reverse sm:flex-row items-start justify-between relative z-10 gap-3">
-                <div className="min-w-0">
-                  <p className="text-rich-black/40 text-[8px] md:text-[10px] uppercase font-bold tracking-widest mb-0.5 md:mb-1 truncate">{m.label}</p>
-                  <h3 className="text-lg md:text-2xl font-black text-rich-black truncate">{m.value}</h3>
-                  <div className="flex items-center gap-1 md:gap-1.5 flex-wrap">
-                    <span className={`text-[9px] md:text-[10px] font-bold ${m.isPositive ? 'text-green-500' : 'text-red-500'}`}>
-                      {m.change}
-                    </span>
-                    <span className="text-[9px] md:text-[10px] text-rich-black/20 font-medium">vs week</span>
-                  </div>
-                </div>
-                <div className={`p-2.5 md:p-4 rounded-xl md:rounded-2xl ${m.bg} ${m.color} transition-transform group-hover:scale-110 shrink-0`}>
-                  <m.icon size={isPhone ? 18 : 24} />
-                </div>
-              </div>
-              
-              {/* Subtle sparkline-like background */}
-              <div className="absolute bottom-0 left-0 right-0 h-1 bg-warm-gray/10">
-                <div className={`h-full ${m.isPositive ? 'bg-green-500' : 'bg-red-500'} opacity-20`} style={{ width: i === 0 ? '70%' : i === 1 ? '40%' : i === 2 ? '85%' : '20%' }} />
-              </div>
-            </motion.div>
+              {t.label}
+              {t.id === 'live' && needsAction > 0 && (
+                <span className="ml-2 inline-flex items-center justify-center min-w-5 h-5 px-1.5 rounded-full bg-red-600 text-white text-[10px] font-bold">
+                  {needsAction}
+                </span>
+              )}
+            </button>
           ))}
         </div>
 
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8 mb-8">
-          {/* Revenue Chart - Inspired by Superset's clean area charts */}
-          <div className="lg:col-span-2 bg-white border border-warm-gray/60 rounded-[2.5rem] p-8 shadow-sm">
-            <div className="flex items-center justify-between mb-8">
-              <div>
-                <h3 className="text-lg font-bold text-rich-black">System Throughput</h3>
-                <p className="text-[10px] text-rich-black/40 font-bold uppercase tracking-widest uppercase">Revenue & Task Volume (Daily)</p>
-              </div>
-              <div className="flex items-center gap-4">
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-accent-gold" />
-                  <span className="text-[10px] font-bold text-rich-black/60">Revenue</span>
-                </div>
-                <div className="flex items-center gap-2">
-                  <div className="w-3 h-3 rounded-full bg-rich-black" />
-                  <span className="text-[10px] font-bold text-rich-black/60">Tasks</span>
-                </div>
-              </div>
-            </div>
-
-            <div className="h-[350px] w-full">
-              <ResponsiveContainer width="100%" height="100%">
-                <AreaChart data={REVENUE_DATA} margin={{ top: 10, right: 30, left: 0, bottom: 0 }}>
-                  <defs>
-                    <linearGradient id="colorRev" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="5%" stopColor="#FFC700" stopOpacity={0.3}/>
-                      <stop offset="95%" stopColor="#FFC700" stopOpacity={0}/>
-                    </linearGradient>
-                  </defs>
-                  <CartesianGrid strokeDasharray="3 3" vertical={false} stroke="#F0F0F0" />
-                  <XAxis 
-                    dataKey="name" 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fontSize: 10, fontWeight: 600, fill: '#A0A0A0' }} 
-                    dy={10}
-                  />
-                  <YAxis 
-                    axisLine={false} 
-                    tickLine={false} 
-                    tick={{ fontSize: 10, fontWeight: 600, fill: '#A0A0A0' }}
-                  />
-                  <Tooltip 
-                    contentStyle={{ 
-                      borderRadius: '16px', 
-                      border: 'none', 
-                      boxShadow: '0 10px 30px rgba(0,0,0,0.1)',
-                      fontSize: '11px',
-                      fontWeight: 'bold'
-                    }} 
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="revenue" 
-                    stroke="#FFC700" 
-                    strokeWidth={4}
-                    fillOpacity={1} 
-                    fill="url(#colorRev)" 
-                  />
-                  <Area 
-                    type="monotone" 
-                    dataKey="tasks" 
-                    stroke="#2D3142" 
-                    strokeWidth={4}
-                    fill="none" 
-                  />
-                </AreaChart>
-              </ResponsiveContainer>
-            </div>
+        {loadError && (
+          <div className="mb-6 flex items-start gap-3 bg-red-50 border border-red-200 text-red-800 rounded-2xl p-4 text-sm">
+            <AlertTriangle size={18} className="shrink-0 mt-0.5" /> {loadError}
           </div>
+        )}
 
-          {/* Category Distribution */}
-          <div className="bg-white border border-warm-gray/60 rounded-[2.5rem] p-8 shadow-sm flex flex-col">
-            <h3 className="text-lg font-bold text-rich-black mb-1">Market Share</h3>
-            <p className="text-[10px] text-rich-black/40 font-bold uppercase tracking-widest mb-8">By Service Category</p>
-            
-            <div className="flex-1 min-h-[300px]">
-              <ResponsiveContainer width="100%" height="100%">
-                <PieChart>
-                  <Pie
-                    data={CATEGORY_DATA}
-                    cx="50%"
-                    cy="50%"
-                    innerRadius={60}
-                    outerRadius={100}
-                    paddingAngle={5}
-                    dataKey="value"
-                  >
-                    {CATEGORY_DATA.map((entry, index) => (
-                      <Cell key={`cell-${index}`} fill={COLORS[index % COLORS.length]} />
-                    ))}
-                  </Pie>
-                  <Tooltip />
-                </PieChart>
-              </ResponsiveContainer>
-            </div>
-
-            <div className="space-y-3 mt-4">
-              {CATEGORY_DATA.map((cat, i) => (
-                <div key={cat.name} className="flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <div className="w-2 h-2 rounded-full" style={{ backgroundColor: COLORS[i % COLORS.length] }} />
-                    <span className="text-[11px] font-medium text-rich-black/60">{cat.name}</span>
-                  </div>
-                  <span className="text-[11px] font-bold text-rich-black">{Math.round((cat.value / 1350) * 100)}%</span>
-                </div>
-              ))}
-            </div>
+        {loading ? (
+          <div className="flex items-center justify-center py-32">
+            <div className="w-10 h-10 border-4 border-accent-gold border-t-transparent rounded-full animate-spin" />
           </div>
-        </div>
+        ) : tab === 'live' ? (
+          renderLive()
+        ) : tab === 'performance' ? (
+          renderPerformance()
+        ) : (
+          renderMoney()
+        )}
 
-        <div className="grid grid-cols-1 lg:grid-cols-2 gap-8">
-          {/* Operations Center */}
-          <div className="bg-white border border-warm-gray/60 rounded-[2.5rem] p-8 shadow-sm">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-black text-rich-black flex items-center gap-3">
-                <Zap size={24} className="text-accent-gold" />
-                Operations
-              </h2>
-              <button className="text-[10px] font-bold uppercase tracking-widest text-accent-gold hover:underline">Manage All</button>
-            </div>
-            
-            <div className="grid grid-cols-2 gap-4">
-              {[
-                { label: 'Background Checks', count: 8, icon: ShieldCheck, color: 'text-green-600', sub: 'Pending approval' },
-                { label: 'Dispute Resolution', count: 3, icon: AlertTriangle, color: 'text-amber-600', sub: 'High risk cases' },
-                { label: 'Active Sessions', count: 142, icon: Activity, color: 'text-blue-600', sub: 'Concurrent users' },
-                { label: 'Latency', count: '12ms', icon: Clock, color: 'text-purple-600', sub: 'System peak health' },
-              ].map((op, i) => (
-                <div key={i} className="p-5 border border-warm-gray rounded-2xl flex flex-col gap-3 group hover:border-accent-gold/50 transition-all cursor-pointer">
-                  <div className={`w-10 h-10 rounded-xl bg-primary-bg ${op.color} flex items-center justify-center`}>
-                    <op.icon size={20} />
-                  </div>
-                  <div>
-                    <h4 className="text-xs font-bold text-rich-black">{op.label}</h4>
-                    <p className="text-xl font-black text-rich-black my-1">{op.count}</p>
-                    <p className="text-[9px] text-rich-black/30 uppercase font-bold tracking-wider">{op.sub}</p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          </div>
-
-          {/* High Priority Alerts (Complaints) */}
-          <div className="bg-white border border-warm-gray/60 rounded-[2.5rem] p-8 shadow-sm flex flex-col">
-            <div className="flex items-center justify-between mb-8">
-              <h2 className="text-xl font-black text-rich-black">High Priority Alerts</h2>
-              <Link to="/admin-complaints" className="text-[10px] font-bold uppercase tracking-widest text-accent-gold flex items-center gap-1 group">
-                Resolution Center <ChevronRight size={14} className="group-hover:translate-x-1 transition-transform" />
-              </Link>
-            </div>
-
-            <div className="space-y-4 flex-1">
-              {[
-                { title: 'Payment Dispute on Task #8292', reporter: 'Kevin W.', time: '22m ago', type: 'critical' },
-                { title: 'Provider Late Cancellation', reporter: 'Sarah O.', time: '1h ago', type: 'warning' },
-                { title: 'Verification Request - Pro Plumber', reporter: 'John D.', time: '3h ago', type: 'info' }
-              ].map((alert, i) => (
-                <div key={i} className="flex items-center gap-4 p-4 rounded-2xl border border-transparent hover:border-warm-gray hover:bg-primary-bg transition-all cursor-pointer group">
-                  <div className={`w-10 h-10 rounded-full flex items-center justify-center shrink-0 ${
-                    alert.type === 'critical' ? 'bg-red-50 text-red-500' : 
-                    alert.type === 'warning' ? 'bg-amber-50 text-amber-500' : 'bg-blue-50 text-blue-500'
-                  }`}>
-                    <AlertTriangle size={18} />
-                  </div>
-                  <div className="flex-1 min-w-0">
-                    <h4 className="text-sm font-bold text-rich-black truncate">{alert.title}</h4>
-                    <p className="text-[10px] text-rich-black/40 font-medium">Reported by {alert.reporter} • {alert.time}</p>
-                  </div>
-                  <ChevronRight size={16} className="text-rich-black/20 group-hover:text-accent-gold transition-colors" />
-                </div>
-              ))}
-            </div>
-          </div>
-        </div>
-
-        {/* Global Navigation Shortcut */}
-        <div className="mt-12 flex items-center justify-center gap-4">
-          <Link to="/admin-analytics" className="px-8 py-4 bg-white border border-warm-gray rounded-2xl font-bold text-xs uppercase tracking-widest text-rich-black hover:border-accent-gold transition-all shadow-sm flex items-center gap-2">
-            <Layers size={16} className="text-accent-gold" /> Explore Deep Analytics
+        <div className="mt-10 flex flex-wrap items-center justify-center gap-3">
+          <Link
+            to="/admin-complaints"
+            className="px-5 py-3 bg-white border border-warm-gray rounded-xl text-xs font-semibold text-rich-black hover:border-rich-black/40 flex items-center gap-2"
+          >
+            <AlertTriangle size={14} className="text-red-500" /> Complaints
           </Link>
-          <Link to="/admin-complaints" className="px-8 py-4 bg-white border border-warm-gray rounded-2xl font-bold text-xs uppercase tracking-widest text-rich-black hover:border-accent-gold transition-all shadow-sm flex items-center gap-2">
-            <AlertTriangle size={16} className="text-red-500" /> Resolution Workflow
+          <Link
+            to="/admin-analytics"
+            className="px-5 py-3 bg-white border border-warm-gray rounded-xl text-xs font-semibold text-rich-black hover:border-rich-black/40 flex items-center gap-2"
+          >
+            <Layers size={14} className="text-accent-gold" /> Site analytics
           </Link>
         </div>
       </div>
     </div>
+  );
+
+  // ---------------------------------------------------------------------------
+  // Screen 1: live operations
+  // ---------------------------------------------------------------------------
+  function renderLive() {
+    const tiles: { stage: LiveStage; tone: 'neutral' | 'urgent' | 'warn'; hint?: ReactNode }[] = [
+      { stage: 'issue', tone: live.counts.issue ? 'urgent' : 'neutral', hint: 'Client flagged the finished work' },
+      { stage: 'expired', tone: live.counts.expired ? 'urgent' : 'neutral', hint: 'Repost or cancel' },
+      { stage: 'expiring', tone: live.counts.expiring ? 'warn' : 'neutral', hint: 'Under 30 min left' },
+      {
+        stage: 'open',
+        tone: 'neutral',
+        hint: live.oldestOpenMs !== null ? `Oldest waiting ${formatDuration(live.oldestOpenMs)}` : 'None waiting',
+      },
+      { stage: 'accepted', tone: 'neutral', hint: 'Client must confirm the pro' },
+      { stage: 'assigned', tone: 'neutral', hint: 'Waiting for the pro to start' },
+      { stage: 'in-progress', tone: 'neutral', hint: 'Work underway' },
+      { stage: 'awaiting-confirmation', tone: 'neutral', hint: 'Pro marked it done' },
+    ];
+
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <StatTile label="Active requests" value={live.activeTotal} icon={Activity} hint="Not yet completed or cancelled" />
+          <StatTile
+            label="Need your attention"
+            value={needsAction}
+            icon={AlertTriangle}
+            tone={needsAction ? 'urgent' : 'neutral'}
+            hint="Issues, expired and expiring"
+          />
+          <StatTile label="Value in flight" value={formatKES(live.valueInFlight)} icon={Wallet} hint="Confirmed jobs not yet signed off" />
+          <Link to="/admin-complaints" className="block min-w-0 rounded-2xl hover:opacity-90">
+            <StatTile
+              label="New complaints"
+              value={complaints.length}
+              icon={AlertTriangle}
+              tone={complaints.length ? 'warn' : 'neutral'}
+              hint={<span className="inline-flex items-center gap-0.5">Open resolution center <ChevronRight size={11} /></span>}
+            />
+          </Link>
+        </div>
+
+        <Card>
+          <SectionTitle title="Request pipeline" subtitle="Tap a stage to filter the table below" />
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            {tiles.map((t) => (
+              <StatTile
+                key={t.stage}
+                label={STAGE_LABELS[t.stage]}
+                value={live.counts[t.stage]}
+                icon={STAGE_STYLE[t.stage].icon}
+                tone={t.tone}
+                hint={t.hint}
+                active={stageFilter === t.stage}
+                onClick={() => setStageFilter(stageFilter === t.stage ? 'all' : t.stage)}
+              />
+            ))}
+          </div>
+        </Card>
+
+        <Card className="!p-0 overflow-hidden">
+          <div className="p-5 md:p-6 pb-4">
+            <SectionTitle
+              title="Live requests"
+              subtitle={`${filteredRows.length} of ${live.activeTotal} active · most urgent first`}
+              right={
+                (stageFilter !== 'all' || categoryFilter !== 'all' || search) && (
+                  <button
+                    onClick={() => {
+                      setStageFilter('all');
+                      setCategoryFilter('all');
+                      setSearch('');
+                    }}
+                    className="flex items-center gap-1 text-xs font-semibold text-rich-black/60 hover:text-rich-black"
+                  >
+                    <X size={13} /> Clear filters
+                  </button>
+                )
+              }
+            />
+            <div className="flex flex-col sm:flex-row gap-2">
+              <div className="relative flex-1">
+                <Search size={14} className="absolute left-3 top-1/2 -translate-y-1/2 text-rich-black/35" />
+                <input
+                  value={search}
+                  onChange={(e) => setSearch(e.target.value)}
+                  placeholder="Search service, client, provider, location"
+                  className="w-full bg-primary-bg border border-warm-gray rounded-xl pl-9 pr-3 py-2 text-sm"
+                />
+              </div>
+              <select
+                value={stageFilter}
+                onChange={(e) => setStageFilter(e.target.value as LiveStage | 'all')}
+                className="bg-primary-bg border border-warm-gray rounded-xl px-3 py-2 text-sm"
+                aria-label="Stage"
+              >
+                <option value="all">All stages</option>
+                {ACTIVE_STAGES.map((s) => (
+                  <option key={s} value={s}>
+                    {STAGE_LABELS[s]}
+                  </option>
+                ))}
+              </select>
+              <select
+                value={categoryFilter}
+                onChange={(e) => setCategoryFilter(e.target.value)}
+                className="bg-primary-bg border border-warm-gray rounded-xl px-3 py-2 text-sm"
+                aria-label="Category"
+              >
+                <option value="all">All categories</option>
+                {SERVICE_CATEGORIES.map((c) => (
+                  <option key={c} value={c}>
+                    {c}
+                  </option>
+                ))}
+              </select>
+            </div>
+          </div>
+
+          {filteredRows.length === 0 ? (
+            <EmptyState text={live.activeTotal ? 'No requests match these filters.' : 'No active requests right now.'} />
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full min-w-[860px] text-sm">
+                <thead>
+                  <tr className="text-left text-[11px] font-semibold text-rich-black/50 border-y border-warm-gray/60 bg-primary-bg/60">
+                    <th className="px-5 py-2.5">Request</th>
+                    <th className="px-3 py-2.5">Stage</th>
+                    <th className="px-3 py-2.5">Client</th>
+                    <th className="px-3 py-2.5">Provider</th>
+                    <th className="px-3 py-2.5 text-right">Price</th>
+                    <th className="px-3 py-2.5">In this stage</th>
+                    <th className="px-5 py-2.5 text-right">Actions</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {filteredRows.map((r) => (
+                    <tr key={r.id} className="border-b border-warm-gray/40 last:border-0 align-top hover:bg-primary-bg/40">
+                      <td className="px-5 py-3 max-w-[260px]">
+                        <p className="font-semibold text-rich-black truncate">{r.serviceType}</p>
+                        <p className="text-[11px] text-rich-black/50 truncate">
+                          {r.category}
+                          {r.location ? ` · ${r.location}` : ''}
+                        </p>
+                        {complaintTaskIds.has(r.id) && (
+                          <p className="text-[11px] font-semibold text-red-600 mt-0.5">Has an open complaint</p>
+                        )}
+                      </td>
+                      <td className="px-3 py-3">
+                        <StageBadge stage={r.stage} />
+                        {r.expiresAt && r.stage !== 'expired' && (
+                          <p className="text-[11px] text-rich-black/45 mt-1">Expires {formatDateTime(r.expiresAt).slice(11)}</p>
+                        )}
+                      </td>
+                      <td className="px-3 py-3 text-rich-black/80">{r.clientName || <span className="text-rich-black/35">{r.clientId.slice(0, 8)}</span>}</td>
+                      <td className="px-3 py-3 text-rich-black/80">{r.providerName || <span className="text-rich-black/35">—</span>}</td>
+                      <td className="px-3 py-3 text-right tabular-nums font-semibold text-rich-black">{formatKES(r.price)}</td>
+                      <td className="px-3 py-3 tabular-nums">
+                        <span className={STAGE_STYLE[r.stage].urgent ? 'text-red-700 font-semibold' : 'text-rich-black/70'}>
+                          {r.since ? formatDuration(r.waitingMs) : '—'}
+                        </span>
+                      </td>
+                      <td className="px-5 py-3">
+                        <div className="flex justify-end gap-1.5">
+                          {['open', 'expiring', 'expired'].includes(r.stage) && (
+                            <ActionButton icon={RefreshCw} label="Repost" disabled={busyId === r.id} onClick={() => runAction(r, 'repost')} />
+                          )}
+                          {['accepted', 'assigned'].includes(r.stage) && (
+                            <ActionButton icon={UserX} label="Reopen" disabled={busyId === r.id} onClick={() => runAction(r, 'reopen')} />
+                          )}
+                          <ActionButton icon={Ban} label="Cancel" danger disabled={busyId === r.id} onClick={() => runAction(r, 'cancel')} />
+                        </div>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </Card>
+
+        {complaints.length > 0 && (
+          <Card>
+            <SectionTitle
+              title="New complaints"
+              subtitle="Filed by clients or providers and not yet picked up"
+              right={
+                <Link to="/admin-complaints" className="text-xs font-semibold text-rich-black/70 hover:text-rich-black flex items-center gap-1">
+                  Resolution center <ChevronRight size={13} />
+                </Link>
+              }
+            />
+            <ul className="divide-y divide-warm-gray/50">
+              {complaints.slice(0, 5).map((c) => (
+                <li key={c.id} className="py-3 flex items-center gap-3">
+                  <span className="p-2 rounded-lg bg-red-50 text-red-600 shrink-0">
+                    <AlertTriangle size={15} />
+                  </span>
+                  <div className="min-w-0 flex-1">
+                    <p className="text-sm font-semibold text-rich-black truncate">{c.reason || 'Complaint'}</p>
+                    <p className="text-[11px] text-rich-black/50">
+                      From a {c.reporterRole === 'tasker' ? 'provider' : 'client'}
+                      {c.timestamp ? ` · ${formatDuration(now - c.timestamp.getTime())} ago` : ''}
+                    </p>
+                  </div>
+                </li>
+              ))}
+            </ul>
+          </Card>
+        )}
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Screen 2: performance (outcomes and speed)
+  // ---------------------------------------------------------------------------
+  function renderPerformance() {
+    const maxCompleted = Math.max(1, ...perf.byCategory.map((c) => c.completed));
+    const hasOutcomes = perf.completed + perf.cancelled + perf.expired > 0;
+
+    return (
+      <div className="space-y-6">
+        <div className="grid grid-cols-2 lg:grid-cols-5 gap-3">
+          <StatTile label="Requests posted" value={perf.posted} icon={Activity} hint={<ChangeBadge value={change(perf.posted, perfPrev?.posted)} />} />
+          <StatTile label="Completed jobs" value={perf.completed} icon={CheckCircle2} hint={<ChangeBadge value={change(perf.completed, perfPrev?.completed)} />} />
+          <StatTile
+            label="Completion rate"
+            value={formatPercent(perf.completionRate)}
+            icon={Timer}
+            hint="Completed ÷ (completed + cancelled + expired)"
+          />
+          <StatTile label="Cancelled" value={perf.cancelled} icon={Ban} hint={<ChangeBadge value={change(perf.cancelled, perfPrev?.cancelled)} goodWhenUp={false} />} />
+          <StatTile
+            label="Expired, nobody accepted"
+            value={perf.expired}
+            icon={UserX}
+            tone={perf.expired ? 'warn' : 'neutral'}
+            hint={<ChangeBadge value={change(perf.expired, perfPrev?.expired)} goodWhenUp={false} />}
+          />
+        </div>
+
+        <Card>
+          <SectionTitle title="Outcomes over time" subtitle={`${PERIOD_LABELS[period.key]} · counted on the day each outcome happened`} />
+          {hasOutcomes ? (
+            <div className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={perf.trend} margin={{ top: 4, right: 8, left: -16, bottom: 0 }} barCategoryGap="20%">
+                  <CartesianGrid vertical={false} stroke={GRID} />
+                  <XAxis dataKey="label" tick={AXIS_TICK} axisLine={false} tickLine={false} minTickGap={16} />
+                  <YAxis allowDecimals={false} tick={AXIS_TICK} axisLine={false} tickLine={false} />
+                  <Tooltip cursor={{ fill: 'rgba(45,49,66,0.05)' }} contentStyle={{ borderRadius: 12, border: '1px solid #E5E7EB', fontSize: 12 }} />
+                  <Legend iconType="circle" iconSize={8} wrapperStyle={{ fontSize: 12, paddingTop: 8 }} />
+                  <Bar dataKey="completed" name="Completed" stackId="o" fill={OUTCOME_COLORS.completed} stroke="#fff" strokeWidth={1} />
+                  <Bar dataKey="cancelled" name="Cancelled" stackId="o" fill={OUTCOME_COLORS.cancelled} stroke="#fff" strokeWidth={1} />
+                  <Bar dataKey="expired" name="Expired" stackId="o" fill={OUTCOME_COLORS.expired} stroke="#fff" strokeWidth={1} radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <EmptyState text="No completed, cancelled or expired requests in this period." />
+          )}
+        </Card>
+
+        <Card className="!p-0 overflow-hidden">
+          <div className="p-5 md:p-6 pb-2">
+            <SectionTitle title="Categories" subtitle="Ranked by completed jobs. Expired requests show where you need more providers." />
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-sm">
+              <thead>
+                <tr className="text-left text-[11px] font-semibold text-rich-black/50 border-y border-warm-gray/60 bg-primary-bg/60">
+                  <th className="px-5 py-2.5">Category</th>
+                  <th className="px-3 py-2.5 w-[30%]">Completed</th>
+                  <th className="px-3 py-2.5 text-right">Cancelled</th>
+                  <th className="px-3 py-2.5 text-right">Expired</th>
+                  <th className="px-3 py-2.5 text-right">Completion rate</th>
+                  <th className="px-5 py-2.5 text-right">Median time to accept</th>
+                </tr>
+              </thead>
+              <tbody>
+                {perf.byCategory.map((c) => (
+                  <tr key={c.category} className="border-b border-warm-gray/40 last:border-0">
+                    <td className="px-5 py-3 font-semibold text-rich-black">{c.category}</td>
+                    <td className="px-3 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-2 rounded-full bg-primary-bg overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${(c.completed / maxCompleted) * 100}%`, background: OUTCOME_COLORS.completed }} />
+                        </div>
+                        <span className="tabular-nums font-semibold text-rich-black w-8 text-right">{c.completed}</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 text-right tabular-nums text-rich-black/70">{c.cancelled}</td>
+                    <td className={`px-3 py-3 text-right tabular-nums ${c.expired ? 'text-amber-700 font-semibold' : 'text-rich-black/70'}`}>{c.expired}</td>
+                    <td className="px-3 py-3 text-right tabular-nums text-rich-black">{formatPercent(c.completionRate)}</td>
+                    <td className="px-5 py-3 text-right tabular-nums text-rich-black/70">{formatDuration(c.medianAcceptMs)}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+
+        <Card>
+          <SectionTitle title="Speed" subtitle="Median times for steps that finished in this period" />
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            {perf.speed.map((s) => (
+              <StatTile
+                key={s.label}
+                label={s.label}
+                value={formatDuration(s.medianMs)}
+                icon={Clock}
+                hint={
+                  <>
+                    {s.description}
+                    <br />
+                    {s.samples} {s.samples === 1 ? 'job' : 'jobs'}
+                  </>
+                }
+              />
+            ))}
+          </div>
+        </Card>
+      </div>
+    );
+  }
+
+  // ---------------------------------------------------------------------------
+  // Screen 3: money
+  // ---------------------------------------------------------------------------
+  function renderMoney() {
+    return (
+      <div className="space-y-6">
+        <div className="flex items-start gap-3 bg-amber-50 border border-amber-200 text-amber-900 rounded-2xl p-4 text-xs">
+          <Info size={16} className="shrink-0 mt-0.5" />
+          <p>
+            These are <strong>agreed prices</strong> on jobs the client signed off, not money collected. Payments are not processed in the
+            app yet, so treat this as expected revenue until M-Pesa is connected.
+          </p>
+        </div>
+
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <StatTile label="Agreed value of completed jobs" value={formatKES(cash.gross)} icon={Wallet} hint={<ChangeBadge value={change(cash.gross, cashPrev?.gross)} />} />
+          <StatTile label="Task Molly commission" value={formatKES(cash.commission)} icon={ShieldCheck} hint={<ChangeBadge value={change(cash.commission, cashPrev?.commission)} />} />
+          <StatTile label="Provider payouts" value={formatKES(cash.payouts)} icon={Wrench} hint={`${cash.jobs} completed ${cash.jobs === 1 ? 'job' : 'jobs'}`} />
+          <StatTile
+            label="Average job value"
+            value={cash.average === null ? '—' : formatKES(cash.average)}
+            icon={Activity}
+            hint={cash.average === null ? 'No completed jobs yet' : <ChangeBadge value={change(cash.average, cashPrev?.average)} />}
+          />
+        </div>
+
+        <Card>
+          <SectionTitle title="Agreed value over time" subtitle={`${PERIOD_LABELS[period.key]} · by sign-off date`} />
+          {cash.jobs ? (
+            <div className="h-[280px]">
+              <ResponsiveContainer width="100%" height="100%">
+                <BarChart data={cash.trend} margin={{ top: 4, right: 8, left: -8, bottom: 0 }} barCategoryGap="20%">
+                  <CartesianGrid vertical={false} stroke={GRID} />
+                  <XAxis dataKey="label" tick={AXIS_TICK} axisLine={false} tickLine={false} minTickGap={16} />
+                  <YAxis tickFormatter={kesTick} tick={AXIS_TICK} axisLine={false} tickLine={false} />
+                  <Tooltip
+                    cursor={{ fill: 'rgba(45,49,66,0.05)' }}
+                    contentStyle={{ borderRadius: 12, border: '1px solid #E5E7EB', fontSize: 12 }}
+                    formatter={(value: any, _name: any, item: any) => [
+                      `${formatKES(Number(value))} · ${item?.payload?.jobs ?? 0} jobs · commission ${formatKES(item?.payload?.commission ?? 0)}`,
+                      'Agreed value',
+                    ]}
+                  />
+                  <Bar dataKey="gross" name="Agreed value" fill={INK} radius={[4, 4, 0, 0]} />
+                </BarChart>
+              </ResponsiveContainer>
+            </div>
+          ) : (
+            <EmptyState text="No jobs were signed off in this period." />
+          )}
+        </Card>
+
+        <Card className="!p-0 overflow-hidden">
+          <div className="p-5 md:p-6 pb-2">
+            <SectionTitle title="Value by category" subtitle="Ranked by agreed value of completed jobs" />
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full min-w-[720px] text-sm">
+              <thead>
+                <tr className="text-left text-[11px] font-semibold text-rich-black/50 border-y border-warm-gray/60 bg-primary-bg/60">
+                  <th className="px-5 py-2.5">Category</th>
+                  <th className="px-3 py-2.5 w-[28%]">Agreed value</th>
+                  <th className="px-3 py-2.5 text-right">Jobs</th>
+                  <th className="px-3 py-2.5 text-right">Commission</th>
+                  <th className="px-3 py-2.5 text-right">Average job</th>
+                  <th className="px-5 py-2.5 text-right">Share</th>
+                </tr>
+              </thead>
+              <tbody>
+                {cash.byCategory.map((c) => (
+                  <tr key={c.category} className="border-b border-warm-gray/40 last:border-0">
+                    <td className="px-5 py-3 font-semibold text-rich-black">{c.category}</td>
+                    <td className="px-3 py-3">
+                      <div className="flex items-center gap-2">
+                        <div className="flex-1 h-2 rounded-full bg-primary-bg overflow-hidden">
+                          <div className="h-full rounded-full" style={{ width: `${cash.gross ? (c.gross / cash.gross) * 100 : 0}%`, background: INK }} />
+                        </div>
+                        <span className="tabular-nums font-semibold text-rich-black whitespace-nowrap">{formatKES(c.gross)}</span>
+                      </div>
+                    </td>
+                    <td className="px-3 py-3 text-right tabular-nums text-rich-black/70">{c.jobs}</td>
+                    <td className="px-3 py-3 text-right tabular-nums text-rich-black/70">{formatKES(c.commission)}</td>
+                    <td className="px-3 py-3 text-right tabular-nums text-rich-black/70">{c.average === null ? '—' : formatKES(c.average)}</td>
+                    <td className="px-5 py-3 text-right tabular-nums text-rich-black">{cash.gross ? formatPercent(c.gross / cash.gross) : '—'}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </Card>
+      </div>
+    );
+  }
+}
+
+function ActionButton({
+  icon: Icon,
+  label,
+  onClick,
+  danger,
+  disabled,
+}: {
+  icon: typeof Activity;
+  label: string;
+  onClick: () => void;
+  danger?: boolean;
+  disabled?: boolean;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      disabled={disabled}
+      className={`inline-flex items-center gap-1 px-2.5 py-1.5 rounded-lg border text-[11px] font-semibold disabled:opacity-40 transition-colors ${
+        danger ? 'border-red-200 text-red-700 hover:bg-red-50' : 'border-warm-gray text-rich-black/80 hover:border-rich-black/40'
+      }`}
+    >
+      <Icon size={12} /> {label}
+    </button>
   );
 }

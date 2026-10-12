@@ -1,0 +1,47 @@
+name: Check pull request
+
+# Builds and tests every pull request (and every push to a claude/ branch) before it is merged into main.
+# (deploy.yml only runs after a merge, and deploys straight to the live site.)
+
+on:
+  pull_request:
+    branches: ['main']
+  push:
+    branches: ['claude/**']
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup Node
+        uses: actions/setup-node@v4
+        with:
+          node-version: 20
+
+      - name: Install dependencies
+        run: |
+          npm install --legacy-peer-deps
+          npm install react-is --legacy-peer-deps
+
+      - name: Admin metrics unit tests
+        run: npm run test:metrics
+
+      - name: Type-check changed admin files
+        # The whole project has older type errors, so only fail on errors in the admin dashboard files.
+        run: |
+          npx tsc --noEmit -p . > tsc.log 2>&1 || true
+          echo "Type errors across the project: $(grep -c 'error TS' tsc.log || true)"
+          if grep -E '^src/(pages/AdminDashboard|lib/(adminMetrics|requestModel|serviceRequests))' tsc.log; then
+            echo "::error::Type errors in the admin dashboard files (listed above)"
+            exit 1
+          fi
+
+      - name: Build
+        run: npm run build
