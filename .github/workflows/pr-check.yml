@@ -1,11 +1,13 @@
 name: Check pull request
 
-# Builds and tests every pull request before it can be merged into main.
+# Builds and tests every pull request (and every push to a claude/ branch) before it is merged into main.
 # (deploy.yml only runs after a merge, and deploys straight to the live site.)
 
 on:
   pull_request:
     branches: ['main']
+  push:
+    branches: ['claude/**']
   workflow_dispatch:
 
 permissions:
