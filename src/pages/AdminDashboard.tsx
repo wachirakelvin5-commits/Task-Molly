@@ -142,6 +142,8 @@ function StatTile({
   tone?: 'neutral' | 'urgent' | 'warn';
   onClick?: () => void;
   active?: boolean;
+  /** Listed so tiles can be rendered in loops (the project has no React type package). */
+  key?: string;
 }) {
   const toneRing = tone === 'urgent' ? 'border-red-200' : tone === 'warn' ? 'border-amber-200' : 'border-warm-gray/60';
   const iconTone = tone === 'urgent' ? 'text-red-600 bg-red-50' : tone === 'warn' ? 'text-amber-700 bg-amber-50' : 'text-rich-black/60 bg-primary-bg';
