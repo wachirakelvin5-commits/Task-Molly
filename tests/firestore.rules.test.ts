@@ -275,3 +275,27 @@ describe('editing and cancelling', () => {
     await assertFails(updateDoc(doc(db('alice'), REQ), { description: 'no timestamp' }));
   });
 });
+
+describe('admin access and roles', () => {
+  const asEmail = (uid: string, email: string, verified = true) =>
+    env.authenticatedContext(uid, { email, email_verified: verified }).firestore();
+
+  beforeEach(() => seed({}));
+
+  test('both admin accounts can read any request', async () => {
+    await assertSucceeds(getDoc(doc(asEmail('admin1', 'wachirakelvin5@gmail.com'), REQ)));
+    await assertSucceeds(getDoc(doc(asEmail('admin2', 'taskmolly254@gmail.com'), REQ)));
+  });
+
+  test('other or unverified emails are not admins', async () => {
+    await assertFails(getDoc(doc(asEmail('mallory', 'mallory@example.com'), REQ)));
+    await assertFails(getDoc(doc(asEmail('admin2', 'taskmolly254@gmail.com', false), REQ)));
+  });
+
+  test('new users can sign up as a client or provider, but not make themselves admin', async () => {
+    const profile = (uid: string, role: string) => ({ uid, email: `${uid}@example.com`, role });
+    await assertSucceeds(setDoc(doc(db('newclient'), 'users/newclient'), profile('newclient', 'client')));
+    await assertSucceeds(setDoc(doc(db('newpro'), 'users/newpro'), profile('newpro', 'tasker')));
+    await assertFails(setDoc(doc(db('sneaky'), 'users/sneaky'), profile('sneaky', 'admin')));
+  });
+});

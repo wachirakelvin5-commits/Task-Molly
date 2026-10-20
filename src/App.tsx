@@ -9,6 +9,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from './firebase';
 import { doc, getDoc, getDocFromServer } from 'firebase/firestore';
 import { UserProfile } from './types';
+import { isAdminUser } from './lib/admin';
 
 // Pages
 import LandingPage from './pages/LandingPage';
@@ -156,15 +157,15 @@ export default function App() {
               />
               <Route 
                 path="/admin-dashboard" 
-                element={user?.role === 'admin' || user?.email === 'wachirakelvin5@gmail.com' ? <AdminDashboard /> : <Navigate to="/auth" />} 
+                element={isAdminUser(user) ? <AdminDashboard /> : <Navigate to="/auth" />} 
               />
               <Route 
                 path="/admin-complaints" 
-                element={user?.role === 'admin' || user?.email === 'wachirakelvin5@gmail.com' ? <AdminComplaints /> : <Navigate to="/auth" />} 
+                element={isAdminUser(user) ? <AdminComplaints /> : <Navigate to="/auth" />} 
               />
               <Route 
                 path="/admin-analytics" 
-                element={user?.role === 'admin' || user?.email === 'wachirakelvin5@gmail.com' ? <AdminAnalytics /> : <Navigate to="/auth" />} 
+                element={isAdminUser(user) ? <AdminAnalytics /> : <Navigate to="/auth" />} 
               />
             </Routes>
           </Suspense>
