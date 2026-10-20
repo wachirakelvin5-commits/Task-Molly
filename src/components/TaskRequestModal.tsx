@@ -13,7 +13,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { auth } from '../firebase';
-import { buildRequestPayload, submitServiceRequest } from '../lib/requestForm';
+import { TIME_SLOTS, buildRequestPayload, localIsoDate, submitServiceRequest } from '../lib/requestForm';
 import { toast } from 'sonner';
 import { savePendingRequest } from '../lib/pendingRequestService';
 import { ALL_SERVICES_CATALOG, ServiceItem } from '../data/serviceCatalog';
@@ -53,11 +53,8 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
   const [taskDescription, setTaskDescription] = useState('');
 
   // Scheduling (ASAP removed, schedule date kept)
-  const [scheduledDate, setScheduledDate] = useState(() => {
-    const today = new Date();
-    return today.toISOString().split('T')[0];
-  });
-  const [scheduledTimeSlot, setScheduledTimeSlot] = useState('Morning (09:00 AM - 12:00 PM)');
+  const [scheduledDate, setScheduledDate] = useState(() => localIsoDate());
+  const [scheduledTimeSlot, setScheduledTimeSlot] = useState<string>(TIME_SLOTS[0]);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Autofill client info if logged in
@@ -400,9 +397,7 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
                         { label: 'Tomorrow', daysAhead: 1 },
                         { label: 'In 2 Days', daysAhead: 2 }
                       ].map((chip) => {
-                        const target = new Date();
-                        target.setDate(target.getDate() + chip.daysAhead);
-                        const iso = target.toISOString().split('T')[0];
+                        const iso = localIsoDate(chip.daysAhead);
                         const isSelected = scheduledDate === iso;
 
                         return (
@@ -430,7 +425,7 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
                         <input
                           type="date"
                           required
-                          min={new Date().toISOString().split('T')[0]}
+                          min={localIsoDate()}
                           value={scheduledDate}
                           onChange={(e) => setScheduledDate(e.target.value)}
                           className="w-full p-2 bg-white border border-warm-gray rounded-xl text-xs text-rich-black focus:outline-none focus:border-accent-gold"
@@ -447,10 +442,9 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
                           onChange={(e) => setScheduledTimeSlot(e.target.value)}
                           className="w-full p-2 bg-white border border-warm-gray rounded-xl text-xs text-rich-black focus:outline-none focus:border-accent-gold cursor-pointer font-medium"
                         >
-                          <option value="Morning (08:30 AM - 11:30 AM)">Morning (08:30 AM - 11:30 AM)</option>
-                          <option value="Mid-Day (11:30 AM - 02:00 PM)">Mid-Day (11:30 AM - 02:00 PM)</option>
-                          <option value="Afternoon (02:00 PM - 05:00 PM)">Afternoon (02:00 PM - 05:00 PM)</option>
-                          <option value="Evening (05:00 PM - 08:00 PM)">Evening (05:00 PM - 08:00 PM)</option>
+                          {TIME_SLOTS.map(slot => (
+                            <option key={slot} value={slot}>{slot}</option>
+                          ))}
                         </select>
                       </div>
                     </div>

@@ -30,3 +30,11 @@ test('"Other" requests are routed by the title the client types', () => {
   assert.equal(getServiceCategory('Dog walking twice a week'), 'Cleaning & Domestic');
   assert.equal(getServiceCategory('Generator service'), 'Repairs & Fundi');
 });
+
+test('typed titles are not misfiled by words hidden inside other words', () => {
+  assert.equal(getServiceCategory('Outdoor lighting'), 'Outdoor & Relocation');
+  assert.equal(getServiceCategory('Outdoor Services'), 'Outdoor & Relocation');
+  assert.equal(getServiceCategory('Carpet repair'), 'Repairs & Fundi');
+  assert.equal(getServiceCategory('Pet sitting'), 'Cleaning & Domestic');
+  assert.equal(getServiceCategory('Fix my front door'), 'Repairs & Fundi');
+});

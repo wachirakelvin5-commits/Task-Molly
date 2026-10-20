@@ -62,8 +62,8 @@ const CATEGORY_KEYWORDS: [RegExp, ServiceCategory][] = [
   [/internet|cable|wifi|dstv/, 'Outdoor & Relocation'],
   [/electr|solar|inverter|breaker|wiring|socket|cctv|security/, 'Electrical & Solar'],
   [/plumb|pipe|leak|tap|sink|drain|toilet|water|shower|borehole/, 'Plumbing & Water'],
-  [/clean|mama fua|laundry|wash|cook|meal|chef|babysit|nanny|child|domestic|house ?help|ironing|helper|elder|care\b|caregiver|dog|pet\b|walking/, 'Cleaning & Domestic'],
-  [/fundi|handyman|carpent|lock|door|furniture|repair|mason|tile|weld/, 'Repairs & Fundi'],
+  [/clean|mama fua|laundry|wash|cook|meal|chef|babysit|nanny|child|domestic|house ?help|ironing|helper|elder|care\b|caregiver|dog|\bpets?\b|walking/, 'Cleaning & Domestic'],
+  [/fundi|handyman|carpent|lock|\bdoor|furniture|repair|mason|tile|weld/, 'Repairs & Fundi'],
   [/outdoor|garden|landscap|lawn|paint|skim|mover|moving|reloc|pest|fumig|errand|concierge|waste|junk|rubbish|garbage|event|pool/, 'Outdoor & Relocation'],
 ];
 
