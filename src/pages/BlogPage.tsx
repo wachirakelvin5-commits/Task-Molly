@@ -23,6 +23,7 @@ import { toast } from 'sonner';
 interface ForumComment {
   id: string;
   author: string;
+  naverId?: string;
   role?: string;
   avatar: string;
   content: string;
@@ -279,12 +280,14 @@ export default function BlogPage() {
   const [isMuted, setIsMuted] = useState(true);
   const [playingMap, setPlayingMap] = useState<Record<number, boolean>>({ 0: true });
   const [newCommentText, setNewCommentText] = useState('');
+  const [replyingTo, setReplyingTo] = useState<{ id: string; author: string } | null>(null);
   const [likedPosts, setLikedPosts] = useState<Record<string, boolean>>({});
   const [postLikesCount, setPostLikesCount] = useState<Record<string, number>>({});
   const [postComments, setPostComments] = useState<Record<string, ForumComment[]>>({});
   
   const videoRefs = useRef<(HTMLVideoElement | null)[]>([]);
   const scrollContainerRef = useRef<HTMLDivElement>(null);
+  const blogInputRef = useRef<HTMLInputElement>(null);
 
   // Initialize post state
   useEffect(() => {
@@ -379,9 +382,14 @@ export default function BlogPage() {
       } catch (err) {}
     }
 
+    const prefix = String.fromCharCode(65 + Math.floor(Math.random() * 26));
+    const randomNum = Math.floor(10000 + Math.random() * 90000);
+    const assignedNaverId = `NAVER-${prefix}${randomNum}`;
+
     const newComment: ForumComment = {
       id: `comment-${Date.now()}`,
       author: userName,
+      naverId: assignedNaverId,
       role: 'Member',
       avatar: userAvatar,
       content: newCommentText.trim(),
@@ -395,7 +403,16 @@ export default function BlogPage() {
     }));
 
     setNewCommentText('');
+    setReplyingTo(null);
     toast.success("Comment posted to forum discussion!");
+  };
+
+  const handleStartReply = (comment: ForumComment) => {
+    setReplyingTo({ id: comment.id, author: comment.author });
+    setNewCommentText(`@${comment.author} `);
+    setTimeout(() => {
+      blogInputRef.current?.focus();
+    }, 50);
   };
 
   const handleLikeComment = (commentId: string) => {
@@ -824,6 +841,11 @@ export default function BlogPage() {
                         <div className="flex-1 min-w-0">
                           <div className="flex items-center gap-1.5 flex-wrap">
                             <span className="text-xs font-bold text-rich-black">{comment.author}</span>
+                            {comment.naverId && (
+                              <span className="text-[9px] font-mono px-1.5 py-0.2 rounded-md bg-accent-gold/15 text-accent-gold border border-accent-gold/30 font-bold">
+                                {comment.naverId}
+                              </span>
+                            )}
                             {comment.role && (
                               <span className="text-[9px] font-bold px-1.5 py-0.2 rounded bg-accent-gold/15 text-accent-gold">
                                 {comment.role}
@@ -834,6 +856,15 @@ export default function BlogPage() {
                           <p className="text-xs text-rich-black/80 mt-1 leading-snug break-words">
                             {comment.content}
                           </p>
+                          <div className="mt-1">
+                            <button
+                              type="button"
+                              onClick={() => handleStartReply(comment)}
+                              className="text-[10px] font-bold text-accent-gold hover:underline cursor-pointer"
+                            >
+                              Reply
+                            </button>
+                          </div>
                         </div>
 
                         {/* Comment Like Button */}
@@ -855,12 +886,32 @@ export default function BlogPage() {
                   </div>
                 </div>
 
+                {/* Replying Banner */}
+                {replyingTo && (
+                  <div className="px-4 py-1.5 bg-accent-gold/10 border-t border-accent-gold/20 flex items-center justify-between text-[11px] text-rich-black">
+                    <span>
+                      Replying to <span className="font-bold text-accent-gold">@{replyingTo.author}</span>
+                    </span>
+                    <button
+                      type="button"
+                      onClick={() => {
+                        setReplyingTo(null);
+                        setNewCommentText('');
+                      }}
+                      className="text-rich-black/50 hover:text-rich-black font-bold text-xs"
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )}
+
                 {/* 4. Bottom Input Bar */}
                 <form 
                   onSubmit={handleAddComment}
                   className="p-3 border-t border-warm-gray/50 bg-white flex items-center gap-2 shrink-0"
                 >
                   <input
+                    ref={blogInputRef}
                     type="text"
                     placeholder="Add a comment..."
                     value={newCommentText}

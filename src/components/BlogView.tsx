@@ -17,7 +17,7 @@ interface ForumMessage {
 export default function BlogView() {
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
   const [topTopicMessages, setTopTopicMessages] = useState<ForumMessage[]>([]);
-  const [topTopicName, setTopTopicName] = useState('Flooding & Drainage');
+  const [topTopicName, setTopTopicName] = useState('Share Your Thoughts');
   const [isPaused, setIsPaused] = useState(false);
   const [direction, setDirection] = useState<'ltr' | 'rtl'>('rtl');
   const [isHovered, setIsHovered] = useState(false);
@@ -49,7 +49,7 @@ export default function BlogView() {
       const topics = msgs.map(m => m.topic);
       const topTopic = topics.sort((a,b) =>
         topics.filter(v => v===a).length - topics.filter(v => v===b).length
-      ).pop() || 'Flooding & Drainage';
+      ).pop() || 'Share Your Thoughts';
       
       setTopTopicName(topTopic);
       setTopTopicMessages(msgs.filter(m => m.topic === topTopic));
@@ -142,13 +142,8 @@ export default function BlogView() {
 
   return (
     <div className="h-full flex flex-col md:flex-row bg-primary-bg overflow-hidden">
-      {/* Column 1: Forum Section (Topic of the Day & Live Feed) */}
-      <div className="w-full md:w-[380px] lg:w-[420px] h-1/2 md:h-full border-r border-warm-gray flex-shrink-0 flex flex-col overflow-hidden">
-        <ForumSidebar />
-      </div>
-
-      {/* Column 2: Published Articles Section */}
-      <div className="flex-1 flex flex-col h-1/2 md:h-full overflow-hidden bg-white relative">
+      {/* Priority Intelligence Section (Published Articles Section) - First */}
+      <div className="flex-1 flex flex-col h-[45%] md:h-full overflow-hidden bg-white relative border-b md:border-b-0 md:border-r border-warm-gray">
         <AnimatePresence mode="wait">
           {!selectedPost ? (
             <motion.div 
@@ -212,8 +207,8 @@ export default function BlogView() {
                 onMouseEnter={() => setIsHovered(true)}
                 onMouseLeave={() => setIsHovered(false)}
               >
-                <div className="px-6 mb-4 flex items-center justify-between">
-                  <div className="text-[10px] text-rich-black/30 uppercase tracking-[0.3em] font-bold">Priority Intelligence</div>
+                <div className="px-6 mb-3 flex items-center justify-between">
+                  <div className="text-[10px] text-rich-black/40 uppercase tracking-[0.3em] font-bold">Priority Intelligence</div>
                   <div className="flex gap-2">
                     {BLOG_POSTS.map((_, i) => (
                       <div key={i} className="w-1.5 h-1.5 rounded-full bg-accent-gold/20" />
@@ -224,41 +219,41 @@ export default function BlogView() {
                 {/* Floating Navigation Buttons - Floating and Disappearing */}
                 <button 
                   onClick={() => handleManualNav('left')}
-                  className="absolute left-6 top-[60%] -translate-y-1/2 z-30 w-12 h-12 bg-white/90 backdrop-blur-sm border border-warm-gray rounded-full flex items-center justify-center text-rich-black shadow-lg hover:text-accent-gold hover:border-accent-gold transition-all opacity-0 group-hover/carousel-main:opacity-100"
+                  className="absolute left-6 top-[55%] -translate-y-1/2 z-30 w-11 h-11 bg-white/90 backdrop-blur-sm border border-warm-gray rounded-full flex items-center justify-center text-rich-black shadow-lg hover:text-accent-gold hover:border-accent-gold transition-all opacity-0 group-hover/carousel-main:opacity-100"
                 >
-                  <ChevronLeft size={24} />
+                  <ChevronLeft size={22} />
                 </button>
                 <button 
                   onClick={() => handleManualNav('right')}
-                  className="absolute right-6 top-[60%] -translate-y-1/2 z-30 w-12 h-12 bg-white/90 backdrop-blur-sm border border-warm-gray rounded-full flex items-center justify-center text-rich-black shadow-lg hover:text-accent-gold hover:border-accent-gold transition-all opacity-0 group-hover/carousel-main:opacity-100"
+                  className="absolute right-6 top-[55%] -translate-y-1/2 z-30 w-11 h-11 bg-white/90 backdrop-blur-sm border border-warm-gray rounded-full flex items-center justify-center text-rich-black shadow-lg hover:text-accent-gold hover:border-accent-gold transition-all opacity-0 group-hover/carousel-main:opacity-100"
                 >
-                  <ChevronRight size={24} />
+                  <ChevronRight size={22} />
                 </button>
 
                 <div className="overflow-hidden relative no-scrollbar">
                   <motion.div 
                     style={{ x: displayX, width: "max-content" }}
-                    className="flex pb-6"
+                    className="flex pb-4"
                   >
                     {featured.map((post, idx) => (
                       <motion.div
                         key={`featured-${post.id}-${idx}`}
                         onClick={() => setSelectedPost(post)}
-                        className="min-w-[280px] md:min-w-[400px] h-[200px] md:h-[260px] group relative rounded-[2rem] overflow-hidden border border-warm-gray bg-primary-bg cursor-pointer hover:border-accent-gold/50 transition-all shadow-xl flex-shrink-0 mr-4"
+                        className="min-w-[260px] md:min-w-[360px] h-[165px] md:h-[215px] group relative rounded-[1.6rem] overflow-hidden border border-warm-gray bg-primary-bg cursor-pointer hover:border-accent-gold/50 transition-all shadow-xl flex-shrink-0 mr-4"
                       >
                         <img 
                           src={post.image} 
                           className="w-full h-full object-cover opacity-100 transition-all duration-700 group-hover:scale-105" 
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
-                        <div className="absolute bottom-6 left-6 right-6">
-                          <div className="flex items-center gap-3 mb-2">
+                        <div className="absolute bottom-4 left-5 right-5 md:bottom-5 md:left-5 md:right-5">
+                          <div className="flex items-center gap-3 mb-1.5">
                             <span className="px-2 py-0.5 bg-accent-gold text-white text-[8px] font-bold uppercase tracking-widest rounded border border-accent-gold/20">
                               {post.category}
                             </span>
                             <span className="text-[9px] text-white/70 font-mono">{post.date}</span>
                           </div>
-                          <h3 className="text-xl md:text-2xl font-medium text-white leading-tight group-hover:text-accent-gold transition-colors">{post.title}</h3>
+                          <h3 className="text-lg md:text-xl font-medium text-white leading-tight group-hover:text-accent-gold transition-colors">{post.title}</h3>
                         </div>
                       </motion.div>
                     ))}
@@ -364,6 +359,12 @@ export default function BlogView() {
           )}
         </AnimatePresence>
       </div>
+
+      {/* Community Feed / Comments Section - Second (Occupies even more space and fits full width/height) */}
+      <div className="w-full md:w-[460px] lg:w-[500px] xl:w-[540px] h-[55%] md:h-full flex-shrink-0 flex flex-col overflow-hidden bg-white">
+        <ForumSidebar />
+      </div>
+
     </div>
   );
 }

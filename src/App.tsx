@@ -24,6 +24,7 @@ const ClientTasks = lazy(() => import('./pages/ClientTasks'));
 const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
 const AdminComplaints = lazy(() => import('./pages/AdminComplaints'));
 const AdminAnalytics = lazy(() => import('./pages/AdminAnalytics'));
+const RequestServicePage = lazy(() => import('./pages/RequestServicePage'));
 
 // Components
 import Navbar from './components/Navbar';
@@ -123,6 +124,7 @@ export default function App() {
           }>
             <Routes>
               <Route path="/" element={<LandingPage setHideNavbar={setHideNavbar} />} />
+              <Route path="/request" element={<RequestServicePage />} />
               <Route 
                 path="/auth" 
                 element={user ? <Navigate to={user.role === 'tasker' ? '/provider-dashboard' : '/dashboard'} /> : <AuthPage />} 

@@ -17,6 +17,7 @@ import {
   doc,
   getDoc,
   getDocs,
+  increment,
   query,
   serverTimestamp,
   setDoc,
@@ -297,5 +298,26 @@ describe('admin access and roles', () => {
     await assertSucceeds(setDoc(doc(db('newclient'), 'users/newclient'), profile('newclient', 'client')));
     await assertSucceeds(setDoc(doc(db('newpro'), 'users/newpro'), profile('newpro', 'tasker')));
     await assertFails(setDoc(doc(db('sneaky'), 'users/sneaky'), profile('sneaky', 'admin')));
+  });
+});
+
+describe('forum likes', () => {
+  const POST = 'forum/post1';
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), POST), { userId: 'alice', content: 'Hello', likes: 3 });
+    });
+  });
+
+  test('a signed-in user can like and unlike a post', async () => {
+    await assertSucceeds(updateDoc(doc(db('eve'), POST), { likes: increment(1) }));
+    await assertSucceeds(updateDoc(doc(db('eve'), POST), { likes: increment(-1) }));
+  });
+
+  test('likes cannot jump, go negative, or come with other edits', async () => {
+    await assertFails(updateDoc(doc(db('eve'), POST), { likes: increment(5) }));
+    await assertFails(updateDoc(doc(db('eve'), POST), { likes: -1 }));
+    await assertFails(updateDoc(doc(db('eve'), POST), { likes: increment(1), content: 'edited' }));
+    await assertFails(updateDoc(doc(db(), POST), { likes: increment(1) }));
   });
 });

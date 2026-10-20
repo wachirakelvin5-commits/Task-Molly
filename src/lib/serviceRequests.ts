@@ -8,7 +8,7 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { getServiceCategory } from './requestModel';
+import { SERVICE_CATEGORIES, getServiceCategory } from './requestModel';
 
 export * from './requestModel';
 
@@ -48,7 +48,10 @@ export async function createServiceRequest(clientId: string, request: NewService
     ...extras,
     clientId,
     serviceType: request.serviceType.slice(0, 100),
-    serviceCategory: getServiceCategory(request.serviceType),
+    // Forms that know the category (e.g. the service catalogue) pass it; otherwise derive it from the name.
+    serviceCategory: (SERVICE_CATEGORIES as readonly string[]).includes(request.serviceCategory)
+      ? request.serviceCategory
+      : getServiceCategory(request.serviceType),
     description: (description || '').slice(0, 2000),
     location: (location || 'Nairobi').slice(0, 200),
     budget: budgetNum,

@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
 import { motion } from 'motion/react';
 import { UserProfile } from '../types';
 import { 
@@ -22,6 +22,11 @@ interface ProviderDashboardProps {
 
 export default function ProviderDashboard({ user }: ProviderDashboardProps) {
   const navigate = useNavigate();
+
+  // Clients belong on the client dashboard.
+  useEffect(() => {
+    if (user.role === 'client') navigate('/dashboard', { replace: true });
+  }, [user.role, navigate]);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
 
   // Initialize online status from saved preference or user object
