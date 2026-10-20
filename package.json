@@ -11,7 +11,7 @@
     "lint": "tsc --noEmit",
     "test:rules": "npx -y firebase-tools@13.29.1 emulators:exec --only firestore --project demo-taskmolly \"tsx --test tests/firestore.rules.test.ts\"",
     "start": "node server.ts",
-    "test:metrics": "tsx --test tests/adminMetrics.test.ts"
+    "test:metrics": "tsx --test tests/adminMetrics.test.ts tests/serviceCatalog.test.ts"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",

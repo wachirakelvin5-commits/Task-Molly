@@ -211,6 +211,11 @@ service cloud.firestore {
       allow create: if isSignedIn() && 
         incoming().content is string && incoming().content.size() <= 1000 &&
         incoming().userId == request.auth.uid;
+      // Likes: signed-in users may move the like count by one, and change nothing else.
+      allow update: if isSignedIn() &&
+        incoming().diff(existing()).affectedKeys().hasOnly(['likes']) &&
+        incoming().likes is int && incoming().likes >= 0 &&
+        incoming().likes - existing().get('likes', 0) in [-1, 1];
     }
 
     match /complaints/{complaintId} {

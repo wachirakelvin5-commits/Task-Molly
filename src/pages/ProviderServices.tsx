@@ -21,11 +21,11 @@ import {
 } from '../lib/serviceRequests';
 
 const CATEGORY_DETAILS: Record<ServiceCategory, { icon: typeof Zap; examples: string }> = {
-  'Cleaning & Domestic': { icon: Sparkles, examples: 'Mama Fua, home cleaning, cooking, babysitting' },
+  'Cleaning & Domestic': { icon: Sparkles, examples: 'Cleaning, Mama Fua, cooking, mom\'s helper, elder care, dog walking' },
   'Plumbing & Water': { icon: Droplet, examples: 'Leaks, taps, blocked drains, water tanks' },
   'Electrical & Solar': { icon: Zap, examples: 'Wiring, breakers, solar & inverters, CCTV' },
   'Repairs & Fundi': { icon: Hammer, examples: 'Handyman, carpentry, appliances, gas, TV mounting' },
-  'Outdoor & Relocation': { icon: Truck, examples: 'Gardening, painting, movers, pest control, errands' },
+  'Outdoor & Relocation': { icon: Truck, examples: 'Outdoor services, gardening, painting, movers, pest control, errands' },
 };
 
 const ACTIVE_STATUSES = ['accepted', 'assigned', 'in-progress', 'awaiting-confirmation'];

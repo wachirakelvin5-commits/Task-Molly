@@ -98,7 +98,8 @@ export async function finalizePendingRequest(
       description: pending.description || 'Service requested via Task Molly Concierge',
       urgency: pending.urgency || 'ASAP',
       location: pending.location || 'Nairobi, Kenya',
-      budget: Number(pending.budget) || Number(pending.clientPrice) || 2500,
+      // No default price: requests from the catalogue forms show "Price TBC" either way.
+      budget: Number(pending.budget) || Number(pending.clientPrice) || undefined,
       date: pending.date || now.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' }),
       time: pending.time || now.toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
     });

@@ -35,6 +35,11 @@ interface DashboardProps {
 export default function Dashboard({ user }: DashboardProps) {
   const { isPhone, isTablet, isLaptop } = useDeviceType();
   const navigate = useNavigate();
+
+  // Providers belong on the provider dashboard.
+  useEffect(() => {
+    if (user.role === 'tasker') navigate('/provider-dashboard', { replace: true });
+  }, [user.role, navigate]);
   const [activeJob, setActiveJob] = useState<any>(null);
   const [showForum, setShowForum] = useState(false);
   const [complaintJob, setComplaintJob] = useState<any>(null);
