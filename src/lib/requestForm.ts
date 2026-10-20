@@ -17,6 +17,21 @@ export interface RequestFormInput {
   scheduledTimeSlot: string;
 }
 
+/** Arrival windows offered on the request forms. The first one is the default. */
+export const TIME_SLOTS = [
+  'Morning (08:30 AM - 11:30 AM)',
+  'Mid-Day (11:30 AM - 02:00 PM)',
+  'Afternoon (02:00 PM - 05:00 PM)',
+  'Evening (05:00 PM - 08:00 PM)',
+] as const;
+
+/** YYYY-MM-DD in the browser's own time zone, `daysAhead` days from today. */
+export function localIsoDate(daysAhead = 0, now = new Date()): string {
+  const d = new Date(now.getFullYear(), now.getMonth(), now.getDate() + daysAhead);
+  const pad = (n: number) => String(n).padStart(2, '0');
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
+}
+
 function formatScheduledDate(isoDate: string): string {
   const [y, m, d] = isoDate.split('-').map(Number);
   const date = new Date(y, (m || 1) - 1, d || 1);
