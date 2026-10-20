@@ -25,7 +25,9 @@ service cloud.firestore {
 
     function isAdmin() {
       return isSignedIn() && 
-        (request.auth.token.email == "wachirakelvin5@gmail.com" && request.auth.token.email_verified == true);
+        // Keep in sync with ADMIN_EMAILS in src/lib/admin.ts
+        (request.auth.token.email in ["wachirakelvin5@gmail.com", "taskmolly254@gmail.com"] &&
+         request.auth.token.email_verified == true);
     }
 
     function incoming() { return request.resource.data; }
@@ -42,7 +44,7 @@ service cloud.firestore {
       }
       allow get: if isSignedIn();
       allow list: if (resource.data.role == 'tasker') || isAdmin();
-      allow create: if (isOwner(uid) || isAdmin()) && isValidUser(incoming());
+      allow create: if ((isOwner(uid) && incoming().role in ['client', 'tasker']) || isAdmin()) && isValidUser(incoming());
       allow update: if (isOwner(uid) || isAdmin()) && 
         incoming().role == existing().role &&
         (!('services' in incoming()) || (incoming().services is list && incoming().services.size() <= 20)) &&

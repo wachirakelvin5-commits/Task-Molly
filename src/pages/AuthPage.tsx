@@ -10,7 +10,7 @@ import {
   signInAnonymously,
   createUserWithEmailAndPassword,
   signInWithEmailAndPassword,
-  fetchSignInMethodsForEmail
+  sendPasswordResetEmail
 } from 'firebase/auth';
 import { doc, setDoc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 import { useNavigate, useLocation } from 'react-router-dom';
@@ -167,19 +167,19 @@ export default function AuthPage() {
       toast.error("Please enter your email");
       return;
     }
-    setLoading(true);
+    // Firebase hides whether an email is registered (email enumeration protection),
+    // so ask for the password and offer "create an account" on the next step.
+    setStep('password-input');
+  };
+
+  const handlePasswordReset = async () => {
     try {
-      const methods = await fetchSignInMethodsForEmail(auth, email);
-      if (methods.length > 0) {
-        setStep('password-input');
-      } else {
-        setStep('registration-confirm');
-      }
-    } catch (err: any) {
-      toast.error("Error checking email");
-    } finally {
-      setLoading(false);
+      await sendPasswordResetEmail(auth, email);
+    } catch (err) {
+      console.warn("Password reset request failed:", err);
     }
+    // Same message either way, so the page doesn't reveal which emails have accounts.
+    toast.success(`If ${email} has an account, a password reset link is on its way.`);
   };
 
   const handleEmailAuth = async () => {
@@ -192,7 +192,7 @@ export default function AuthPage() {
       const result = await signInWithEmailAndPassword(auth, email, password);
       await handleUserCreation(result.user, selectedRole!);
     } catch (err: any) {
-      toast.error("Invalid email or password");
+      toast.error("Email or password is incorrect. New here? Create an account below.");
     } finally {
       setLoading(false);
     }
@@ -230,7 +230,12 @@ export default function AuthPage() {
         toast.error("Something went wrong. Please try again.");
       }
     } catch (err: any) {
-      toast.error("Registration failed: " + err.message);
+      if (err?.code === 'auth/email-already-in-use') {
+        toast.error("An account with this email already exists. Please sign in instead.");
+        setStep('password-input');
+      } else {
+        toast.error("Registration failed: " + err.message);
+      }
     } finally {
       setLoading(false);
     }
@@ -376,7 +381,7 @@ export default function AuthPage() {
       }
       setStep('method-selection');
     }
-    if (step === 'profile-setup') setStep('registration-confirm');
+    if (step === 'profile-setup') setStep(tempUser ? 'registration-confirm' : 'password-input');
   };
 
   return (
@@ -511,6 +516,15 @@ export default function AuthPage() {
                       </button>
 
                       <button 
+                        onClick={() => setStep('email-input')}
+                        disabled={loading}
+                        className="w-full flex items-center justify-center gap-3.5 bg-white border-2 border-warm-gray/70 hover:border-accent-gold py-4 px-6 rounded-2xl hover:shadow-md transition-all group disabled:opacity-50 font-semibold text-rich-black text-sm"
+                      >
+                        <Mail size={18} className="text-rich-black/50 shrink-0" />
+                        <span>Continue with Email</span>
+                      </button>
+
+                      <button 
                         onClick={handleAppleLogin}
                         disabled={loading}
                         className="w-full flex items-center justify-center gap-3.5 bg-rich-black text-white hover:bg-black py-4 px-6 rounded-2xl hover:shadow-lg transition-all group disabled:opacity-50 font-semibold text-sm"
@@ -641,6 +655,14 @@ export default function AuthPage() {
                   {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Login'}
                   {!loading && <CheckCircle2 size={18} />}
                 </button>
+                <div className="flex items-center justify-between text-xs px-2">
+                  <button onClick={handlePasswordReset} disabled={loading} className="text-rich-black/50 hover:text-accent-gold transition-colors">
+                    Forgot password?
+                  </button>
+                  <button onClick={handleRegistration} disabled={loading} className="font-semibold text-accent-gold hover:underline">
+                    New here? Create an account
+                  </button>
+                </div>
               </div>
             </motion.div>
           )}
