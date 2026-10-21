@@ -1,5 +1,5 @@
 import { useState, useRef, useEffect } from 'react';
-import { motion, AnimatePresence, useMotionValue, useAnimationFrame, animate } from 'motion/react';
+import { motion, AnimatePresence, useMotionValue, useAnimationFrame, useTransform, animate } from 'motion/react';
 import { Search, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import TaskRequestModal from '../components/TaskRequestModal';
 import HeroVideo from '../components/HeroVideo';
@@ -11,6 +11,7 @@ import TermsView from '../components/TermsView';
 import PrivacyView from '../components/PrivacyView';
 
 import { useDeviceType } from '../hooks/useDeviceType';
+import { useSwipe } from '../hooks/useSwipe';
 
 interface LandingPageProps {
   setHideNavbar: (hide: boolean) => void;
@@ -20,22 +21,18 @@ export default function LandingPage({ setHideNavbar }: LandingPageProps) {
   const { isPhone, isTablet, isLaptop } = useDeviceType();
   const [selectedCard, setSelectedCard] = useState<{ title: string; content: string } | null>(null);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
+  // x is the raw, unbounded offset; displayX wraps it so the tripled card list loops seamlessly.
   const x = useMotionValue(0);
   const [isPaused, setIsPaused] = useState(false);
   const pauseTimeoutRef = useRef<NodeJS.Timeout | null>(null);
+  const dragStartXRef = useRef(0);
   const CARD_WIDTH = 284; // 260px width + 24px gap
   const TOTAL_WIDTH = 1704; // 6 cards * 284px
+  const displayX = useTransform(x, (v) => (((v % TOTAL_WIDTH) + TOTAL_WIDTH) % TOTAL_WIDTH) - TOTAL_WIDTH);
 
   useAnimationFrame((_, delta) => {
     if (!isPaused) {
-      const currentX = x.get();
-      let newX = currentX - (delta * 0.05); // Speed adjustment
-      
-      // Seamless wrap
-      if (newX <= -TOTAL_WIDTH) {
-        newX += TOTAL_WIDTH;
-      }
-      x.set(newX);
+      x.set(x.get() - delta * 0.05); // Speed adjustment
     }
   });
 
@@ -50,16 +47,38 @@ export default function LandingPage({ setHideNavbar }: LandingPageProps) {
       type: "spring",
       stiffness: 300,
       damping: 30,
-      onUpdate: (latest) => {
-        if (latest > 0) x.set(latest - TOTAL_WIDTH);
-        if (latest <= -TOTAL_WIDTH) x.set(latest + TOTAL_WIDTH);
-      }
     });
 
     pauseTimeoutRef.current = setTimeout(() => {
       setIsPaused(false);
     }, 3000);
   };
+
+  // Swipe left/right with a finger or mouse. Auto-play stops while held and
+  // picks up again as soon as the cards settle after letting go.
+  const swipeHandlers = useSwipe({
+    onStart: () => {
+      if (pauseTimeoutRef.current) clearTimeout(pauseTimeoutRef.current);
+      x.stop();
+      setIsPaused(true);
+      dragStartXRef.current = x.get();
+    },
+    onMove: (dx) => {
+      x.set(dragStartXRef.current + dx);
+    },
+    onEnd: (velocity) => {
+      // Carry the flick a little further, then line up on the nearest card.
+      const projected = x.get() + velocity * 200;
+      const targetX = Math.round(projected / CARD_WIDTH) * CARD_WIDTH;
+      animate(x, targetX, {
+        type: "spring",
+        stiffness: 300,
+        damping: 30,
+        velocity: velocity * 1000,
+        onComplete: () => setIsPaused(false),
+      });
+    },
+  });
 
   useEffect(() => {
     setHideNavbar(isTaskModalOpen);
@@ -367,9 +386,12 @@ We may update this Privacy Policy from time to time. We will notify you of any m
               <ChevronRight size={24} />
             </button>
 
-            <div className="relative flex">
+            <div
+              className="relative flex touch-pan-y select-none cursor-grab active:cursor-grabbing"
+              {...swipeHandlers}
+            >
               <motion.div 
-                style={{ x }}
+                style={{ x: displayX }}
                 className="flex gap-6 whitespace-nowrap px-4"
               >
                 {[...INFO_CARDS, ...INFO_CARDS, ...INFO_CARDS].map((card, i) => (
