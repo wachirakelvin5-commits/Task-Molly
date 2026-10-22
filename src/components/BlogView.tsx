@@ -6,6 +6,7 @@ import { BLOG_POSTS, BlogPost } from '../constants/blogData';
 import ForumSidebar from './ForumSidebar';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
+import { useSwipe } from '../hooks/useSwipe';
 
 interface ForumMessage {
   id: string;
@@ -27,6 +28,9 @@ export default function BlogView() {
   const pauseTimerRef = useRef<NodeJS.Timeout | null>(null);
   const animationRef = useRef<any>(null);
   const articleRef = useRef<HTMLDivElement>(null);
+  const trayRef = useRef<HTMLDivElement>(null);
+  const dragStartRef = useRef(0);
+  const snapRef = useRef<ReturnType<typeof animate> | null>(null);
 
   // Triple the posts for a seamless loop [Clone 1, Real Set, Clone 2]
   const featured = [...BLOG_POSTS, ...BLOG_POSTS, ...BLOG_POSTS];
@@ -126,6 +130,48 @@ export default function BlogView() {
     }, 5000);
   };
 
+  // Keep the tray inside the middle copy of the posts (-33.33% to -66.66%).
+  const wrapTray = (val: number) => {
+    const unit = 100 / 3;
+    while (val > -unit) val -= unit;
+    while (val < -unit * 2) val += unit;
+    return val;
+  };
+
+  // Swipe left/right with a finger or mouse. Auto-play stops while held and
+  // resumes as soon as the cards settle after letting go.
+  const swipeHandlers = useSwipe({
+    onStart: () => {
+      if (pauseTimerRef.current) clearTimeout(pauseTimerRef.current);
+      if (animationRef.current) animationRef.current.stop();
+      if (snapRef.current) snapRef.current.stop();
+      trayX.stop();
+      setIsPaused(true);
+      dragStartRef.current = trayX.get();
+    },
+    onMove: (dx) => {
+      const width = trayRef.current?.offsetWidth || 1;
+      trayX.set(wrapTray(dragStartRef.current + (dx / width) * 100));
+    },
+    onEnd: (velocity) => {
+      const width = trayRef.current?.offsetWidth || 1;
+      const nudgeSize = (100 / 3) / BLOG_POSTS.length; // One article, in % of the tray
+      const projected = trayX.get() + ((velocity * 200) / width) * 100;
+      const targetX = Math.round(projected / nudgeSize) * nudgeSize;
+      // Kept apart from animationRef so the auto-play effect can't cancel the settle
+      // (which would leave the carousel paused).
+      snapRef.current = animate(trayX, targetX, {
+        duration: 0.4,
+        ease: "easeOut",
+        onComplete: () => {
+          trayX.set(wrapTray(trayX.get()));
+          setDirection('rtl');
+          setIsPaused(false);
+        }
+      });
+    },
+  });
+
   const handleArticleScroll = (e: React.UIEvent<HTMLDivElement>) => {
     const { scrollTop, scrollHeight, clientHeight } = e.currentTarget;
     // Show when reached near bottom (within 200px)
@@ -204,8 +250,8 @@ export default function BlogView() {
               {/* Featured Carousel */}
               <div 
                 className="flex-shrink-0 pt-4 md:pt-6 relative group/carousel-main"
-                onMouseEnter={() => setIsHovered(true)}
-                onMouseLeave={() => setIsHovered(false)}
+                onPointerEnter={(e) => { if (e.pointerType === 'mouse') setIsHovered(true); }}
+                onPointerLeave={(e) => { if (e.pointerType === 'mouse') setIsHovered(false); }}
               >
                 <div className="px-6 mb-3 flex items-center justify-between">
                   <div className="text-[10px] text-rich-black/40 uppercase tracking-[0.3em] font-bold">Priority Intelligence</div>
@@ -230,8 +276,12 @@ export default function BlogView() {
                   <ChevronRight size={22} />
                 </button>
 
-                <div className="overflow-hidden relative no-scrollbar">
+                <div
+                  className="overflow-hidden relative no-scrollbar touch-pan-y select-none cursor-grab active:cursor-grabbing"
+                  {...swipeHandlers}
+                >
                   <motion.div 
+                    ref={trayRef}
                     style={{ x: displayX, width: "max-content" }}
                     className="flex pb-4"
                   >
@@ -243,6 +293,7 @@ export default function BlogView() {
                       >
                         <img 
                           src={post.image} 
+                          draggable={false}
                           className="w-full h-full object-cover opacity-100 transition-all duration-700 group-hover:scale-105" 
                         />
                         <div className="absolute inset-0 bg-gradient-to-t from-black/90 via-black/20 to-transparent" />
