@@ -17,8 +17,29 @@ Sentry.init({
   sendDefaultPii: false,
 });
 
-// Register service worker
-registerSW({ immediate: true });
+// Register the service worker and keep the installed app up to date.
+// The browser only looks for a new version when a page is opened, so an app left open
+// (or resumed from the background on a phone) could keep showing an old version.
+// Check again whenever the app comes back into view, when the connection returns, and
+// every 30 minutes. With autoUpdate, a new version is installed and the page reloads itself.
+const UPDATE_CHECK_INTERVAL_MS = 30 * 60 * 1000;
+registerSW({
+  immediate: true,
+  onRegisteredSW(_swUrl, registration) {
+    if (!registration) return;
+    const checkForUpdate = () => {
+      if (!navigator.onLine) return;
+      registration.update().catch(() => {
+        // Offline or the server is unreachable: try again on the next trigger.
+      });
+    };
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'visible') checkForUpdate();
+    });
+    window.addEventListener('online', checkForUpdate);
+    setInterval(checkForUpdate, UPDATE_CHECK_INTERVAL_MS);
+  },
+});
 
 createRoot(document.getElementById('root')!, {
   // Report React render errors, not just uncaught script errors.

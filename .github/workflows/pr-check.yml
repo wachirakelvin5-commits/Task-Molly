@@ -45,3 +45,10 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # Same checks deploy.yml makes before publishing, so a change that would block the deploy fails here first.
+      - name: Check the build is wired to the live site
+        run: |
+          test -f dist/CNAME || { echo "::error::dist/CNAME missing - task-molly.com would stop pointing at this site"; exit 1; }
+          grep -q '"task-molly"' -r dist/assets || { echo "::error::Build does not use the task-molly Firebase project"; exit 1; }
+          cmp -s firebase-applet-config.json .github/live-config/firebase-applet-config.json || echo "::warning::firebase-applet-config.json differs from .github/live-config/ - the deploy will use the live copy"
