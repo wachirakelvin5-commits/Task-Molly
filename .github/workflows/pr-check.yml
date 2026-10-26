@@ -44,7 +44,9 @@ jobs:
           fi
 
       - name: Build
-        run: npm run build
+        run: |
+          set -o pipefail
+          npm run build 2>&1 | tee build.log || { tail -40 build.log | sed 's/^/::error::/'; exit 1; }
 
       # Same checks deploy.yml makes before publishing, so a change that would block the deploy fails here first.
       - name: Check the build is wired to the live site
