@@ -1,10 +1,11 @@
 import { useState, useEffect, useRef } from 'react';
 import { motion } from 'motion/react';
-import { X, Send, Sparkles } from 'lucide-react';
+import { X, Send, Sparkles, ClipboardList } from 'lucide-react';
 import { askMollyStream } from '../services/geminiService';
 import { checkProviderAvailability, formatWaitTime } from '../services/availabilityService';
 import { useNavigate } from 'react-router-dom';
-import { auth } from '../firebase';
+import { addDoc, collection } from 'firebase/firestore';
+import { auth, db } from '../firebase';
 import { createServiceRequest } from '../lib/serviceRequests';
 import { toast } from 'sonner';
 import { savePendingRequest } from '../lib/pendingRequestService';
@@ -17,9 +18,13 @@ interface Message {
 
 interface AIModalProps {
   onClose: () => void;
+  /** Text the client already typed (e.g. in the homepage search box); sent as the first message. */
+  initialPrompt?: string;
+  /** Opens the regular request form instead of chatting. */
+  onUseForm?: () => void;
 }
 
-export default function AIModal({ onClose }: AIModalProps) {
+export default function AIModal({ onClose, initialPrompt, onUseForm }: AIModalProps) {
   const [input, setInput] = useState('');
   const [messages, setMessages] = useState<Message[]>([
     { role: 'model', text: "Ask Molly. Let's get you paired up with a pro." }
@@ -28,6 +33,8 @@ export default function AIModal({ onClose }: AIModalProps) {
   const [availabilityInfo, setAvailabilityInfo] = useState<string | null>(null);
   const [detectedService, setDetectedService] = useState<string | null>(null);
   const [pendingConfirmation, setPendingConfirmation] = useState<any | null>(null);
+  const [connectionFailed, setConnectionFailed] = useState(false);
+  const sentInitialPrompt = useRef(false);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLInputElement>(null);
   const navigate = useNavigate();
@@ -99,11 +106,24 @@ export default function AIModal({ onClose }: AIModalProps) {
     }
   };
 
-  const handleSend = async () => {
-    if (!input.trim() || loading || pendingConfirmation) return;
+  // Send what the client typed on the homepage as soon as the chat opens.
+  useEffect(() => {
+    const text = initialPrompt?.trim();
+    if (text && !sentInitialPrompt.current) {
+      sentInitialPrompt.current = true;
+      void sendMessage(text);
+    }
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [initialPrompt]);
 
-    const userMsg = input;
+  const handleSend = () => sendMessage(input);
+
+  const sendMessage = async (text: string) => {
+    if (!text.trim() || loading || pendingConfirmation) return;
+
+    const userMsg = text.trim();
     setInput('');
+    setConnectionFailed(false);
     setMessages(prev => [...prev, { role: 'user', text: userMsg }]);
     setLoading(true);
 
@@ -160,18 +180,20 @@ export default function AIModal({ onClose }: AIModalProps) {
       if (isUnlisted) {
         const serviceType = response.serviceDetails?.serviceType || (userMsg.length < 30 ? userMsg : "Unlisted Service");
         const currentUser = auth.currentUser;
-        await fetch('/api/unlisted-service', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
+        // Saved straight to Firestore (the live site has no server); the rules allow anyone to add one.
+        try {
+          await addDoc(collection(db, 'unlistedServiceRequests'), {
             clientId: currentUser?.uid || 'anonymous',
-            email: currentUser?.email || 'anonymous',
-            serviceType: serviceType,
-            rawMessage: userMsg,
-            timestamp: new Date().toISOString()
-          })
-        });
-        toast.success("Request received! We'll look into this service.");
+            email: (currentUser?.email || 'anonymous').slice(0, 200),
+            serviceType: String(serviceType).slice(0, 200),
+            rawMessage: userMsg.slice(0, 2000),
+            timestamp: new Date().toISOString(),
+            source: 'molly-chat',
+          });
+          toast.success("Request received! We'll look into this service.");
+        } catch (err) {
+          console.error("Couldn't save the unlisted service request:", err);
+        }
         return;
       }
 
@@ -188,7 +210,13 @@ export default function AIModal({ onClose }: AIModalProps) {
       }
     } catch (error) {
       console.error("AI Chat Error:", error);
-      setMessages(prev => [...prev, { role: 'model', text: "I'm having a bit of trouble connecting. Could you try again?" }]);
+      setConnectionFailed(true);
+      setMessages(prev => [
+        ...prev.filter(m => !m.isStreaming),
+        { role: 'model', text: onUseForm
+          ? "I'm having a bit of trouble connecting. Could you try again, or use the request form below?"
+          : "I'm having a bit of trouble connecting. Could you try again?" },
+      ]);
     } finally {
       setLoading(false);
     }
@@ -309,6 +337,18 @@ export default function AIModal({ onClose }: AIModalProps) {
 
         {/* Input */}
         <div className="p-6 bg-white border-t border-warm-gray">
+          {onUseForm && (
+            <button
+              type="button"
+              onClick={onUseForm}
+              className={`mb-3 flex items-center gap-2 text-xs uppercase tracking-wider font-bold transition-colors ${
+                connectionFailed ? 'text-accent-gold' : 'text-rich-black/40 hover:text-accent-gold'
+              }`}
+            >
+              <ClipboardList size={14} />
+              Prefer a form? Fill in the request form
+            </button>
+          )}
           <div className="relative flex items-center">
             <input 
               ref={inputRef}
@@ -316,7 +356,7 @@ export default function AIModal({ onClose }: AIModalProps) {
               type="text" 
               value={input}
               onChange={(e) => setInput(e.target.value)}
-              onKeyPress={(e) => e.key === 'Enter' && handleSend()}
+              onKeyDown={(e) => e.key === 'Enter' && handleSend()}
               placeholder="Tell Molly what you need..."
               className="w-full bg-primary-bg border border-warm-gray rounded-full px-6 py-4 pr-16 focus:outline-none focus:border-accent-gold transition-all placeholder:text-rich-black/20"
             />
