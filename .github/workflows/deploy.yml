@@ -52,8 +52,18 @@ jobs:
       - name: Setup Pages
         uses: actions/configure-pages@v5
 
+      # AI Studio doesn't keep package-lock.json, so packages are downloaded fresh on every
+      # deploy and a build can fail for reasons unrelated to the code. Retry once with a clean
+      # install before giving up, so an AI Studio update isn't silently left undeployed.
       - name: Build
-        run: npm run build
+        run: |
+          if npm run build; then exit 0; fi
+          echo "::warning::Build failed - retrying once with a clean install"
+          sleep 20
+          rm -rf node_modules dist build
+          npm install --legacy-peer-deps
+          npm install react-is --legacy-peer-deps
+          npm run build
 
       - name: Verify build artifacts
         run: |
