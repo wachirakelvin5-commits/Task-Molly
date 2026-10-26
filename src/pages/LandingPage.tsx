@@ -386,11 +386,13 @@ We may update this Privacy Policy from time to time. We will notify you of any m
 
           <AnimatePresence>
             {isTaskModalOpen && (
-              <TaskRequestModal key="request-form" onClose={() => setIsTaskModalOpen(false)} />
+              <TaskRequestModal onClose={() => setIsTaskModalOpen(false)} />
             )}
+          </AnimatePresence>
+
+          <AnimatePresence>
             {isMollyOpen && (
               <AIModal
-                key="molly"
                 initialPrompt={mollyPrompt ?? undefined}
                 onClose={() => setMollyPrompt(null)}
                 onUseForm={switchToForm}
