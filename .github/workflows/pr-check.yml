@@ -33,13 +33,18 @@ jobs:
       - name: Admin metrics unit tests
         run: npm run test:metrics
 
-      - name: Type-check changed admin files
+      - name: Type-check admin dashboard and Molly files
         # The whole project has older type errors, so only fail on errors in the admin dashboard files.
         run: |
           npx tsc --noEmit -p . > tsc.log 2>&1 || true
           echo "Type errors across the project: $(grep -c 'error TS' tsc.log || true)"
           if grep -E '^src/(pages/AdminDashboard|lib/(adminMetrics|requestModel|serviceRequests))' tsc.log; then
             echo "::error::Type errors in the admin dashboard files (listed above)"
+            exit 1
+          fi
+          # Molly (AI concierge) files
+          if grep -E '^(src/(services/geminiService|lib/molly|components/AIModal|pages/LandingPage)|tests/mollyResponse)' tsc.log | tee molly-tsc.log | grep -q .; then
+            sed 's/^/::error::/' molly-tsc.log
             exit 1
           fi
 
