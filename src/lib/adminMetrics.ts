@@ -16,6 +16,7 @@ import {
   getServiceCategory,
   toDate,
 } from './requestModel';
+import { taskRef } from './taskRef';
 
 // Small date helpers (local time). Kept dependency-free so this module runs anywhere.
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -95,6 +96,8 @@ export const STAGE_LABELS: Record<LiveStage, string> = {
 
 export interface AdminRequest {
   id: string;
+  /** "task_128_NRB", or null until the admin site has given the request a number. */
+  ref: string | null;
   status: RequestStatus;
   serviceType: string;
   category: ServiceCategory;
@@ -151,6 +154,7 @@ export function normalizeRequest(id: string, data: Record<string, any>): AdminRe
 
   return {
     id,
+    ref: taskRef({ taskNumber: data.taskNumber, location: data.location }),
     status,
     serviceType: data.serviceType || 'Unknown service',
     category,
@@ -597,6 +601,7 @@ const fmtDate = (d: Date | null) => (d ? formatDateTime(d) : '');
 /** One flat row per request, for CSV / Excel export. */
 export function exportRows(requests: AdminRequest[], now = Date.now()) {
   return requests.map((r) => ({
+    Task: r.ref ? `#${r.ref}` : '',
     'Request ID': r.id,
     Stage: STAGE_LABELS[getStage(r, now)],
     Service: r.serviceType,

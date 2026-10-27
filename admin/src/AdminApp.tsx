@@ -7,11 +7,18 @@ import { auth } from '../../src/firebase';
 import NotificationBell from './NotificationBell';
 import SignInPage from './SignInPage';
 import { isAllowedAdmin } from './access';
+import { useTaskNumbering } from './useTaskNumbering';
 
 // The dashboard screens are shared with the main repo (src/pages) but only bundled here.
 const AdminDashboard = lazy(() => import('../../src/pages/AdminDashboard'));
 const AdminComplaints = lazy(() => import('../../src/pages/AdminComplaints'));
 const AdminAnalytics = lazy(() => import('../../src/pages/AdminAnalytics'));
+
+/** Hands out task numbers while an admin is signed in (renders nothing). */
+function TaskNumbering() {
+  useTaskNumbering();
+  return null;
+}
 
 function Spinner() {
   return (
@@ -52,6 +59,7 @@ export default function AdminApp() {
         <SignInPage denied={denied} />
       ) : (
         <BrowserRouter>
+          <TaskNumbering />
           <div className="sticky top-0 z-40 bg-rich-black text-white">
             <div className="max-w-[1400px] mx-auto px-4 md:px-8 h-11 flex items-center justify-between gap-3 text-xs">
               <span className="flex items-center gap-2 font-semibold">

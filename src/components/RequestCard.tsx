@@ -1,6 +1,7 @@
 import { ReactNode } from 'react';
 import { Briefcase, Clock, Droplet, Hammer, MapPin, Sparkles, Truck, Zap } from 'lucide-react';
 import { RequestStatus, STATUS_LABELS, getServiceCategory, toDate } from '../lib/serviceRequests';
+import { taskRef } from '../lib/taskRef';
 
 const CATEGORY_ICONS: Record<string, typeof Briefcase> = {
   'Cleaning & Domestic': Sparkles,
@@ -37,6 +38,7 @@ export default function RequestCard({ request, priceField, badge, note, children
   const status = (request.status || 'pending') as RequestStatus;
   const posted = toDate(request.createdAt);
   const price = request[priceField] ?? request.budget;
+  const ref = taskRef(request);
 
   return (
     <div
@@ -49,7 +51,10 @@ export default function RequestCard({ request, priceField, badge, note, children
           <Icon size={18} />
         </div>
         <div className="flex-1 min-w-0">
-          <span className="text-[9px] uppercase tracking-wider font-extrabold text-accent-gold block">{category}</span>
+          <span className="text-[9px] uppercase tracking-wider font-extrabold text-accent-gold block">
+            {category}
+            {ref && <span className="ml-1.5 normal-case tracking-normal font-semibold text-rich-black/40">#{ref}</span>}
+          </span>
           <h3 className="text-sm font-bold text-rich-black leading-snug break-words">{request.serviceType || 'Service request'}</h3>
         </div>
         <span className={`shrink-0 px-2.5 py-1 rounded-full border text-[9px] font-black uppercase tracking-wider ${badge ? 'bg-neutral-100 text-rich-black/50 border-warm-gray' : STATUS_STYLES[status]}`}>
