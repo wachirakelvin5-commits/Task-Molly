@@ -9,7 +9,6 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from './firebase';
 import { doc, getDoc, getDocFromServer } from 'firebase/firestore';
 import { UserProfile } from './types';
-import { isAdminUser } from './lib/admin';
 
 // Pages
 import LandingPage from './pages/LandingPage';
@@ -21,9 +20,6 @@ const ChatPage = lazy(() => import('./pages/ChatPage'));
 const ProviderListing = lazy(() => import('./pages/ProviderListing'));
 const BlogPage = lazy(() => import('./pages/BlogPage'));
 const ClientTasks = lazy(() => import('./pages/ClientTasks'));
-const AdminDashboard = lazy(() => import('./pages/AdminDashboard'));
-const AdminComplaints = lazy(() => import('./pages/AdminComplaints'));
-const AdminAnalytics = lazy(() => import('./pages/AdminAnalytics'));
 const RequestServicePage = lazy(() => import('./pages/RequestServicePage'));
 
 // Components
@@ -157,18 +153,8 @@ export default function App() {
                 path="/blog" 
                 element={<BlogPage />} 
               />
-              <Route 
-                path="/admin-dashboard" 
-                element={isAdminUser(user) ? <AdminDashboard /> : <Navigate to="/auth" />} 
-              />
-              <Route 
-                path="/admin-complaints" 
-                element={isAdminUser(user) ? <AdminComplaints /> : <Navigate to="/auth" />} 
-              />
-              <Route 
-                path="/admin-analytics" 
-                element={isAdminUser(user) ? <AdminAnalytics /> : <Navigate to="/auth" />} 
-              />
+              {/* The admin screens live on the separate admin site (admin/), not in this app. */}
+              <Route path="*" element={<Navigate to="/" replace />} />
             </Routes>
           </Suspense>
         </div>

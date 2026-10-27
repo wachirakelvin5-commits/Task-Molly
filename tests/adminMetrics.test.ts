@@ -17,6 +17,7 @@ import {
   performance,
   previousPeriod,
   toCSV,
+  todaySummary,
 } from '../src/lib/adminMetrics';
 
 const NOW = new Date(2026, 9, 12, 15, 0); // 12 Oct 2026, 15:00 local
@@ -181,6 +182,28 @@ describe('money', () => {
     assert.equal(m.jobs, 3);
     assert.ok(m.trend[0].label.startsWith('Wk of'));
     assert.equal(m.trend.reduce((s, t) => s + t.gross, 0), 15000);
+  });
+});
+
+describe('todaySummary', () => {
+  test('counts only today for money, completed and cancelled, and right now for active jobs', () => {
+    const rs = [
+      req({ status: 'completed', completedAt: ago(2 * HOUR) }), // today: 2000, commission 300
+      req({ status: 'completed', completedAt: ago(DAY) }), // yesterday: not counted
+      req({ status: 'cancelled', cancelledAt: ago(HOUR) }),
+      req({ status: 'cancelled', cancelledAt: ago(2 * DAY) }),
+      req({ status: 'assigned', acceptedAt: ago(3 * DAY), confirmedAt: ago(3 * DAY) }), // assigned days ago, still counts
+      req({ status: 'in-progress', startedAt: ago(30 * MIN) }),
+      req({ status: 'in-progress', startedAt: ago(DAY) }),
+      req({ status: 'pending' }),
+    ];
+    const t = todaySummary(rs, NOW.getTime());
+    assert.equal(t.gross, 2000);
+    assert.equal(t.commission, 300);
+    assert.equal(t.completed, 1);
+    assert.equal(t.cancelled, 1);
+    assert.equal(t.assigned, 1);
+    assert.equal(t.inProgress, 2);
   });
 });
 

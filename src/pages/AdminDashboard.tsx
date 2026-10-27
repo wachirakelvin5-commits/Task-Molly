@@ -56,6 +56,7 @@ import {
   performance,
   previousPeriod,
   toCSV,
+  todaySummary,
 } from '../lib/adminMetrics';
 import { SERVICE_CATEGORIES, toDate } from '../lib/requestModel';
 
@@ -245,6 +246,7 @@ export default function AdminDashboard() {
 
   // ---- Metrics ----
   const live = useMemo(() => liveSummary(requests, now), [requests, now]);
+  const today = useMemo(() => todaySummary(requests, now), [requests, now]);
   const period = useMemo(() => makePeriod(periodKey, new Date(now)), [periodKey, now]);
   const prev = useMemo(() => previousPeriod(period), [period]);
   const perf = useMemo(() => performance(requests, period), [requests, period]);
@@ -417,6 +419,25 @@ export default function AdminDashboard() {
             </button>
           </div>
         </div>
+
+        {/* Today at a glance: always visible, whichever tab is open */}
+        {!loading && !loadError && (
+          <section aria-label="Today" className="mb-6">
+            <h2 className="text-[11px] font-semibold text-rich-black/55 mb-2">Today</h2>
+            <div className="grid grid-cols-2 md:grid-cols-3 xl:grid-cols-5 gap-3">
+              <StatTile
+                label="Money made today"
+                value={formatKES(today.gross)}
+                icon={Wallet}
+                hint={`${formatKES(today.commission)} Task Molly commission`}
+              />
+              <StatTile label="Completed today" value={today.completed} icon={CheckCircle2} hint="Signed off by the client" />
+              <StatTile label="Cancelled today" value={today.cancelled} icon={Ban} />
+              <StatTile label="Assigned" value={today.assigned} icon={ShieldCheck} hint="Pro confirmed, not started" />
+              <StatTile label="In progress" value={today.inProgress} icon={Wrench} hint="Work underway now" />
+            </div>
+          </section>
+        )}
 
         {/* Tabs */}
         <div className="flex gap-1 bg-white border border-warm-gray/60 rounded-2xl p-1 mb-6 w-full sm:w-fit overflow-x-auto">
