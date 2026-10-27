@@ -10,6 +10,7 @@ import AboutView from '../components/AboutView';
 import ContactView from '../components/ContactView';
 import TermsView from '../components/TermsView';
 import PrivacyView from '../components/PrivacyView';
+import { trackPage } from '../lib/analytics';
 
 import { useDeviceType } from '../hooks/useDeviceType';
 import { useSwipe } from '../hooks/useSwipe';
@@ -26,6 +27,10 @@ export default function LandingPage({ setHideNavbar }: LandingPageProps) {
   const [requestText, setRequestText] = useState('');
   const [mollyPrompt, setMollyPrompt] = useState<string | null>(null);
   const isMollyOpen = mollyPrompt !== null;
+  // Count the home page's pop-up sections (Blog, About, ...) as their own pages.
+  useEffect(() => {
+    trackPage(selectedCard ? `/#${selectedCard.title}` : '/');
+  }, [selectedCard]);
   const isAnyModalOpen = isTaskModalOpen || isMollyOpen;
   const openMolly = () => {
     setMollyPrompt(requestText.trim());
