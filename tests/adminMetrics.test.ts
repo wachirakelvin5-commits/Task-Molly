@@ -232,7 +232,7 @@ describe('helpers', () => {
   test('CSV export escapes commas and quotes', () => {
     const csv = toCSV(exportRows([req({ location: 'Kilimani, Nairobi', serviceType: 'Fix "big" leak' })], NOW.getTime()));
     const [header, line] = csv.split('\n');
-    assert.ok(header.startsWith('Request ID,Stage,Service'));
+    assert.ok(header.startsWith('Task,Request ID,Stage,Service'));
     assert.ok(line.includes('"Kilimani, Nairobi"'));
     assert.ok(line.includes('"Fix ""big"" leak"'));
   });

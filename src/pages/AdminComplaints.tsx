@@ -18,8 +18,43 @@ import { collection, query, onSnapshot, doc, updateDoc, orderBy, addDoc, serverT
 import { useLocation, useNavigate } from 'react-router-dom';
 import { useDeviceType } from '../hooks/useDeviceType';
 import { toast } from 'sonner';
+import { AdminRequest, normalizeRequest } from '../lib/adminMetrics';
 
 type ComplaintStatus = 'new' | 'in-progress' | 'completed';
+
+function PartyCard({ label, labelClassName, uid, info }: {
+  label: string;
+  labelClassName: string;
+  uid?: string;
+  info: { name: string; tasks: number; complaintsAgainst: number };
+}) {
+  return (
+    <div className="bg-white p-4 md:p-6 rounded-2xl md:rounded-3xl border border-warm-gray shadow-sm min-w-0">
+      <div className="flex items-center justify-between mb-3 md:mb-4">
+        <span className={`text-[9px] md:text-[10px] font-bold uppercase tracking-widest truncate ${labelClassName}`}>{label}</span>
+        <User size={14} className="text-rich-black/20" />
+      </div>
+      {uid ? (
+        <>
+          <h3 className="font-bold text-base md:text-lg truncate">{info.name || 'Name not on file'}</h3>
+          <p className="text-[10px] md:text-xs text-rich-black/40 truncate mb-2">ID: {uid}</p>
+          <div className="flex gap-4">
+            <div>
+              <p className="text-[8px] md:text-[10px] text-rich-black/30 font-bold uppercase">Tasks</p>
+              <p className="font-bold text-xs md:text-base">{info.tasks}</p>
+            </div>
+            <div>
+              <p className="text-[8px] md:text-[10px] text-rich-black/30 font-bold uppercase">Complaints against</p>
+              <p className={`font-bold text-xs md:text-base ${info.complaintsAgainst ? 'text-red-500' : ''}`}>{info.complaintsAgainst}</p>
+            </div>
+          </div>
+        </>
+      ) : (
+        <p className="text-sm text-rich-black/40">No one named in this complaint.</p>
+      )}
+    </div>
+  );
+}
 
 export default function AdminComplaints() {
   const { isPhone } = useDeviceType();
@@ -31,51 +66,40 @@ export default function AdminComplaints() {
   const [selectedComplaint, setSelectedComplaint] = useState<any>(null);
   const [chatMessage, setChatMessage] = useState('');
   const [messages, setMessages] = useState<any[]>([]);
+  // Every request, to show task references and each person's real task and complaint counts.
+  const [requests, setRequests] = useState<AdminRequest[]>([]);
+
+  useEffect(() => {
+    if (!auth.currentUser) return;
+    return onSnapshot(
+      collection(db, 'serviceRequests'),
+      (snap) => setRequests(snap.docs.map((d) => normalizeRequest(d.id, d.data()))),
+      (err) => handleFirestoreError(err, OperationType.LIST, 'serviceRequests'),
+    );
+  }, []);
+
+  const requestById = new Map<string, AdminRequest>(requests.map((r: AdminRequest) => [r.id, r]));
+  /** "#task_128_NRB"; a short code until the request has a number; "—" with no task. */
+  const taskLabel = (taskId?: string) => {
+    if (!taskId) return '—';
+    const r = requestById.get(taskId);
+    return r?.ref ? `#${r.ref}` : `#${taskId.slice(0, 6)}`;
+  };
+  const person = (uid?: string) => {
+    const asClient = requests.find((r) => r.clientId === uid && r.clientName);
+    const asProvider = requests.find((r) => r.providerId === uid && r.providerName);
+    return {
+      name: asClient?.clientName || asProvider?.providerName || '',
+      tasks: uid ? requests.filter((r) => r.clientId === uid || r.providerId === uid).length : 0,
+      complaintsAgainst: uid ? complaints.filter((c) => c.targetId === uid).length : 0,
+    };
+  };
 
   useEffect(() => {
     if (!auth.currentUser) return;
     const q = query(collection(db, 'complaints'), orderBy('timestamp', 'desc'));
     const unsubscribe = onSnapshot(q, (snapshot) => {
-      const dbData = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
-      
-      // Simulation/Mock Data
-      const mockData = [
-        {
-          id: 'mock_1',
-          taskId: 'task_8292_NRB',
-          reporterId: 'client_kevin_5',
-          reporterRole: 'client',
-          targetId: 'pro_sarah_w',
-          reason: 'Unsatisfactory Service',
-          comment: 'The provider arrived late and did not complete the socket installation correctly. The plate is loose.',
-          status: 'new',
-          timestamp: { toDate: () => new Date(Date.now() - 3600000) }
-        },
-        {
-          id: 'mock_2',
-          taskId: 'task_1049_KLM',
-          reporterId: 'pro_john_k',
-          reporterRole: 'tasker',
-          targetId: 'client_mary_n',
-          reason: 'Abusive Customer',
-          comment: 'The client was shouting and used insulting language during the entire duration of the service.',
-          status: 'in-progress',
-          timestamp: { toDate: () => new Date(Date.now() - 86400000) }
-        },
-        {
-          id: 'mock_3',
-          taskId: 'task_5521_WST',
-          reporterId: 'client_alice_m',
-          reporterRole: 'client',
-          targetId: 'pro_peter_o',
-          reason: 'Missing/Damaged Items',
-          comment: 'A decorative lamp in the hallway was knocked over and cracked. This happened while the equipment was being moved.',
-          status: 'completed',
-          timestamp: { toDate: () => new Date(Date.now() - 172800000) }
-        }
-      ];
-
-      setComplaints([...dbData, ...mockData]);
+      setComplaints(snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() })));
     }, (err) => {
       handleFirestoreError(err, OperationType.LIST, 'complaints');
     });
@@ -178,8 +202,8 @@ export default function AdminComplaints() {
               className={`w-full p-4 md:p-6 text-left border-b border-warm-gray hover:bg-primary-bg/50 transition-all group ${selectedComplaint?.id === c.id ? 'bg-accent-gold/5 border-r-4 border-r-accent-gold' : ''}`}
             >
               <div className="flex justify-between items-start mb-1.5 md:mb-2">
-                <span className="text-[9px] md:text-[10px] font-bold text-rich-black/30 uppercase tracking-[0.1em]">#{c.taskId.slice(-5)}</span>
-                <span className="text-[9px] md:text-[10px] font-bold text-accent-gold">{new Date(c.timestamp?.toDate()).toLocaleDateString()}</span>
+                <span className="text-[9px] md:text-[10px] font-bold text-rich-black/40 tracking-wide">{taskLabel(c.taskId)}</span>
+                <span className="text-[9px] md:text-[10px] font-bold text-accent-gold">{c.timestamp?.toDate ? c.timestamp.toDate().toLocaleDateString() : 'Just now'}</span>
               </div>
               <h3 className="text-xs md:text-sm font-bold text-rich-black mb-1 group-hover:text-accent-gold transition-colors">{c.reason}</h3>
               <p className="text-[10px] md:text-xs text-rich-black/40 line-clamp-2 leading-relaxed">{c.comment}</p>
@@ -216,7 +240,7 @@ export default function AdminComplaints() {
                       {selectedComplaint.status}
                     </span>
                   </h2>
-                  <p className="text-[10px] md:text-xs text-rich-black/40 truncate">Ref: <span className="text-rich-black font-medium">#{selectedComplaint.taskId}</span></p>
+                  <p className="text-[10px] md:text-xs text-rich-black/40 truncate">Task: <span className="text-rich-black font-medium">{taskLabel(selectedComplaint.taskId)}</span></p>
                 </div>
               </div>
               <div className="flex gap-2">
@@ -236,40 +260,18 @@ export default function AdminComplaints() {
             <div className="flex-1 overflow-y-auto p-4 md:p-10 space-y-6 md:space-y-8 no-scrollbar">
               {/* Party Information Cards */}
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4 md:gap-6">
-                <div className="bg-white p-4 md:p-6 rounded-2xl md:rounded-3xl border border-warm-gray shadow-sm">
-                  <div className="flex items-center justify-between mb-3 md:mb-4">
-                    <span className="text-[9px] md:text-[10px] font-bold text-accent-gold uppercase tracking-widest truncate">Reporter: {selectedComplaint.reporterRole}</span>
-                    <User size={14} className="text-rich-black/20" />
-                  </div>
-                  <h3 className="font-bold text-base md:text-lg mb-1 truncate">ID: {selectedComplaint.reporterId}</h3>
-                  <div className="flex gap-4">
-                    <div>
-                      <p className="text-[8px] md:text-[10px] text-rich-black/30 font-bold uppercase">Tasks</p>
-                      <p className="font-bold text-xs md:text-base">42</p>
-                    </div>
-                    <div>
-                      <p className="text-[8px] md:text-[10px] text-rich-black/30 font-bold uppercase">Complaints</p>
-                      <p className="font-bold text-red-500 text-xs md:text-base">1</p>
-                    </div>
-                  </div>
-                </div>
-                <div className="bg-white p-4 md:p-6 rounded-2xl md:rounded-3xl border border-warm-gray shadow-sm">
-                  <div className="flex items-center justify-between mb-3 md:mb-4">
-                    <span className="text-[9px] md:text-[10px] font-bold text-rich-black/30 uppercase tracking-widest">Accused</span>
-                    <User size={14} className="text-rich-black/20" />
-                  </div>
-                  <h3 className="font-bold text-base md:text-lg mb-1 truncate">ID: {selectedComplaint.targetId}</h3>
-                   <div className="flex gap-4">
-                    <div>
-                      <p className="text-[8px] md:text-[10px] text-rich-black/30 font-bold uppercase">Tasks</p>
-                      <p className="font-bold text-xs md:text-base">128</p>
-                    </div>
-                    <div>
-                      <p className="text-[8px] md:text-[10px] text-rich-black/30 font-bold uppercase">Complaints</p>
-                      <p className="font-bold text-red-500 text-xs md:text-base">3</p>
-                    </div>
-                  </div>
-                </div>
+                <PartyCard
+                  label={`Reporter: ${selectedComplaint.reporterRole === 'tasker' ? 'provider' : selectedComplaint.reporterRole || 'unknown'}`}
+                  labelClassName="text-accent-gold"
+                  uid={selectedComplaint.reporterId}
+                  info={person(selectedComplaint.reporterId)}
+                />
+                <PartyCard
+                  label="Accused"
+                  labelClassName="text-rich-black/30"
+                  uid={selectedComplaint.targetId}
+                  info={person(selectedComplaint.targetId)}
+                />
               </div>
 
               {/* Original Comment */}

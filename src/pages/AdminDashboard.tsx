@@ -263,7 +263,7 @@ export default function AdminDashboard() {
         (stageFilter === 'all' || r.stage === stageFilter) &&
         (categoryFilter === 'all' || r.category === categoryFilter) &&
         (!q ||
-          [r.serviceType, r.clientName, r.providerName || '', r.location, r.id].some((v) => v.toLowerCase().includes(q)))
+          [r.serviceType, r.clientName, r.providerName || '', r.location, r.id, r.ref || ''].some((v) => v.toLowerCase().includes(q)))
     );
   }, [live.rows, stageFilter, categoryFilter, search]);
 
@@ -634,6 +634,7 @@ export default function AdminDashboard() {
                   {filteredRows.map((r) => (
                     <tr key={r.id} className="border-b border-warm-gray/40 last:border-0 align-top hover:bg-primary-bg/40">
                       <td className="px-5 py-3 max-w-[260px]">
+                        {r.ref && <p className="text-[10px] font-semibold text-rich-black/40 tabular-nums">#{r.ref}</p>}
                         <p className="font-semibold text-rich-black truncate">{r.serviceType}</p>
                         <p className="text-[11px] text-rich-black/50 truncate">
                           {r.category}
