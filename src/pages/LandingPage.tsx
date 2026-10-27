@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useAnimationFrame, useTransform, animate } from 'motion/react';
-import { Search, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
+import { Search, MessageCircle, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
 import TaskRequestModal from '../components/TaskRequestModal';
 import AIModal from '../components/AIModal';
 import HeroVideo from '../components/HeroVideo';
@@ -23,21 +23,15 @@ export default function LandingPage({ setHideNavbar }: LandingPageProps) {
   const { isPhone, isTablet, isLaptop } = useDeviceType();
   const [selectedCard, setSelectedCard] = useState<{ title: string; content: string } | null>(null);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-  // The search box opens Molly (AI concierge) with whatever the client typed.
-  const [requestText, setRequestText] = useState('');
-  const [mollyPrompt, setMollyPrompt] = useState<string | null>(null);
-  const isMollyOpen = mollyPrompt !== null;
+  // The search box opens the two-step request form; "Ask Molly" under it opens the AI concierge.
+  const [isMollyOpen, setIsMollyOpen] = useState(false);
   // Count the home page's pop-up sections (Blog, About, ...) as their own pages.
   useEffect(() => {
     trackPage(selectedCard ? `/#${selectedCard.title}` : '/');
   }, [selectedCard]);
   const isAnyModalOpen = isTaskModalOpen || isMollyOpen;
-  const openMolly = () => {
-    setMollyPrompt(requestText.trim());
-    setRequestText('');
-  };
   const switchToForm = () => {
-    setMollyPrompt(null);
+    setIsMollyOpen(false);
     setIsTaskModalOpen(true);
   };
   // x is the raw, unbounded offset; displayX wraps it so the tripled card list loops seamlessly.
@@ -347,25 +341,16 @@ We may update this Privacy Policy from time to time. We will notify you of any m
           className="relative z-10 text-center max-w-4xl w-full"
         >
           {/* Task Request Search Bar with Blurred Placeholder and Cursor */}
-          <form
-            className="relative max-w-2xl mx-auto group"
-            onSubmit={(e) => {
-              e.preventDefault();
-              openMolly();
-            }}
-          >
+          <div className="relative max-w-2xl mx-auto group">
             <div className="relative">
               <input 
                 type="text" 
-                value={requestText}
-                onChange={(e) => setRequestText(e.target.value)}
-                maxLength={500}
+                className="w-full bg-white/60 backdrop-blur-md border border-warm-gray rounded-full px-10 py-6 text-xl focus:outline-none focus:border-accent-gold transition-all shadow-2xl group-hover:shadow-accent-gold/20 cursor-pointer"
+                onClick={() => setIsTaskModalOpen(true)}
                 aria-label="Add your service request"
-                enterKeyHint="send"
-                className="w-full bg-white/60 backdrop-blur-md border border-warm-gray rounded-full pl-10 pr-24 py-6 text-xl focus:outline-none focus:border-accent-gold transition-all shadow-2xl group-hover:shadow-accent-gold/20"
+                readOnly
               />
-              {/* Custom Placeholder with Blur and Cursor (hidden once the client starts typing) */}
-              {!requestText && (
+              {/* Custom Placeholder with Blur and Cursor */}
               <div 
                 className="absolute inset-0 flex items-center px-10 pointer-events-none"
               >
@@ -378,16 +363,24 @@ We may update this Privacy Policy from time to time. We will notify you of any m
                   Add your service request
                 </span>
               </div>
-              )}
             </div>
             <button 
-              type="submit"
               className="absolute right-4 top-1/2 -translate-y-1/2 bg-accent-gold text-white p-4 rounded-full hover:scale-105 transition-transform shadow-lg cursor-pointer"
-              aria-label="Ask Molly about your service request"
+              onClick={() => setIsTaskModalOpen(true)}
+              aria-label="Add your service request"
             >
               <Search size={24} />
             </button>
-          </form>
+          </div>
+
+          <button
+            type="button"
+            onClick={() => setIsMollyOpen(true)}
+            className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/70 backdrop-blur-md border border-warm-gray text-sm font-medium text-rich-black/70 hover:text-accent-gold hover:border-accent-gold transition-all shadow-md"
+          >
+            <Sparkles size={16} className="text-accent-gold" />
+            Ask Molly, our AI concierge
+          </button>
 
           <AnimatePresence>
             {isTaskModalOpen && (
@@ -398,8 +391,7 @@ We may update this Privacy Policy from time to time. We will notify you of any m
           <AnimatePresence>
             {isMollyOpen && (
               <AIModal
-                initialPrompt={mollyPrompt ?? undefined}
-                onClose={() => setMollyPrompt(null)}
+                onClose={() => setIsMollyOpen(false)}
                 onUseForm={switchToForm}
               />
             )}
