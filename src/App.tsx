@@ -9,6 +9,7 @@ import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from './firebase';
 import { doc, getDoc, getDocFromServer } from 'firebase/firestore';
 import { UserProfile } from './types';
+import { trackPage } from './lib/analytics';
 
 // Pages
 import LandingPage from './pages/LandingPage';
@@ -36,6 +37,16 @@ function NavbarWrapper({ user, hideNavbar }: { user: UserProfile | null; hideNav
     return null;
   }
   return <Navbar user={user} />;
+}
+
+/** Records an anonymous page view whenever the route changes (see src/lib/analytics.ts). */
+function PageTracker() {
+  const { pathname } = useLocation();
+  useEffect(() => {
+    // Chat pages carry a job id: count them all as one page.
+    trackPage(pathname.startsWith('/chat/') ? '/chat' : pathname);
+  }, [pathname]);
+  return null;
 }
 
 const queryClient = new QueryClient();
@@ -111,6 +122,7 @@ export default function App() {
       <Toaster position="top-right" richColors />
       <InstallPrompt />
       <Router>
+        <PageTracker />
         <div className="min-h-[100dvh] bg-primary-bg no-scrollbar overflow-y-auto">
           <NavbarWrapper user={user} hideNavbar={hideNavbar} />
           <Suspense fallback={

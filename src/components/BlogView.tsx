@@ -7,6 +7,7 @@ import ForumSidebar from './ForumSidebar';
 import { db, handleFirestoreError, OperationType } from '../firebase';
 import { collection, query, orderBy, limit, onSnapshot } from 'firebase/firestore';
 import { useSwipe } from '../hooks/useSwipe';
+import { track } from '../lib/analytics';
 
 interface ForumMessage {
   id: string;
@@ -31,6 +32,10 @@ export default function BlogView() {
   const trayRef = useRef<HTMLDivElement>(null);
   const dragStartRef = useRef(0);
   const snapRef = useRef<ReturnType<typeof animate> | null>(null);
+
+  useEffect(() => {
+    if (selectedPost) track('blog_view', { page: `/blog/${selectedPost.id}`, title: selectedPost.title });
+  }, [selectedPost]);
 
   // Triple the posts for a seamless loop [Clone 1, Real Set, Clone 2]
   const featured = [...BLOG_POSTS, ...BLOG_POSTS, ...BLOG_POSTS];
