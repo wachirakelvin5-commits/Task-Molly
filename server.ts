@@ -9,8 +9,6 @@ import cors from "cors";
 import admin from "firebase-admin";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
-import { GoogleGenAI, Type, ThinkingLevel } from "@google/genai";
-import { MOLLY_SYSTEM_INSTRUCTION } from "./src/lib/mollyPrompt";
 
 // Load Firebase config safely
 const configPath = path.join(process.cwd(), "firebase-applet-config.json");
@@ -132,118 +130,6 @@ async function startServer() {
   // API Routes
   app.get("/api/health", (req, res) => {
     res.json({ status: "ok", timestamp: new Date().toISOString() });
-  });
-
-  // Molly AI Concierge Endpoints (Server-side Gemini)
-  const SYSTEM_INSTRUCTION = MOLLY_SYSTEM_INSTRUCTION;
-
-  const RESPONSE_SCHEMA = {
-    type: Type.OBJECT,
-    properties: {
-      message: { type: Type.STRING, description: "Your response to the user. This MUST be the first property in the JSON." },
-      serviceDetails: {
-        type: Type.OBJECT,
-        properties: {
-          serviceType: { type: Type.STRING },
-          description: { type: Type.STRING, description: "A concise summary of actual work to be done" },
-          urgency: { type: Type.STRING },
-          location: { type: Type.STRING },
-          deadline: { type: Type.STRING, description: "Specific time or period when service is expected to start" },
-          initialQuote: { type: Type.NUMBER, description: "The original price estimate provided by the user" },
-          budget: { type: Type.NUMBER, description: "The calculated standard quote (Initial * 1.25) that the user agreed to" },
-          isComplete: { type: Type.BOOLEAN, description: "Set to true ONLY after all info is collected AND the user has agreed to the standard quote (1.25x)" },
-          isUnlisted: { type: Type.BOOLEAN, description: "Set to true if the service is not in the provided list" }
-        }
-      }
-    },
-    required: ["message"]
-  };
-
-  app.post("/api/ask-molly-stream", async (req, res) => {
-    const { prompt, history, availabilityContext } = req.body;
-    if (!prompt) {
-      return res.status(400).json({ error: "Prompt is required" });
-    }
-
-    res.setHeader("Content-Type", "text/event-stream");
-    res.setHeader("Cache-Control", "no-cache");
-    res.setHeader("Connection", "keep-alive");
-
-    try {
-      const ai = new GoogleGenAI({});
-      const responseStream = await ai.models.generateContentStream({
-        model: "gemini-3.5-flash",
-        contents: [
-          ...(Array.isArray(history) ? history : []),
-          { role: "user", parts: [{ text: prompt }] }
-        ],
-        config: {
-          systemInstruction: `${SYSTEM_INSTRUCTION}\n\n${availabilityContext ? `CURRENT AVAILABILITY STATUS: ${availabilityContext}` : ''}`,
-          responseMimeType: "application/json",
-          responseSchema: RESPONSE_SCHEMA,
-          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
-        }
-      });
-
-      let fullText = "";
-      for await (const chunk of responseStream) {
-        const text = chunk.text || "";
-        fullText += text;
-        const messageMatch = fullText.match(/"message":\s*"([^"]*)/);
-        if (messageMatch && messageMatch[1]) {
-          res.write(`data: ${JSON.stringify({ type: 'token', text: messageMatch[1] })}\n\n`);
-        }
-      }
-
-      let parsedResult: any = { message: "I'm processing your request...", serviceDetails: { isComplete: false, isUnlisted: false } };
-      try {
-        const cleaned = fullText.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
-        parsedResult = JSON.parse(cleaned);
-      } catch (e) {
-        console.error("Failed to parse final JSON in streaming:", fullText);
-      }
-
-      res.write(`data: ${JSON.stringify({ type: 'done', result: parsedResult })}\n\n`);
-      res.end();
-    } catch (error: any) {
-      console.error("Server streaming AI error:", error);
-      res.write(`data: ${JSON.stringify({ type: 'error', error: error.message || "AI error" })}\n\n`);
-      res.end();
-    }
-  });
-
-  app.post("/api/ask-molly", async (req, res) => {
-    const { prompt, history, availabilityContext } = req.body;
-    if (!prompt) {
-      return res.status(400).json({ error: "Prompt is required" });
-    }
-
-    try {
-      const ai = new GoogleGenAI({});
-      const response = await ai.models.generateContent({
-        model: "gemini-3.5-flash",
-        contents: [
-          ...(Array.isArray(history) ? history : []),
-          { role: "user", parts: [{ text: prompt }] }
-        ],
-        config: {
-          systemInstruction: `${SYSTEM_INSTRUCTION}\n\n${availabilityContext ? `CURRENT AVAILABILITY STATUS: ${availabilityContext}` : ''}`,
-          responseMimeType: "application/json",
-          responseSchema: RESPONSE_SCHEMA,
-          thinkingConfig: { thinkingLevel: ThinkingLevel.LOW }
-        }
-      });
-
-      const text = response.text || "{}";
-      const cleanedText = text.replace(/^```json\n?/, '').replace(/\n?```$/, '').trim();
-      const parsed = JSON.parse(cleanedText);
-      if (!parsed.message && parsed.text) parsed.message = parsed.text;
-      if (!parsed.message) parsed.message = "I'm here to help! What service are you looking for?";
-      res.json(parsed);
-    } catch (error: any) {
-      console.error("Server AI error:", error);
-      res.status(500).json({ error: error.message || "Failed to generate AI response" });
-    }
   });
 
   // Log Unlisted Service Requests (Google Sheets Integration Placeholder)

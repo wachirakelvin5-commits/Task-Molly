@@ -1,8 +1,7 @@
 import { useState, useRef, useEffect } from 'react';
 import { motion, AnimatePresence, useMotionValue, useAnimationFrame, useTransform, animate } from 'motion/react';
-import { Search, MessageCircle, ChevronLeft, ChevronRight, Sparkles } from 'lucide-react';
+import { Search, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import TaskRequestModal from '../components/TaskRequestModal';
-import AIModal from '../components/AIModal';
 import HeroVideo from '../components/HeroVideo';
 import BlogView from '../components/BlogView';
 import FunFactsView from '../components/FunFactsView';
@@ -23,17 +22,11 @@ export default function LandingPage({ setHideNavbar }: LandingPageProps) {
   const { isPhone, isTablet, isLaptop } = useDeviceType();
   const [selectedCard, setSelectedCard] = useState<{ title: string; content: string } | null>(null);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-  // The search box opens the two-step request form; "Ask Molly" under it opens the AI concierge.
-  const [isMollyOpen, setIsMollyOpen] = useState(false);
   // Count the home page's pop-up sections (Blog, About, ...) as their own pages.
   useEffect(() => {
     trackPage(selectedCard ? `/#${selectedCard.title}` : '/');
   }, [selectedCard]);
-  const isAnyModalOpen = isTaskModalOpen || isMollyOpen;
-  const switchToForm = () => {
-    setIsMollyOpen(false);
-    setIsTaskModalOpen(true);
-  };
+  const isAnyModalOpen = isTaskModalOpen;
   // x is the raw, unbounded offset; displayX wraps it so the tripled card list loops seamlessly.
   const x = useMotionValue(0);
   const [isPaused, setIsPaused] = useState(false);
@@ -373,27 +366,9 @@ We may update this Privacy Policy from time to time. We will notify you of any m
             </button>
           </div>
 
-          <button
-            type="button"
-            onClick={() => setIsMollyOpen(true)}
-            className="mt-5 inline-flex items-center gap-2 px-5 py-2.5 rounded-full bg-white/70 backdrop-blur-md border border-warm-gray text-sm font-medium text-rich-black/70 hover:text-accent-gold hover:border-accent-gold transition-all shadow-md"
-          >
-            <Sparkles size={16} className="text-accent-gold" />
-            Ask Molly, our AI concierge
-          </button>
-
           <AnimatePresence>
             {isTaskModalOpen && (
               <TaskRequestModal onClose={() => setIsTaskModalOpen(false)} />
-            )}
-          </AnimatePresence>
-
-          <AnimatePresence>
-            {isMollyOpen && (
-              <AIModal
-                onClose={() => setIsMollyOpen(false)}
-                onUseForm={switchToForm}
-              />
             )}
           </AnimatePresence>
         </motion.div>
