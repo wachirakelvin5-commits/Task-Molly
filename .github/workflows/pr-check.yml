@@ -38,7 +38,7 @@ jobs:
         run: |
           npx tsc --noEmit -p . > tsc.log 2>&1 || true
           echo "Type errors across the project: $(grep -c 'error TS' tsc.log || true)"
-          if grep -E '^(admin/|src/(App\.tsx|pages/AdminDashboard|lib/(admin|adminMetrics|requestModel|serviceRequests))|tests/adminAccess)' tsc.log; then
+          if grep -E '^(admin/|src/(App\.tsx|pages/AdminDashboard|lib/(admin|adminMetrics|requestModel|serviceRequests))|src/pages/AdminComplaints|tests/(adminAccess|timeAgo))' tsc.log; then
             echo "::error::Type errors in the admin dashboard files (listed above)"
             exit 1
           fi

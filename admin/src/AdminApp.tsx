@@ -4,6 +4,7 @@ import { onAuthStateChanged, signOut, type User } from 'firebase/auth';
 import { LogOut, ShieldCheck } from 'lucide-react';
 import { Toaster } from 'sonner';
 import { auth } from '../../src/firebase';
+import NotificationBell from './NotificationBell';
 import SignInPage from './SignInPage';
 import { isAllowedAdmin } from './access';
 
@@ -46,7 +47,7 @@ export default function AdminApp() {
 
   return (
     <>
-      <Toaster position="top-right" richColors />
+      <Toaster position="bottom-right" richColors />
       {!user ? (
         <SignInPage denied={denied} />
       ) : (
@@ -58,6 +59,7 @@ export default function AdminApp() {
               </span>
               <span className="flex items-center gap-3 min-w-0">
                 <span className="truncate text-white/60 hidden sm:inline">{user.email}</span>
+                <NotificationBell />
                 <button
                   onClick={() => signOut(auth)}
                   className="flex items-center gap-1.5 px-2.5 py-1 rounded-lg hover:bg-white/10 font-semibold"
