@@ -1,4 +1,6 @@
 /* Same look as the main app (colours, font), plus the shared admin screens for Tailwind to scan. */
 @import "../../src/index.css";
 @source "../../src/pages/Admin*.tsx";
+/* Shared components the admin screens use (task details panel, chat thread). */
+@source "../../src/components";
 @source "./";

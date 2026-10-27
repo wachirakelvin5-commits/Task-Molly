@@ -286,6 +286,18 @@ export function liveSummary(requests: AdminRequest[], now = Date.now()): LiveSum
   return { counts, activeTotal: rows.length, valueInFlight, rows, oldestOpenMs };
 }
 
+/** Completed and cancelled requests for the live table's "show finished" option, newest first. */
+export function finishedRows(requests: AdminRequest[], now = Date.now()): LiveRow[] {
+  return requests
+    .map((r) => ({ r, stage: getStage(r, now) }))
+    .filter(({ stage }) => !ACTIVE_STAGES.includes(stage))
+    .map(({ r, stage }) => {
+      const since = stageSince(r, now);
+      return { ...r, stage, since, waitingMs: since ? Math.max(0, now - since.getTime()) : 0, expiresAt: null };
+    })
+    .sort((a, b) => (b.since?.getTime() ?? 0) - (a.since?.getTime() ?? 0));
+}
+
 // ---------------------------------------------------------------------------
 // Periods and time buckets
 // ---------------------------------------------------------------------------

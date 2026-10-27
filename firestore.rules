@@ -175,6 +175,32 @@ service cloud.firestore {
 
       allow delete: if isAdmin() ||
         (isSignedIn() && existing().clientId == request.auth.uid && existing().status in ['pending', 'cancelled']);
+
+      // Chat between the client and the provider of this task (src/lib/taskChat.ts).
+      // Both of them and the admins can read; the two of them can write while the task is active.
+      // Messages can't be edited or deleted, so the admins always see the full conversation.
+      match /messages/{messageId} {
+        function task() {
+          return get(/databases/$(database)/documents/serviceRequests/$(requestId)).data;
+        }
+        function isClient() { return isSignedIn() && task().clientId == request.auth.uid; }
+        function isProvider() { return isSignedIn() && task().get('providerId', '') == request.auth.uid; }
+
+        allow read: if isAdmin() || isClient() || isProvider();
+
+        allow create: if
+          task().status in ['accepted', 'assigned', 'in-progress', 'awaiting-confirmation'] &&
+          ((isClient() && request.resource.data.senderRole == 'client') ||
+           (isProvider() && request.resource.data.senderRole == 'provider')) &&
+          request.resource.data.keys().hasOnly(['senderId', 'senderRole', 'senderName', 'text', 'timestamp']) &&
+          request.resource.data.senderId == request.auth.uid &&
+          request.resource.data.senderName is string && request.resource.data.senderName.size() <= 100 &&
+          request.resource.data.text is string &&
+          request.resource.data.text.size() > 0 && request.resource.data.text.size() <= 1000 &&
+          request.resource.data.timestamp == request.time;
+
+        allow update, delete: if false;
+      }
     }
 
     // ===============================================================

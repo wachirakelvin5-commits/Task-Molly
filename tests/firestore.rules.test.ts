@@ -11,8 +11,10 @@ import {
   RulesTestEnvironment,
 } from '@firebase/rules-unit-testing';
 import {
+  addDoc,
   arrayUnion,
   collection,
+  deleteDoc,
   deleteField,
   doc,
   getDoc,
@@ -319,5 +321,73 @@ describe('forum likes', () => {
     await assertFails(updateDoc(doc(db('eve'), POST), { likes: -1 }));
     await assertFails(updateDoc(doc(db('eve'), POST), { likes: increment(1), content: 'edited' }));
     await assertFails(updateDoc(doc(db(), POST), { likes: increment(1) }));
+  });
+});
+
+describe('task chat', () => {
+  const MSGS = `${REQ}/messages`;
+  const msg = (uid: string, senderRole: string, extra: Record<string, any> = {}) => ({
+    senderId: uid,
+    senderRole,
+    senderName: uid,
+    text: 'Gate code is 1234',
+    timestamp: serverTimestamp(),
+    ...extra,
+  });
+  const send = (uid: string, senderRole: string, extra?: Record<string, any>) =>
+    addDoc(collection(db(uid), MSGS), msg(uid, senderRole, extra));
+  const admin = () => env.authenticatedContext('admin1', { email: 'wachirakelvin5@gmail.com', email_verified: true }).firestore();
+
+  beforeEach(() => seed({ status: 'assigned', providerId: 'bob', providerName: 'Bob' }));
+
+  test('the client and the provider can message each other and read the thread', async () => {
+    await assertSucceeds(send('alice', 'client'));
+    await assertSucceeds(send('bob', 'provider'));
+    await assertSucceeds(getDocs(collection(db('alice'), MSGS)));
+    await assertSucceeds(getDocs(collection(db('bob'), MSGS)));
+  });
+
+  test('admins can read the thread', async () => {
+    await assertSucceeds(send('alice', 'client'));
+    await assertSucceeds(getDocs(collection(admin(), MSGS)));
+  });
+
+  test('anyone else can neither read nor write', async () => {
+    await assertFails(getDocs(collection(db('eve'), MSGS)));
+    await assertFails(getDocs(collection(db(), MSGS)));
+    await assertFails(send('eve', 'client'));
+  });
+
+  test('cannot pose as the other side or someone else', async () => {
+    await assertFails(send('alice', 'provider'));
+    await assertFails(send('bob', 'client'));
+    await assertFails(addDoc(collection(db('alice'), MSGS), msg('bob', 'provider')));
+  });
+
+  test('messages must be valid and server-timestamped', async () => {
+    await assertFails(send('alice', 'client', { text: '' }));
+    await assertFails(send('alice', 'client', { text: 'x'.repeat(1001) }));
+    await assertFails(send('alice', 'client', { timestamp: Timestamp.fromMillis(0) }));
+    await assertFails(send('alice', 'client', { extra: 'field' }));
+  });
+
+  test('messages cannot be edited or deleted, even by admins', async () => {
+    let id = '';
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      id = (await addDoc(collection(ctx.firestore(), MSGS), { ...msg('alice', 'client'), timestamp: Timestamp.now() })).id;
+    });
+    await assertFails(updateDoc(doc(db('alice'), MSGS, id), { text: 'changed' }));
+    await assertFails(deleteDoc(doc(db('alice'), MSGS, id)));
+    await assertFails(deleteDoc(doc(admin(), MSGS, id)));
+  });
+
+  test('no messages before a provider takes the task or after it closes', async () => {
+    await seed({ status: 'pending' });
+    await assertFails(send('alice', 'client'));
+    await seed({ status: 'completed', providerId: 'bob', providerName: 'Bob' });
+    await assertFails(send('alice', 'client'));
+    await assertFails(send('bob', 'provider'));
+    // ...but the thread can still be read afterwards.
+    await assertSucceeds(getDocs(collection(db('alice'), MSGS)));
   });
 });
