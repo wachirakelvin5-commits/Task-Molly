@@ -7,6 +7,7 @@ import assert from 'node:assert/strict';
 import {
   AdminRequest,
   exportRows,
+  finishedRows,
   formatDuration,
   getStage,
   liveSummary,
@@ -112,6 +113,13 @@ describe('liveSummary', () => {
   test('tracks value in flight and the oldest open request', () => {
     assert.equal(s.valueInFlight, 5000 + 2000);
     assert.equal(s.oldestOpenMs, 2 * HOUR);
+  });
+
+  test('finishedRows lists completed and cancelled jobs, newest first', () => {
+    const extra = req({ status: 'completed', completedAt: ago(HOUR) });
+    const done = finishedRows([...rows, extra], NOW.getTime());
+    assert.deepEqual(done.map((r) => r.stage), ['completed', 'completed', 'cancelled']);
+    assert.equal(done[0].id, extra.id);
   });
 });
 

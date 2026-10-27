@@ -1,7 +1,10 @@
-import { ReactNode } from 'react';
-import { Briefcase, Clock, Droplet, Hammer, MapPin, Sparkles, Truck, Zap } from 'lucide-react';
+import { ReactNode, useState } from 'react';
+import { Briefcase, Clock, Droplet, Hammer, MapPin, MessageSquare, Sparkles, Truck, Zap } from 'lucide-react';
+import { auth } from '../firebase';
 import { RequestStatus, STATUS_LABELS, getServiceCategory, toDate } from '../lib/serviceRequests';
+import { chatRole } from '../lib/taskChat';
 import { taskRef } from '../lib/taskRef';
+import { TaskChatModal } from './TaskChat';
 
 const CATEGORY_ICONS: Record<string, typeof Briefcase> = {
   'Cleaning & Domestic': Sparkles,
@@ -39,6 +42,14 @@ export default function RequestCard({ request, priceField, badge, note, children
   const posted = toDate(request.createdAt);
   const price = request[priceField] ?? request.budget;
   const ref = taskRef(request);
+
+  // Chat between the client and the provider, once a provider has taken the task.
+  const user = auth.currentUser;
+  const role = chatRole(request, user?.uid);
+  const [chatOpen, setChatOpen] = useState(false);
+  const myName =
+    (role === 'client' ? request.clientName : request.providerName) || user?.displayName || (role === 'client' ? 'Client' : 'Provider');
+  const otherName = role === 'client' ? request.providerName || 'Your provider' : request.clientName || 'Your client';
 
   return (
     <div
@@ -85,7 +96,27 @@ export default function RequestCard({ request, priceField, badge, note, children
         </div>
       )}
 
-      {children && <div className="flex flex-wrap gap-2 pt-1">{children}</div>}
+      {(children || role) && (
+        <div className="flex flex-wrap gap-2 pt-1">
+          {children}
+          {role && (
+            <CardButton onClick={() => setChatOpen(true)}>
+              <span className="inline-flex items-center gap-1.5">
+                <MessageSquare size={13} /> Message {role === 'client' ? 'provider' : 'client'}
+              </span>
+            </CardButton>
+          )}
+        </div>
+      )}
+
+      {chatOpen && role && user && (
+        <TaskChatModal
+          request={request}
+          me={{ uid: user.uid, role, name: myName }}
+          otherName={otherName}
+          onClose={() => setChatOpen(false)}
+        />
+      )}
     </div>
   );
 }

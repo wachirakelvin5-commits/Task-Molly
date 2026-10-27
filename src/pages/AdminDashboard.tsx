@@ -44,6 +44,7 @@ import {
   STAGE_LABELS,
   change,
   exportRows,
+  finishedRows,
   formatDateTime,
   formatDuration,
   formatKES,
@@ -59,6 +60,7 @@ import {
   todaySummary,
 } from '../lib/adminMetrics';
 import { SERVICE_CATEGORIES, toDate } from '../lib/requestModel';
+import AdminTaskDetails from '../components/AdminTaskDetails';
 
 type Tab = 'live' | 'performance' | 'money';
 
@@ -205,6 +207,9 @@ export default function AdminDashboard() {
   const [categoryFilter, setCategoryFilter] = useState<string>('all');
   const [search, setSearch] = useState('');
   const [busyId, setBusyId] = useState<string | null>(null);
+  const [showFinished, setShowFinished] = useState(false);
+  // The task whose full details are open in the side panel.
+  const [openTaskId, setOpenTaskId] = useState<string | null>(null);
 
   // ---- Data: one live feed of every request, plus new complaints ----
   useEffect(() => {
@@ -256,16 +261,18 @@ export default function AdminDashboard() {
 
   const complaintTaskIds = useMemo(() => new Set(complaints.map((c) => c.taskId).filter(Boolean)), [complaints]);
 
+  const finished = useMemo(() => (showFinished ? finishedRows(requests, now) : []), [showFinished, requests, now]);
+
   const filteredRows = useMemo(() => {
     const q = search.trim().toLowerCase();
-    return live.rows.filter(
+    return [...live.rows, ...finished].filter(
       (r) =>
         (stageFilter === 'all' || r.stage === stageFilter) &&
         (categoryFilter === 'all' || r.category === categoryFilter) &&
         (!q ||
           [r.serviceType, r.clientName, r.providerName || '', r.location, r.id, r.ref || ''].some((v) => v.toLowerCase().includes(q)))
     );
-  }, [live.rows, stageFilter, categoryFilter, search]);
+  }, [live.rows, finished, stageFilter, categoryFilter, search]);
 
   // ---- Admin actions (firestore.rules let the admin update any request) ----
   async function runAction(r: LiveRow, action: 'repost' | 'reopen' | 'cancel') {
@@ -492,6 +499,8 @@ export default function AdminDashboard() {
           </Link>
         </div>
       </div>
+
+      {openTaskId && <AdminTaskDetails requestId={openTaskId} onClose={() => setOpenTaskId(null)} />}
     </div>
   );
 
@@ -559,7 +568,7 @@ export default function AdminDashboard() {
           <div className="p-5 md:p-6 pb-4">
             <SectionTitle
               title="Live requests"
-              subtitle={`${filteredRows.length} of ${live.activeTotal} active · most urgent first`}
+              subtitle={`${filteredRows.length} shown · ${live.activeTotal} active${showFinished ? ` + ${finished.length} finished` : ''} · most urgent first · click a row for full details`}
               right={
                 (stageFilter !== 'all' || categoryFilter !== 'all' || search) && (
                   <button
@@ -592,7 +601,7 @@ export default function AdminDashboard() {
                 aria-label="Stage"
               >
                 <option value="all">All stages</option>
-                {ACTIVE_STAGES.map((s) => (
+                {[...ACTIVE_STAGES, ...(showFinished ? (['completed', 'cancelled'] as LiveStage[]) : [])].map((s) => (
                   <option key={s} value={s}>
                     {STAGE_LABELS[s]}
                   </option>
@@ -612,10 +621,30 @@ export default function AdminDashboard() {
                 ))}
               </select>
             </div>
+            <label className="mt-3 inline-flex items-center gap-2 text-xs font-semibold text-rich-black/70 cursor-pointer select-none">
+              <input
+                type="checkbox"
+                checked={showFinished}
+                onChange={(e) => {
+                  setShowFinished(e.target.checked);
+                  if (!e.target.checked && (stageFilter === 'completed' || stageFilter === 'cancelled')) setStageFilter('all');
+                }}
+                className="accent-rich-black"
+              />
+              Also show completed and cancelled tasks
+            </label>
           </div>
 
           {filteredRows.length === 0 ? (
-            <EmptyState text={live.activeTotal ? 'No requests match these filters.' : 'No active requests right now.'} />
+            <EmptyState
+              text={
+                live.activeTotal || finished.length
+                  ? 'No requests match these filters.'
+                  : showFinished
+                    ? 'No requests yet.'
+                    : 'No active requests right now. Tick "Also show completed and cancelled tasks" to see past ones.'
+              }
+            />
           ) : (
             <div className="overflow-x-auto">
               <table className="w-full min-w-[860px] text-sm">
@@ -632,7 +661,16 @@ export default function AdminDashboard() {
                 </thead>
                 <tbody>
                   {filteredRows.map((r) => (
-                    <tr key={r.id} className="border-b border-warm-gray/40 last:border-0 align-top hover:bg-primary-bg/40">
+                    <tr
+                      key={r.id}
+                      onClick={() => setOpenTaskId(r.id)}
+                      onKeyDown={(e) => {
+                        if (e.key === 'Enter') setOpenTaskId(r.id);
+                      }}
+                      tabIndex={0}
+                      title="Open full task details"
+                      className="border-b border-warm-gray/40 last:border-0 align-top hover:bg-primary-bg/60 cursor-pointer focus:outline-none focus:bg-primary-bg/60"
+                    >
                       <td className="px-5 py-3 max-w-[260px]">
                         {r.ref && <p className="text-[10px] font-semibold text-rich-black/40 tabular-nums">#{r.ref}</p>}
                         <p className="font-semibold text-rich-black truncate">{r.serviceType}</p>
@@ -658,7 +696,8 @@ export default function AdminDashboard() {
                           {r.since ? formatDuration(r.waitingMs) : '—'}
                         </span>
                       </td>
-                      <td className="px-5 py-3">
+                      {/* Buttons act on the task without opening the details panel. */}
+                      <td className="px-5 py-3" onClick={(e) => e.stopPropagation()}>
                         <div className="flex justify-end gap-1.5">
                           {['open', 'expiring', 'expired'].includes(r.stage) && (
                             <ActionButton icon={RefreshCw} label="Repost" disabled={busyId === r.id} onClick={() => runAction(r, 'repost')} />
@@ -666,7 +705,10 @@ export default function AdminDashboard() {
                           {['accepted', 'assigned'].includes(r.stage) && (
                             <ActionButton icon={UserX} label="Reopen" disabled={busyId === r.id} onClick={() => runAction(r, 'reopen')} />
                           )}
-                          <ActionButton icon={Ban} label="Cancel" danger disabled={busyId === r.id} onClick={() => runAction(r, 'cancel')} />
+                          {ACTIVE_STAGES.includes(r.stage) && (
+                            <ActionButton icon={Ban} label="Cancel" danger disabled={busyId === r.id} onClick={() => runAction(r, 'cancel')} />
+                          )}
+                          <ActionButton icon={ChevronRight} label="Details" onClick={() => setOpenTaskId(r.id)} />
                         </div>
                       </td>
                     </tr>
