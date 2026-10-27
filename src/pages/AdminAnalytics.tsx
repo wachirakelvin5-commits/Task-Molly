@@ -40,7 +40,8 @@ const RANGES: { key: RangeKey; label: string }[] = [
 ];
 /** Days of events to load per range (the extra days feed "vs previous period"). */
 const LOAD_DAYS: Record<RangeKey, number> = { today: 2, '7d': 14, '30d': 30 };
-const MAX_EVENTS = 20000;
+/** Firestore refuses queries with a limit above 10,000. */
+const MAX_EVENTS = 10000;
 
 const INK = '#2D3142';
 const GOLD = '#B59D7A';
@@ -161,7 +162,9 @@ export default function AdminAnalytics() {
       },
       (err) => {
         handleFirestoreError(err, OperationType.LIST, 'analytics');
-        setError('Could not load visit data. Make sure you are signed in with the admin account.');
+        // Show Firebase's own reason, so a problem can be diagnosed from a screenshot.
+        const reason = err instanceof Error ? err.message : String(err);
+        setError(`Could not load visit data: ${reason}`);
         setLoading(false);
       },
     );
