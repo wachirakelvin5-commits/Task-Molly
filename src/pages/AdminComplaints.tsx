@@ -1,4 +1,4 @@
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
   TriangleAlert, 
@@ -15,7 +15,7 @@ import {
 } from 'lucide-react';
 import { db, handleFirestoreError, OperationType, auth } from '../firebase';
 import { collection, query, onSnapshot, doc, updateDoc, orderBy, addDoc, serverTimestamp } from 'firebase/firestore';
-import { useNavigate } from 'react-router-dom';
+import { useLocation, useNavigate } from 'react-router-dom';
 import { useDeviceType } from '../hooks/useDeviceType';
 import { toast } from 'sonner';
 
@@ -24,6 +24,8 @@ type ComplaintStatus = 'new' | 'in-progress' | 'completed';
 export default function AdminComplaints() {
   const { isPhone } = useDeviceType();
   const navigate = useNavigate();
+  // The admin site's notification bell opens a specific complaint by passing its id here.
+  const openId = (useLocation().state as { complaintId?: string } | null)?.complaintId;
   const [activeTab, setActiveTab] = useState<ComplaintStatus>('new');
   const [complaints, setComplaints] = useState<any[]>([]);
   const [selectedComplaint, setSelectedComplaint] = useState<any>(null);
@@ -94,9 +96,21 @@ export default function AdminComplaints() {
     return () => unsubscribe();
   }, [selectedComplaint]);
 
+  // Open it once, as soon as it has loaded (so closing it isn't undone by later updates).
+  const openedId = useRef<string | null>(null);
+  useEffect(() => {
+    if (!openId || openedId.current === openId) return;
+    const match = complaints.find((c) => c.id === openId);
+    if (match) {
+      openedId.current = openId;
+      setActiveTab(match.status);
+      setSelectedComplaint(match);
+    }
+  }, [openId, complaints]);
+
   const filteredComplaints = complaints.filter(c => c.status === activeTab);
 
-  const handleSendMessage = async (e: React.FormEvent) => {
+  const handleSendMessage = async (e: { preventDefault(): void }) => {
     e.preventDefault();
     if (!chatMessage.trim() || !selectedComplaint) return;
 
