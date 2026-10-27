@@ -11,7 +11,6 @@ import ComplaintModal from '../components/ComplaintModal';
 import TaskerAssignmentModal from '../components/TaskerAssignmentModal';
 import ManageRequestModal from '../components/ManageRequestModal';
 import CreateRequestModal from '../components/CreateRequestModal';
-import AIModal from '../components/AIModal';
 import EditProfileModal from '../components/EditProfileModal';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
 import { toast } from 'sonner';
@@ -51,7 +50,6 @@ export default function Dashboard({ user }: DashboardProps) {
   const [pendingRequestInfo, setPendingRequestInfo] = useState<any>(null);
   const [managedRequest, setManagedRequest] = useState<any>(null);
   const [showCreateModal, setShowCreateModal] = useState(false);
-  const [showAIModal, setShowAIModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [selectedServiceForCreate, setSelectedServiceForCreate] = useState<string | undefined>();
   const [onlineProviders, setOnlineProviders] = useState<any[]>([]);
