@@ -1,0 +1,4 @@
+/* Same look as the main app (colours, font), plus the shared admin screens for Tailwind to scan. */
+@import "../../src/index.css";
+@source "../../src/pages/Admin*.tsx";
+@source "./";

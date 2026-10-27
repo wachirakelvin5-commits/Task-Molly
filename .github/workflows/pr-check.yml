@@ -38,7 +38,7 @@ jobs:
         run: |
           npx tsc --noEmit -p . > tsc.log 2>&1 || true
           echo "Type errors across the project: $(grep -c 'error TS' tsc.log || true)"
-          if grep -E '^src/(pages/AdminDashboard|lib/(adminMetrics|requestModel|serviceRequests))' tsc.log; then
+          if grep -E '^(admin/|src/(App\.tsx|pages/AdminDashboard|lib/(admin|adminMetrics|requestModel|serviceRequests))|tests/adminAccess)' tsc.log; then
             echo "::error::Type errors in the admin dashboard files (listed above)"
             exit 1
           fi
@@ -50,6 +50,17 @@ jobs:
 
       - name: Build
         run: npm run build
+
+      # The separate admin website (admin/), deployed by Cloudflare Pages after merge.
+      - name: Build admin site
+        run: |
+          npm run build:admin
+          test -f admin/dist/index.html || exit 1
+          grep -q '"task-molly"' -r admin/dist/assets || { echo "::error::Admin site does not use the task-molly Firebase project"; exit 1; }
+          if grep -qE 'Operations dashboard|admin-complaints' -r dist/assets; then
+            echo "::error::Admin screens ended up in the customer/provider app"
+            exit 1
+          fi
 
       # Same checks deploy.yml makes before publishing, so a change that would block the deploy fails here first.
       - name: Check the build is wired to the live site

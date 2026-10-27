@@ -534,6 +534,37 @@ export function money(requests: AdminRequest[], p: Period): Money {
 }
 
 // ---------------------------------------------------------------------------
+// Today at a glance
+// ---------------------------------------------------------------------------
+
+export interface TodaySummary {
+  /** Agreed value of jobs the client signed off today (KES). */
+  gross: number;
+  /** Task Molly's share of that value (KES). */
+  commission: number;
+  completed: number;
+  cancelled: number;
+  /** Jobs with a confirmed pro that haven't started yet (right now, not just today's). */
+  assigned: number;
+  /** Jobs being worked on right now. */
+  inProgress: number;
+}
+
+export function todaySummary(requests: AdminRequest[], now = Date.now()): TodaySummary {
+  const today = makePeriod('today', new Date(now));
+  const done = requests.filter((r) => r.status === 'completed' && inPeriod(r.completedAt, today));
+  const stages = requests.map((r) => getStage(r, now));
+  return {
+    gross: done.reduce((s, r) => s + r.price, 0),
+    commission: done.reduce((s, r) => s + r.commission, 0),
+    completed: done.length,
+    cancelled: requests.filter((r) => r.status === 'cancelled' && inPeriod(r.cancelledAt, today)).length,
+    assigned: stages.filter((s) => s === 'assigned').length,
+    inProgress: stages.filter((s) => s === 'in-progress').length,
+  };
+}
+
+// ---------------------------------------------------------------------------
 // Formatting and export
 // ---------------------------------------------------------------------------
 

@@ -7,11 +7,13 @@
     "dev": "tsx server.ts",
     "build": "vite build && rm -rf build && cp -r dist build",
     "preview": "vite preview",
+    "dev:admin": "vite --config admin/vite.config.ts",
+    "build:admin": "vite build --config admin/vite.config.ts",
     "clean": "rm -rf dist build",
     "lint": "tsc --noEmit",
     "test:rules": "npx -y firebase-tools@13.29.1 emulators:exec --only firestore --project demo-taskmolly \"tsx --test tests/firestore.rules.test.ts\"",
     "start": "node server.ts",
-    "test:metrics": "tsx --test tests/adminMetrics.test.ts tests/serviceCatalog.test.ts tests/mollyResponse.test.ts"
+    "test:metrics": "tsx --test tests/adminMetrics.test.ts tests/serviceCatalog.test.ts tests/mollyResponse.test.ts tests/adminAccess.test.ts"
   },
   "dependencies": {
     "@google/genai": "^1.29.0",
@@ -34,6 +36,7 @@
     "react": "^19.0.0",
     "react-datepicker": "^9.1.0",
     "react-dom": "^19.0.0",
+    "react-is": "^19.0.0",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.13.2",
     "recharts": "^3.8.1",
