@@ -1,0 +1,4 @@
+/* Same look as the customer app. */
+@import "../src/index.css";
+@source "../src";
+@source "./";

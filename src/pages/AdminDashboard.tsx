@@ -251,6 +251,10 @@ export default function AdminDashboard() {
   const perfPrev = useMemo(() => (prev ? performance(requests, prev) : null), [requests, prev]);
   const cash = useMemo(() => money(requests, period), [requests, period]);
   const cashPrev = useMemo(() => (prev ? money(requests, prev) : null), [requests, prev]);
+  // Always-on "today" numbers for the live screen, whatever period the other tabs use.
+  const todayPeriod = useMemo(() => makePeriod('today', new Date(now)), [now]);
+  const perfToday = useMemo(() => performance(requests, todayPeriod), [requests, todayPeriod]);
+  const cashToday = useMemo(() => money(requests, todayPeriod), [requests, todayPeriod]);
 
   const complaintTaskIds = useMemo(() => new Set(complaints.map((c) => c.taskId).filter(Boolean)), [complaints]);
 
@@ -495,6 +499,15 @@ export default function AdminDashboard() {
 
     return (
       <div className="space-y-6">
+        <div>
+          <div className="text-[11px] font-semibold text-rich-black/45 mb-2">Today</div>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <StatTile label="Made today (commission)" value={formatKES(cashToday.commission)} icon={ShieldCheck} hint={`${formatKES(cashToday.gross)} agreed value`} />
+            <StatTile label="Completed today" value={perfToday.completed} icon={Activity} hint={`${perfToday.posted} new requests today`} />
+            <StatTile label="Cancelled today" value={perfToday.cancelled} icon={AlertTriangle} tone={perfToday.cancelled ? 'warn' : 'neutral'} hint={`${perfToday.expired} expired with no pro`} />
+            <StatTile label="Assigned / in progress" value={`${live.counts.assigned} / ${live.counts['in-progress']}`} icon={Wrench} hint="Pro confirmed / work underway" />
+          </div>
+        </div>
         <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
           <StatTile label="Active requests" value={live.activeTotal} icon={Activity} hint="Not yet completed or cancelled" />
           <StatTile

@@ -51,6 +51,9 @@ jobs:
       - name: Build
         run: npm run build
 
+      - name: Build the admin website (deployed separately, e.g. on Vercel)
+        run: npm run build:admin
+
       # Same checks deploy.yml makes before publishing, so a change that would block the deploy fails here first.
       - name: Check the build is wired to the live site
         run: |

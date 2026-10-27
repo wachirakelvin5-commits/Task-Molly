@@ -6,6 +6,8 @@
   "scripts": {
     "dev": "tsx server.ts",
     "build": "vite build && rm -rf build && cp -r dist build",
+    "build:admin": "vite build --config admin/vite.config.ts",
+    "dev:admin": "vite --config admin/vite.config.ts --port 5174",
     "preview": "vite preview",
     "clean": "rm -rf dist build",
     "lint": "tsc --noEmit",
@@ -34,6 +36,7 @@
     "react": "^19.0.0",
     "react-datepicker": "^9.1.0",
     "react-dom": "^19.0.0",
+    "react-is": "^19.3.1",
     "react-markdown": "^10.1.0",
     "react-router-dom": "^7.13.2",
     "recharts": "^3.8.1",
