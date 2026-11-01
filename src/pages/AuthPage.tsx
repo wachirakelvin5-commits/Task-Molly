@@ -32,10 +32,12 @@ export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
   const [step, setStep] = useState<AuthStep>('method-selection');
+  const [authMode, setAuthMode] = useState<'signin' | 'signup'>('signin');
   const [selectedRole, setSelectedRole] = useState<UserRole | null>('client');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
+  const [showPassword, setShowPassword] = useState(false);
   const [displayName, setDisplayName] = useState('');
   const [verificationCode, setVerificationCode] = useState('');
   const [confirmationResult, setConfirmationResult] = useState<ConfirmationResult | null>(null);
@@ -47,6 +49,7 @@ export default function AuthPage() {
     const queryParams = new URLSearchParams(location.search);
     const redirectPath = queryParams.get('redirect');
     const roleParam = queryParams.get('role');
+    const modeParam = queryParams.get('mode');
     
     // There is no role page: the Client / Provider buttons pass ?role=, and anything
     // else (a plain /auth link, a protected page, a pending request) signs in as a client.
@@ -55,6 +58,13 @@ export default function AuthPage() {
     } else {
       setSelectedRole('client');
     }
+
+    if (modeParam === 'signup' || modeParam === 'register') {
+      setAuthMode('signup');
+    } else {
+      setAuthMode('signin');
+    }
+
     setStep('method-selection');
   }, [location.search]);
 
@@ -160,37 +170,72 @@ export default function AuthPage() {
     return userDoc.exists();
   };
 
-  const handleEmailNext = async () => {
-    if (!email) {
-      toast.error("Please enter your email");
+  const handlePasswordReset = async () => {
+    if (!email || !email.includes('@')) {
+      toast.error("Please enter your email address to receive reset instructions.");
       return;
     }
-    // Firebase hides whether an email is registered (email enumeration protection),
-    // so ask for the password and offer "create an account" on the next step.
-    setStep('password-input');
-  };
-
-  const handlePasswordReset = async () => {
     try {
-      await sendPasswordResetEmail(auth, email);
+      await sendPasswordResetEmail(auth, email.trim());
     } catch (err) {
       console.warn("Password reset request failed:", err);
     }
     // Same message either way, so the page doesn't reveal which emails have accounts.
-    toast.success(`If ${email} has an account, a password reset link is on its way.`);
+    toast.success(`If ${email.trim()} has an account, a password reset link is on its way.`);
   };
 
-  const handleEmailAuth = async () => {
+  const handleEmailSubmit = async (e?: React.FormEvent) => {
+    if (e) e.preventDefault();
+
+    if (!email || !email.includes('@')) {
+      toast.error("Please enter a valid email address");
+      return;
+    }
     if (!password) {
       toast.error("Please enter your password");
       return;
     }
+    if (password.length < 6) {
+      toast.error("Password must be at least 6 characters");
+      return;
+    }
+    if (authMode === 'signup' && !displayName.trim()) {
+      toast.error("Please enter your name to create an account");
+      return;
+    }
+
     setLoading(true);
     try {
-      const result = await signInWithEmailAndPassword(auth, email, password);
-      await handleUserCreation(result.user, selectedRole!);
+      if (authMode === 'signup') {
+        const result = await createUserWithEmailAndPassword(auth, email.trim(), password);
+        await handleUserCreation(result.user, selectedRole!, displayName.trim());
+      } else {
+        try {
+          const result = await signInWithEmailAndPassword(auth, email.trim(), password);
+          await handleUserCreation(result.user, selectedRole!, displayName.trim() || undefined);
+        } catch (signInErr: any) {
+          if (
+            signInErr?.code === 'auth/user-not-found' || 
+            signInErr?.code === 'auth/invalid-credential' ||
+            signInErr?.message?.includes('user-not-found')
+          ) {
+            toast.error("Account not found or password incorrect. If you're new, switch to Sign Up!");
+          } else if (signInErr?.code === 'auth/wrong-password') {
+            toast.error("Incorrect password. Try again or click 'Forgot password?'.");
+          } else {
+            toast.error(signInErr.message || "Failed to sign in. Please check your credentials.");
+          }
+        }
+      }
     } catch (err: any) {
-      toast.error("Email or password is incorrect. New here? Create an account below.");
+      if (err?.code === 'auth/email-already-in-use') {
+        toast.error("An account with this email already exists. Switching you to Sign In!");
+        setAuthMode('signin');
+      } else if (err?.code === 'auth/weak-password') {
+        toast.error("Password must be at least 6 characters.");
+      } else {
+        toast.error(err?.message || "Authentication failed. Please try again.");
+      }
     } finally {
       setLoading(false);
     }
@@ -198,7 +243,8 @@ export default function AuthPage() {
 
   const handleRegistration = async () => {
     if (!selectedRole) return;
-    setStep('profile-setup');
+    setAuthMode('signup');
+    setStep('email-input');
   };
 
   const handleProfileComplete = async () => {
@@ -413,18 +459,58 @@ export default function AuthPage() {
         </button>
 
         {/* Header */}
-        <div className="text-center mb-8 md:mb-12">
+        <div className="text-center mb-6 md:mb-10">
           <motion.div 
             initial={{ scale: 0.5, opacity: 0 }}
             animate={{ scale: 1, opacity: 1 }}
-            className="monogram-m mx-auto mb-6 w-14 h-14 md:w-16 md:h-16 text-2xl flex items-center justify-center bg-accent-gold text-white rounded-2xl shadow-xl shadow-accent-gold/20"
+            className="monogram-m mx-auto mb-4 w-14 h-14 md:w-16 md:h-16 text-2xl flex items-center justify-center bg-accent-gold text-white rounded-2xl shadow-xl shadow-accent-gold/20"
           >
             M
           </motion.div>
           <h2 className="text-3xl md:text-4xl font-light mb-3 tracking-tight">Task <span className="text-accent-gold">Molly</span></h2>
-          <p className="text-rich-black/40 text-sm md:text-base font-medium">
-            {`Signing in as ${selectedRole === 'tasker' ? 'Service Provider' : 'Client'}`}
-          </p>
+          
+          {/* Clickable Sign In / Sign Up toggle and Role Switcher */}
+          <div className="flex flex-wrap items-center justify-center gap-2 text-sm md:text-base font-medium">
+            <div className="inline-flex items-center p-1 bg-primary-bg border border-warm-gray/70 rounded-full shadow-2xs">
+              <button
+                type="button"
+                onClick={() => setAuthMode('signin')}
+                className={`px-4 py-1.5 rounded-full text-xs md:text-sm font-bold transition-all cursor-pointer ${
+                  authMode === 'signin'
+                    ? 'bg-rich-black text-white shadow-sm'
+                    : 'text-rich-black/50 hover:text-rich-black'
+                }`}
+              >
+                Sign In
+              </button>
+              <span className="text-rich-black/20 font-bold px-1">/</span>
+              <button
+                type="button"
+                onClick={() => setAuthMode('signup')}
+                className={`px-4 py-1.5 rounded-full text-xs md:text-sm font-bold transition-all cursor-pointer ${
+                  authMode === 'signup'
+                    ? 'bg-accent-gold text-white shadow-sm'
+                    : 'text-rich-black/50 hover:text-rich-black'
+                }`}
+              >
+                Sign Up
+              </button>
+            </div>
+            <span className="text-rich-black/40 text-xs md:text-sm">as</span>
+            <button
+              type="button"
+              onClick={() => setSelectedRole(prev => prev === 'tasker' ? 'client' : 'tasker')}
+              className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-white hover:bg-warm-gray/30 border border-warm-gray/70 rounded-full text-xs md:text-sm font-bold text-rich-black transition-all cursor-pointer group shadow-2xs"
+              title="Click to switch between Client and Service Provider"
+            >
+              <span className={selectedRole === 'tasker' ? 'text-accent-gold' : 'text-rich-black'}>
+                {selectedRole === 'tasker' ? 'Service Provider' : 'Client'}
+              </span>
+              <span className="text-[10px] text-rich-black/40 group-hover:text-accent-gold font-semibold underline underline-offset-2">
+                switch
+              </span>
+            </button>
+          </div>
         </div>
 
         {selectedRole === 'client' && window.location.search.includes('pending-task') && (
@@ -457,14 +543,18 @@ export default function AuthPage() {
                 {selectedRole === 'client' ? (
                   <>
                     <div className="text-center pb-2">
-                      <p className="text-xs text-rich-black/50 font-medium">Select your preferred sign-in method to continue to your dashboard</p>
+                      <p className="text-xs text-rich-black/50 font-medium">
+                        {authMode === 'signin'
+                          ? 'Select your preferred sign-in method to continue to your dashboard'
+                          : 'Select your preferred method to create your account'}
+                      </p>
                     </div>
 
                     <div className="grid grid-cols-1 gap-3.5">
                       <button 
                         onClick={handleGoogleLogin}
                         disabled={loading}
-                        className="w-full flex items-center justify-center gap-3.5 bg-white border-2 border-warm-gray/70 hover:border-accent-gold py-4 px-6 rounded-2xl hover:shadow-md transition-all group disabled:opacity-50 font-semibold text-rich-black text-sm"
+                        className="w-full flex items-center justify-center gap-3.5 bg-white border-2 border-warm-gray/70 hover:border-accent-gold py-4 px-6 rounded-2xl hover:shadow-md transition-all group disabled:opacity-50 font-semibold text-rich-black text-sm cursor-pointer"
                       >
                         <img src="https://www.google.com/favicon.ico" alt="Google" className="w-5 h-5 shrink-0" />
                         <span>Continue with Google</span>
@@ -473,7 +563,7 @@ export default function AuthPage() {
                       <button 
                         onClick={() => setStep('email-input')}
                         disabled={loading}
-                        className="w-full flex items-center justify-center gap-3.5 bg-white border-2 border-warm-gray/70 hover:border-accent-gold py-4 px-6 rounded-2xl hover:shadow-md transition-all group disabled:opacity-50 font-semibold text-rich-black text-sm"
+                        className="w-full flex items-center justify-center gap-3.5 bg-white border-2 border-warm-gray/70 hover:border-accent-gold py-4 px-6 rounded-2xl hover:shadow-md transition-all group disabled:opacity-50 font-semibold text-rich-black text-sm cursor-pointer"
                       >
                         <Mail size={18} className="text-rich-black/50 shrink-0" />
                         <span>Continue with Email</span>
@@ -482,7 +572,7 @@ export default function AuthPage() {
                       <button 
                         onClick={handleAppleLogin}
                         disabled={loading}
-                        className="w-full flex items-center justify-center gap-3.5 bg-rich-black text-white hover:bg-black py-4 px-6 rounded-2xl hover:shadow-lg transition-all group disabled:opacity-50 font-semibold text-sm"
+                        className="w-full flex items-center justify-center gap-3.5 bg-rich-black text-white hover:bg-black py-4 px-6 rounded-2xl hover:shadow-lg transition-all group disabled:opacity-50 font-semibold text-sm cursor-pointer"
                       >
                         <svg className="w-5 h-5 fill-white shrink-0" viewBox="0 0 170 170">
                           <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.58-7.7-11.64-13.98-5.78-9.01-10.36-19.34-13.73-31.02-3.37-11.68-5.06-22.7-5.06-33.06 0-14.28 3.59-25.96 10.77-35.03 7.18-9.07 16.14-13.68 26.89-13.84 5.37 0 11.16 1.41 17.37 4.23 6.21 2.82 10.15 4.3 11.82 4.44 1.34-.14 5.48-1.7 12.42-4.69 6.94-2.99 12.83-4.3 17.67-3.93 13.55.98 24.28 5.76 32.2 14.34-11.77 7.14-17.51 16.92-17.21 29.35.3 9.68 4.13 17.74 11.49 24.18 4.26 3.75 9.07 6.47 14.42 8.16-2.5 7.42-5.59 15.02-9.26 22.81zM119.22 31.86c0-7.38 2.65-14.28 7.95-20.7 5.31-6.42 11.87-10.47 19.69-12.16.22 1.32.33 2.51.33 3.57 0 7.37-2.73 14.32-8.19 20.85-5.46 6.53-12.04 10.51-19.78 11.94z" />
@@ -492,16 +582,24 @@ export default function AuthPage() {
                     </div>
 
                     <p className="text-[11px] text-center text-rich-black/40 mt-3 leading-relaxed">
-                      By signing in, you agree to our Terms of Service & Privacy Policy. Fast-track entry to your client dashboard.
+                      By continuing, you agree to our Terms of Service & Privacy Policy. Fast-track entry to your client dashboard.
                     </p>
                   </>
                 ) : (
                   <>
+                    <div className="text-center pb-2">
+                      <p className="text-xs text-rich-black/50 font-medium">
+                        {authMode === 'signin'
+                          ? 'Sign in to access your Service Provider workspace'
+                          : 'Register as a Service Provider to start accepting jobs'}
+                      </p>
+                    </div>
+
                     <div className="grid grid-cols-2 gap-4">
                       <button 
                         onClick={handleGoogleLogin}
                         disabled={loading}
-                        className="w-full flex items-center justify-center gap-3 border border-warm-gray/60 py-4 rounded-2xl hover:bg-primary-bg transition-all group disabled:opacity-50 font-medium text-sm"
+                        className="w-full flex items-center justify-center gap-3 border border-warm-gray/60 py-4 rounded-2xl hover:bg-primary-bg transition-all group disabled:opacity-50 font-medium text-sm cursor-pointer"
                       >
                         <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4" />
                         Google
@@ -510,7 +608,7 @@ export default function AuthPage() {
                       <button 
                         onClick={() => setStep('email-input')}
                         disabled={loading}
-                        className="w-full flex items-center justify-center gap-3 border border-warm-gray/60 py-4 rounded-2xl hover:bg-primary-bg transition-all group disabled:opacity-50 font-medium text-sm"
+                        className="w-full flex items-center justify-center gap-3 border border-warm-gray/60 py-4 rounded-2xl hover:bg-primary-bg transition-all group disabled:opacity-50 font-medium text-sm cursor-pointer"
                       >
                         <Mail size={18} className="text-rich-black/40" />
                         Email
@@ -520,105 +618,159 @@ export default function AuthPage() {
                     <button 
                       onClick={() => setStep('phone-input')}
                       disabled={loading}
-                      className="w-full flex items-center justify-center gap-4 bg-rich-black text-white py-5 rounded-2xl hover:bg-rich-black/90 transition-all shadow-xl shadow-rich-black/10 disabled:opacity-50 font-semibold"
+                      className="w-full flex items-center justify-center gap-4 bg-rich-black text-white py-5 rounded-2xl hover:bg-rich-black/90 transition-all shadow-xl shadow-rich-black/10 disabled:opacity-50 font-semibold cursor-pointer"
                     >
                       <Phone size={20} className="text-accent-gold" />
                       Continue with Phone
                     </button>
-
                   </>
                 )}
               </div>
             </motion.div>
           )}
 
-          {step === 'email-input' && (
+          {(step === 'email-input' || step === 'password-input') && (
             <motion.div 
-              key="email"
+              key="email-auth-page"
               initial={{ opacity: 0, x: 20 }}
               animate={{ opacity: 1, x: 0 }}
               exit={{ opacity: 0, x: -20 }}
-              className="space-y-6"
+              className="space-y-5"
             >
-              <button 
-                onClick={goBack}
-                className="flex items-center gap-2 text-xs text-rich-black/40 hover:text-accent-gold transition-colors"
-              >
-                <ChevronLeft size={14} /> Back
-              </button>
+              <div className="flex items-center justify-between">
+                <button 
+                  type="button"
+                  onClick={goBack}
+                  className="flex items-center gap-2 text-xs text-rich-black/50 hover:text-accent-gold transition-colors cursor-pointer font-medium"
+                >
+                  <ChevronLeft size={14} /> Back to options
+                </button>
 
-              <div className="space-y-4">
+                <div className="text-[11px] font-bold uppercase tracking-wider text-accent-gold px-2.5 py-1 rounded-md bg-accent-gold/10">
+                  {authMode === 'signup' ? 'New Registration' : 'Account Sign In'}
+                </div>
+              </div>
+
+              <form onSubmit={handleEmailSubmit} className="space-y-4">
+                {/* 1. Full Name (on the same page) */}
                 <div className="text-left">
-                  <label className="text-[10px] uppercase tracking-widest text-rich-black/40 font-bold ml-4 mb-2 block">Email Address</label>
+                  <div className="flex items-center justify-between mb-1.5 ml-1">
+                    <label className="text-[10px] uppercase tracking-widest text-rich-black/50 font-bold">
+                      Full Name {authMode === 'signup' ? <span className="text-accent-gold">*</span> : <span className="text-rich-black/35 font-normal lowercase">(optional for sign in)</span>}
+                    </label>
+                  </div>
                   <div className="relative">
-                    <Mail className="absolute left-5 top-1/2 -translate-y-1/2 text-rich-black/20" size={18} />
+                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-rich-black/30" size={18} />
+                    <input 
+                      type="text" 
+                      placeholder="e.g. Kelvin Wachira"
+                      value={displayName}
+                      onChange={(e) => setDisplayName(e.target.value)}
+                      className="w-full bg-primary-bg border border-warm-gray rounded-2xl py-3.5 pl-12 pr-4 text-xs md:text-sm text-rich-black focus:outline-none focus:border-accent-gold transition-all"
+                    />
+                  </div>
+                </div>
+
+                {/* 2. Email Address (on the same page) */}
+                <div className="text-left">
+                  <label className="text-[10px] uppercase tracking-widest text-rich-black/50 font-bold ml-1 mb-1.5 block">
+                    Email Address <span className="text-accent-gold">*</span>
+                  </label>
+                  <div className="relative">
+                    <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-rich-black/30" size={18} />
                     <input 
                       type="email" 
                       placeholder="name@example.com"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
-                      className="w-full bg-primary-bg border border-warm-gray rounded-2xl py-4 pl-14 pr-6 focus:outline-none focus:border-accent-gold transition-all"
+                      required
+                      className="w-full bg-primary-bg border border-warm-gray rounded-2xl py-3.5 pl-12 pr-4 text-xs md:text-sm text-rich-black focus:outline-none focus:border-accent-gold transition-all"
                     />
                   </div>
                 </div>
-                <button 
-                  onClick={handleEmailNext}
-                  disabled={loading || !email}
-                  className="w-full bg-accent-gold text-white py-4 rounded-full font-medium hover:scale-[1.02] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
-                >
-                  {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Continue'}
-                  {!loading && <ArrowRight size={18} />}
-                </button>
-              </div>
-            </motion.div>
-          )}
 
-          {step === 'password-input' && (
-            <motion.div 
-              key="password"
-              initial={{ opacity: 0, x: 20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: -20 }}
-              className="space-y-6"
-            >
-              <button 
-                onClick={goBack}
-                className="flex items-center gap-2 text-xs text-rich-black/40 hover:text-accent-gold transition-colors"
-              >
-                <ChevronLeft size={14} /> Back
-              </button>
-
-              <div className="space-y-4">
+                {/* 3. Password (on the same page) */}
                 <div className="text-left">
-                  <label className="text-[10px] uppercase tracking-widest text-rich-black/40 font-bold ml-4 mb-2 block">Password</label>
+                  <label className="text-[10px] uppercase tracking-widest text-rich-black/50 font-bold ml-1 mb-1.5 block">
+                    Password <span className="text-accent-gold">*</span>
+                  </label>
                   <div className="relative">
-                    <Lock className="absolute left-5 top-1/2 -translate-y-1/2 text-rich-black/20" size={18} />
+                    <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-rich-black/30" size={18} />
                     <input 
-                      type="password" 
+                      type={showPassword ? "text" : "password"} 
                       placeholder="••••••••"
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
-                      className="w-full bg-primary-bg border border-warm-gray rounded-2xl py-4 pl-14 pr-6 focus:outline-none focus:border-accent-gold transition-all"
+                      required
+                      className="w-full bg-primary-bg border border-warm-gray rounded-2xl py-3.5 pl-12 pr-14 text-xs md:text-sm text-rich-black focus:outline-none focus:border-accent-gold transition-all"
                     />
+                    <button
+                      type="button"
+                      onClick={() => setShowPassword(!showPassword)}
+                      className="absolute right-4 top-1/2 -translate-y-1/2 text-[11px] font-bold text-rich-black/40 hover:text-rich-black transition-colors cursor-pointer"
+                    >
+                      {showPassword ? "Hide" : "Show"}
+                    </button>
                   </div>
                 </div>
+
+                {/* Submit Action */}
                 <button 
-                  onClick={handleEmailAuth}
-                  disabled={loading || !password}
-                  className="w-full bg-accent-gold text-white py-4 rounded-full font-medium hover:scale-[1.02] transition-all disabled:opacity-50 flex items-center justify-center gap-2"
+                  type="submit"
+                  disabled={loading || !email || !password || (authMode === 'signup' && !displayName)}
+                  className="w-full mt-2 bg-rich-black hover:bg-black text-white hover:text-accent-gold py-4 rounded-full font-bold uppercase tracking-wider text-xs shadow-lg transition-all disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer"
                 >
-                  {loading ? <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin"></div> : 'Login'}
-                  {!loading && <CheckCircle2 size={18} />}
+                  {loading ? (
+                    <div className="w-5 h-5 border-2 border-white border-t-transparent rounded-full animate-spin" />
+                  ) : authMode === 'signup' ? (
+                    <>
+                      <span>Sign Up as {selectedRole === 'tasker' ? 'Service Provider' : 'Client'}</span>
+                      <CheckCircle2 size={16} className="text-accent-gold" />
+                    </>
+                  ) : (
+                    <>
+                      <span>Sign In as {selectedRole === 'tasker' ? 'Service Provider' : 'Client'}</span>
+                      <ArrowRight size={16} className="text-accent-gold" />
+                    </>
+                  )}
                 </button>
-                <div className="flex items-center justify-between text-xs px-2">
-                  <button onClick={handlePasswordReset} disabled={loading} className="text-rich-black/50 hover:text-accent-gold transition-colors">
-                    Forgot password?
-                  </button>
-                  <button onClick={handleRegistration} disabled={loading} className="font-semibold text-accent-gold hover:underline">
-                    New here? Create an account
-                  </button>
+
+                {/* Helper switcher links */}
+                <div className="flex flex-col sm:flex-row items-center justify-between gap-2 text-xs pt-1 px-1">
+                  {authMode === 'signin' ? (
+                    <>
+                      <button 
+                        type="button"
+                        onClick={handlePasswordReset} 
+                        disabled={loading} 
+                        className="text-rich-black/50 hover:text-accent-gold transition-colors cursor-pointer"
+                      >
+                        Forgot password?
+                      </button>
+                      <button 
+                        type="button"
+                        onClick={() => setAuthMode('signup')} 
+                        className="font-bold text-accent-gold hover:underline cursor-pointer"
+                      >
+                        New here? Sign up
+                      </button>
+                    </>
+                  ) : (
+                    <>
+                      <span className="text-rich-black/40 text-[11px]">
+                        Password must be at least 6 characters
+                      </span>
+                      <button 
+                        type="button"
+                        onClick={() => setAuthMode('signin')} 
+                        className="font-bold text-accent-gold hover:underline cursor-pointer"
+                      >
+                        Already have an account? Sign in
+                      </button>
+                    </>
+                  )}
                 </div>
-              </div>
+              </form>
             </motion.div>
           )}
 
