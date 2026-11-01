@@ -16,7 +16,7 @@ import { doc, setDoc, getDoc, collection, query, where, getDocs } from 'firebase
 import { useNavigate, useLocation } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { UserRole, UserProfile } from '../types';
-import { Phone, Mail, ArrowRight, CheckCircle2, User, Briefcase, ChevronLeft, Lock, UserPlus, Sparkles } from 'lucide-react';
+import { Phone, Mail, ArrowRight, CheckCircle2, User, ChevronLeft, Lock, UserPlus, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { finalizePendingRequest as syncPendingRequestService } from '../lib/pendingRequestService';
 
@@ -26,13 +26,13 @@ declare global {
   }
 }
 
-type AuthStep = 'role-selection' | 'method-selection' | 'phone-input' | 'otp-input' | 'email-input' | 'password-input' | 'registration-confirm' | 'profile-setup';
+type AuthStep = 'method-selection' | 'phone-input' | 'otp-input' | 'email-input' | 'password-input' | 'registration-confirm' | 'profile-setup';
 
 export default function AuthPage() {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState('');
-  const [step, setStep] = useState<AuthStep>('role-selection');
-  const [selectedRole, setSelectedRole] = useState<UserRole | null>(null);
+  const [step, setStep] = useState<AuthStep>('method-selection');
+  const [selectedRole, setSelectedRole] = useState<UserRole | null>('client');
   const [phoneNumber, setPhoneNumber] = useState('');
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
@@ -48,16 +48,14 @@ export default function AuthPage() {
     const redirectPath = queryParams.get('redirect');
     const roleParam = queryParams.get('role');
     
-    if (roleParam === 'client') {
-      setSelectedRole('client');
-      setStep('method-selection');
-    } else if (roleParam === 'tasker' || roleParam === 'provider') {
+    // There is no role page: the Client / Provider buttons pass ?role=, and anything
+    // else (a plain /auth link, a protected page, a pending request) signs in as a client.
+    if (roleParam === 'tasker' || roleParam === 'provider') {
       setSelectedRole('tasker');
-      setStep('method-selection');
-    } else if (redirectPath === 'pending-task') {
+    } else {
       setSelectedRole('client');
-      setStep('method-selection');
     }
+    setStep('method-selection');
   }, [location.search]);
 
   useEffect(() => {
@@ -363,13 +361,7 @@ export default function AuthPage() {
     }
   };
 
-  const selectRole = (role: UserRole) => {
-    setSelectedRole(role);
-    setStep('method-selection');
-  };
-
   const goBack = () => {
-    if (step === 'method-selection') setStep('role-selection');
     if (step === 'phone-input') setStep('method-selection');
     if (step === 'email-input') setStep('method-selection');
     if (step === 'password-input') setStep('email-input');
@@ -410,6 +402,16 @@ export default function AuthPage() {
         }}
         className="w-full max-w-xl bg-white/80 backdrop-blur-2xl p-8 md:p-14 rounded-[3rem] border border-warm-gray/50 shadow-[0_40px_80px_-15px_rgba(0,0,0,0.1)] relative overflow-hidden flex flex-col"
       >
+        <button
+          type="button"
+          onClick={() => navigate('/')}
+          aria-label="Close"
+          title="Close"
+          className="absolute top-5 right-5 md:top-7 md:right-7 z-10 w-10 h-10 flex items-center justify-center rounded-full text-rich-black/40 hover:text-rich-black hover:bg-rich-black/5 transition-colors"
+        >
+          <X size={20} />
+        </button>
+
         {/* Header */}
         <div className="text-center mb-8 md:mb-12">
           <motion.div 
@@ -421,8 +423,7 @@ export default function AuthPage() {
           </motion.div>
           <h2 className="text-3xl md:text-4xl font-light mb-3 tracking-tight">Task <span className="text-accent-gold">Molly</span></h2>
           <p className="text-rich-black/40 text-sm md:text-base font-medium">
-            {step === 'role-selection' ? 'Choose how you want to use the platform' : 
-             `Signing in as ${selectedRole === 'tasker' ? 'Service Provider' : 'Client'}`}
+            {`Signing in as ${selectedRole === 'tasker' ? 'Service Provider' : 'Client'}`}
           </p>
         </div>
 
@@ -444,45 +445,6 @@ export default function AuthPage() {
         )}
 
         <AnimatePresence mode="popLayout">
-          {step === 'role-selection' && (
-            <motion.div 
-              key="role-selection-step"
-              initial={{ opacity: 0, x: -20 }}
-              animate={{ opacity: 1, x: 0 }}
-              exit={{ opacity: 0, x: 20 }}
-              className="space-y-3 md:space-y-4"
-            >
-              <button 
-                onClick={() => selectRole('client')}
-                className="w-full p-6 md:p-8 bg-primary-bg border border-warm-gray/50 rounded-[2rem] hover:border-accent-gold hover:shadow-lg hover:shadow-accent-gold/5 transition-all group text-left flex items-center gap-6"
-              >
-                <div className="w-14 h-14 md:w-16 md:h-16 flex-shrink-0 bg-white rounded-2xl flex items-center justify-center text-accent-gold shadow-sm group-hover:scale-110 transition-transform">
-                  <User size={28} className="md:w-8 md:h-8" />
-                </div>
-                <div>
-                  <h3 className="font-medium text-lg md:text-xl">I'm a Client</h3>
-                  <p className="text-xs text-rich-black/40">I want to hire professionals</p>
-                </div>
-                <ArrowRight className="ml-auto text-warm-gray group-hover:text-accent-gold transition-all group-hover:translate-x-1" size={20} />
-              </button>
-
-              <button 
-                onClick={() => selectRole('tasker')}
-                className="w-full p-6 md:p-8 bg-rich-black border border-rich-black rounded-[2rem] hover:bg-rich-black/90 hover:shadow-lg hover:shadow-rich-black/20 transition-all group text-left flex items-center gap-6"
-              >
-                <div className="w-14 h-14 md:w-16 md:h-16 flex-shrink-0 bg-white/10 rounded-2xl flex items-center justify-center text-accent-gold shadow-sm group-hover:scale-110 transition-transform">
-                  <Briefcase size={28} className="md:w-8 md:h-8" />
-                </div>
-                <div className="text-white">
-                  <h3 className="font-medium text-lg md:text-xl">I'm a Provider</h3>
-                  <p className="text-xs text-white/40">I want to offer my services</p>
-                </div>
-                <ArrowRight className="ml-auto text-white/20 group-hover:text-accent-gold transition-all group-hover:translate-x-1" size={20} />
-              </button>
-
-            </motion.div>
-          )}
-
           {step === 'method-selection' && (
             <motion.div 
               key="method-selection-step"
@@ -491,13 +453,6 @@ export default function AuthPage() {
               exit={{ opacity: 0, x: -20 }}
               className="space-y-4"
             >
-              <button 
-                onClick={goBack}
-                className="flex items-center gap-2 text-xs text-rich-black/40 hover:text-accent-gold transition-colors mb-4"
-              >
-                <ChevronLeft size={14} /> Back to roles
-              </button>
-
               <div className="grid grid-cols-1 gap-4">
                 {selectedRole === 'client' ? (
                   <>
