@@ -16,6 +16,7 @@ import LandingPage from './pages/LandingPage';
 const Dashboard = lazy(() => import('./pages/Dashboard'));
 const ProviderDashboard = lazy(() => import('./pages/ProviderDashboard'));
 const ProviderServices = lazy(() => import('./pages/ProviderServices'));
+const ProviderMyServices = lazy(() => import('./pages/ProviderMyServices'));
 const AuthPage = lazy(() => import('./pages/AuthPage'));
 const ChatPage = lazy(() => import('./pages/ChatPage'));
 const ProviderListing = lazy(() => import('./pages/ProviderListing'));
@@ -152,6 +153,14 @@ export default function App() {
               <Route 
                 path="/provider-services" 
                 element={user ? <ProviderServices user={user} /> : <Navigate to="/auth" />} 
+              />
+              <Route 
+                path="/provider-my-services" 
+                element={user ? <ProviderMyServices user={user} /> : <Navigate to="/auth" />} 
+              />
+              <Route 
+                path="/my-services" 
+                element={user ? <ProviderMyServices user={user} /> : <Navigate to="/auth" />} 
               />
               <Route 
                 path="/providers" 

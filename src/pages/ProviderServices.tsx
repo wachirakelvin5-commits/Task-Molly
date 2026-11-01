@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
 import { UserProfile } from '../types';
-import { ArrowLeft, Download, Droplet, Hammer, Inbox, Sparkles, Truck, Zap } from 'lucide-react';
+import { ArrowLeft, Download, Inbox, Sparkles } from 'lucide-react';
 import { db } from '../firebase';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -9,7 +9,6 @@ import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import RequestCard, { CardButton } from '../components/RequestCard';
 import {
-  SERVICE_CATEGORIES,
   ServiceCategory,
   acceptRequest,
   isRequestExpired,
@@ -20,18 +19,10 @@ import {
   withdrawAcceptance,
 } from '../lib/serviceRequests';
 
-const CATEGORY_DETAILS: Record<ServiceCategory, { icon: typeof Zap; examples: string }> = {
-  'Cleaning & Domestic': { icon: Sparkles, examples: 'Cleaning, Mama Fua, cooking, mom\'s helper, elder care, dog walking' },
-  'Plumbing & Water': { icon: Droplet, examples: 'Leaks, taps, blocked drains, water tanks' },
-  'Electrical & Solar': { icon: Zap, examples: 'Wiring, breakers, solar & inverters, CCTV' },
-  'Repairs & Fundi': { icon: Hammer, examples: 'Handyman, carpentry, appliances, gas, TV mounting' },
-  'Outdoor & Relocation': { icon: Truck, examples: 'Outdoor services, gardening, painting, movers, pest control, errands' },
-};
-
 const ACTIVE_STATUSES = ['accepted', 'assigned', 'in-progress', 'awaiting-confirmation'];
 const HISTORY_STATUSES = ['completed', 'cancelled'];
 
-type ProviderTab = 'available' | 'active' | 'history' | 'services';
+type ProviderTab = 'available' | 'active' | 'history';
 
 const byNewest = (a: any, b: any) =>
   (toDate(b.createdAt)?.getTime() ?? 0) - (toDate(a.createdAt)?.getTime() ?? 0);
@@ -43,7 +34,7 @@ interface ProviderServicesProps {
 export default function ProviderServices({ user }: ProviderServicesProps) {
   const navigate = useNavigate();
   const [categories, setCategories] = useState<ServiceCategory[]>(() => normalizeProviderCategories(user.services));
-  const [activeTab, setActiveTab] = useState<ProviderTab>(() => (categories.length ? 'available' : 'services'));
+  const [activeTab, setActiveTab] = useState<ProviderTab>('available');
   const [openRequests, setOpenRequests] = useState<any[]>([]);
   const [myJobs, setMyJobs] = useState<any[]>([]);
   const [busyId, setBusyId] = useState<string | null>(null);
@@ -119,22 +110,6 @@ export default function ProviderServices({ user }: ProviderServicesProps) {
   const historyJobs = myJobs.filter(j => HISTORY_STATUSES.includes(j.status));
   const completedJobs = historyJobs.filter(j => j.status === 'completed');
   const totalEarnings = completedJobs.reduce((sum, j) => sum + Number(j.providerPrice ?? j.budget ?? 0), 0);
-
-  const toggleCategory = async (category: ServiceCategory) => {
-    const updated = categories.includes(category)
-      ? categories.filter(c => c !== category)
-      : [...categories, category];
-    const previous = categories;
-    setCategories(updated);
-    try {
-      await updateDoc(doc(db, 'users', user.uid), { services: updated });
-      toast.success(updated.length ? 'Service categories saved' : 'No categories selected – you will not receive requests');
-    } catch (err) {
-      console.error('Could not save categories:', err);
-      setCategories(previous);
-      toast.error('Could not save your categories. Please try again.');
-    }
-  };
 
   const runAction = async (requestId: string, action: () => Promise<void>, successMessage: string, nextTab?: ProviderTab) => {
     setBusyId(requestId);
@@ -238,7 +213,6 @@ export default function ProviderServices({ user }: ProviderServicesProps) {
     { id: 'available', label: 'Available Tasks', count: availableTasks.length },
     { id: 'active', label: 'My Jobs', count: activeJobs.length },
     { id: 'history', label: 'Task History', count: historyJobs.length },
-    { id: 'services', label: 'My Categories', count: categories.length },
   ];
 
   const emptyState = (message: string) => (
@@ -251,10 +225,18 @@ export default function ProviderServices({ user }: ProviderServicesProps) {
   return (
     <div className="h-[100dvh] max-h-[100dvh] overflow-hidden bg-primary-bg pt-5 md:pt-6 pb-3 px-3 md:px-6 flex flex-col justify-between">
       <div className="max-w-5xl mx-auto w-full h-full flex flex-col justify-between overflow-hidden">
-        <div className="flex items-center justify-center mb-2 pb-2 border-b border-warm-gray/40 shrink-0 text-center">
-          <h1 className="text-xl md:text-2xl font-black text-rich-black tracking-tight">
+        <div className="flex items-center justify-between mb-2 pb-2 border-b border-warm-gray/40 shrink-0">
+          <div className="w-8" />
+          <h1 className="text-xl md:text-2xl font-black text-rich-black tracking-tight text-center">
             Pro <span className="text-accent-gold">Dashboard</span>
           </h1>
+          <button
+            onClick={() => navigate('/provider-my-services')}
+            className="flex items-center gap-1.5 px-3 py-1 bg-white border border-warm-gray hover:border-accent-gold rounded-full text-xs font-bold text-rich-black/80 hover:text-rich-black shadow-2xs transition-all active:scale-95 cursor-pointer"
+          >
+            <Sparkles size={13} className="text-accent-gold" />
+            <span className="hidden sm:inline">My Services</span>
+          </button>
         </div>
 
         <div className="flex items-center gap-1.5 md:gap-2 overflow-x-auto no-scrollbar shrink-0 mb-2">
@@ -279,7 +261,23 @@ export default function ProviderServices({ user }: ProviderServicesProps) {
         <div className="flex-1 min-h-0 overflow-y-auto no-scrollbar pb-2">
           {activeTab === 'available' && (
             categories.length === 0
-              ? emptyState('Choose the service categories you offer under "My Categories" to start seeing requests.')
+              ? (
+                <div className="h-full flex flex-col items-center justify-center text-center gap-3 px-6 py-6">
+                  <div className="w-14 h-14 rounded-full bg-accent-gold/10 border border-accent-gold/20 flex items-center justify-center text-accent-gold">
+                    <Sparkles size={24} />
+                  </div>
+                  <h3 className="text-sm font-bold text-rich-black">No Active Categories Yet</h3>
+                  <p className="text-xs text-rich-black/60 max-w-xs">
+                    Choose and activate your service categories under My Services to start receiving client job requests.
+                  </p>
+                  <button
+                    onClick={() => navigate('/provider-my-services')}
+                    className="mt-1 px-4 py-2 bg-rich-black hover:bg-black text-white hover:text-accent-gold rounded-full text-xs font-bold uppercase tracking-wider shadow-sm transition-all active:scale-95 cursor-pointer"
+                  >
+                    Go to My Services
+                  </button>
+                </div>
+              )
               : availableTasks.length === 0
                 ? emptyState(`No open requests in ${categories.join(', ')} right now. New ones appear here automatically.`)
                 : (
@@ -319,51 +317,25 @@ export default function ProviderServices({ user }: ProviderServicesProps) {
                 </div>
               )
           )}
-
-          {activeTab === 'services' && (
-            <div className="space-y-3">
-              <p className="text-xs text-rich-black/60 px-1">
-                You'll see every client request in the categories you select. Changes save automatically.
-              </p>
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2.5">
-                {SERVICE_CATEGORIES.map(category => {
-                  const { icon: Icon, examples } = CATEGORY_DETAILS[category];
-                  const isSelected = categories.includes(category);
-                  return (
-                    <button
-                      key={category}
-                      onClick={() => toggleCategory(category)}
-                      aria-pressed={isSelected}
-                      className={`p-3 rounded-2xl border-2 text-left transition-all flex gap-3 cursor-pointer ${
-                        isSelected ? 'bg-accent-gold/10 border-accent-gold shadow-sm' : 'bg-white border-warm-gray/60 hover:border-warm-gray'
-                      }`}
-                    >
-                      <div className={`w-9 h-9 shrink-0 rounded-xl flex items-center justify-center ${isSelected ? 'bg-accent-gold text-white' : 'bg-primary-bg text-rich-black/60'}`}>
-                        <Icon size={16} />
-                      </div>
-                      <div className="min-w-0">
-                        <p className="text-xs font-bold text-rich-black">{category}</p>
-                        <p className="text-[10px] text-rich-black/50 mt-0.5">{examples}</p>
-                        <p className={`text-[9px] mt-1 font-bold uppercase tracking-wider ${isSelected ? 'text-accent-gold' : 'text-rich-black/30'}`}>
-                          {isSelected ? 'Receiving requests' : 'Tap to offer'}
-                        </p>
-                      </div>
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-          )}
         </div>
 
         <div className="mt-2 pt-2 border-t border-warm-gray/40 flex items-center justify-between shrink-0">
-          <button
-            onClick={() => navigate('/provider-dashboard')}
-            className="flex items-center gap-2 px-4 py-1.5 bg-white border border-warm-gray hover:border-accent-gold rounded-full text-xs font-bold uppercase tracking-wider text-rich-black/70 hover:text-rich-black shadow-sm transition-all active:scale-95 group cursor-pointer"
-          >
-            <ArrowLeft size={14} className="text-rich-black/50 group-hover:text-accent-gold transition-colors" />
-            <span>Back</span>
-          </button>
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => navigate('/provider-dashboard')}
+              className="flex items-center gap-2 px-4 py-1.5 bg-white border border-warm-gray hover:border-accent-gold rounded-full text-xs font-bold uppercase tracking-wider text-rich-black/70 hover:text-rich-black shadow-sm transition-all active:scale-95 group cursor-pointer"
+            >
+              <ArrowLeft size={14} className="text-rich-black/50 group-hover:text-accent-gold transition-colors" />
+              <span>Back</span>
+            </button>
+            <button
+              onClick={() => navigate('/provider-my-services')}
+              className="flex items-center gap-1.5 px-4 py-1.5 bg-white border border-warm-gray hover:border-accent-gold rounded-full text-xs font-bold uppercase tracking-wider text-rich-black/70 hover:text-rich-black shadow-sm transition-all active:scale-95 group cursor-pointer"
+            >
+              <Sparkles size={13} className="text-accent-gold" />
+              <span>My Services</span>
+            </button>
+          </div>
 
           {activeTab === 'history' && (
             <button

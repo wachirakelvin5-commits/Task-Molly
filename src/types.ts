@@ -1,5 +1,33 @@
 export type UserRole = 'client' | 'tasker' | 'admin';
 
+export interface ServiceVerificationDoc {
+  name: string;
+  type: string;
+  dataUrl?: string;
+  size?: number;
+  uploadedAt: string;
+}
+
+export interface ServiceVerification {
+  serviceId: string;
+  serviceName: string;
+  categoryGroup?: string;
+  status: 'pending' | 'verified' | 'rejected';
+  submittedAt: string;
+  reviewedAt?: string;
+  selfie: ServiceVerificationDoc | null;
+  idDocument: (ServiceVerificationDoc & {
+    idType: 'national_id' | 'passport' | 'alien_card';
+    idNumber: string;
+  }) | null;
+  credential: (ServiceVerificationDoc & {
+    credentialType: 'business_permit' | 'academic_cert' | 'professional_license' | 'trade_cert';
+    documentNumber?: string;
+    issuingAuthority?: string;
+  }) | null;
+  rejectionReason?: string;
+}
+
 export interface UserProfile {
   uid: string;
   email: string;
@@ -13,6 +41,7 @@ export interface UserProfile {
   walletBalance?: number;
   services?: string[];
   location?: string;
+  serviceVerifications?: Record<string, ServiceVerification>;
 }
 
 export interface TaskerProfile {

@@ -46,6 +46,7 @@ const PAGE_LABELS: Record<string, string> = {
   '/tasks': 'My tasks (client)',
   '/provider-dashboard': 'Provider dashboard',
   '/provider-services': 'Provider jobs',
+  '/provider-my-services': 'My services & verification',
   '/providers': 'Find a pro',
   '/chat': 'Chat',
   '/blog': 'Blog page',

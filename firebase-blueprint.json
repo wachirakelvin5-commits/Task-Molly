@@ -14,6 +14,8 @@
         "fcmToken": { "type": "string", "description": "Token for push notifications" },
         "isVerified": { "type": "boolean" },
         "isOnline": { "type": "boolean", "description": "Whether the pro is currently online" },
+        "services": { "type": "array", "items": { "type": "string" }, "description": "Active service categories" },
+        "serviceVerifications": { "type": "object", "description": "Verification document submissions per service" },
         "createdAt": { "type": "string", "format": "date-time" }
       },
       "required": ["uid", "email", "role"]

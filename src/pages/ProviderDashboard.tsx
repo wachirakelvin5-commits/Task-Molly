@@ -7,7 +7,8 @@ import {
   Briefcase,
   MessageSquare,
   ChevronRight,
-  User
+  User,
+  Sparkles
 } from 'lucide-react';
 import { auth, db } from '../firebase';
 import { signOut } from 'firebase/auth';
@@ -179,6 +180,22 @@ export default function ProviderDashboard({ user }: ProviderDashboardProps) {
               </div>
               <span className="text-[11px] font-black uppercase tracking-wider text-rich-black/70 group-hover:text-rich-black transition-colors text-left">
                 Tasks & Requests
+              </span>
+            </div>
+            <ChevronRight size={14} className="text-rich-black/30 group-hover:text-accent-gold group-hover:translate-x-0.5 transition-all shrink-0" />
+          </button>
+
+          {/* My Services -> Opens to My Services / Categories */}
+          <button
+            onClick={() => navigate('/provider-my-services')}
+            className="w-full flex items-center justify-between p-2.5 md:p-3 bg-primary-bg hover:bg-accent-gold/5 border border-warm-gray/50 rounded-xl group transition-all duration-300 active:scale-98 cursor-pointer"
+          >
+            <div className="flex items-center gap-2.5">
+              <div className="w-8 h-8 rounded-lg bg-white flex items-center justify-center border border-warm-gray text-accent-gold shadow-sm group-hover:bg-accent-gold/10 group-hover:border-accent-gold/30 transition-all shrink-0">
+                <Sparkles size={15} />
+              </div>
+              <span className="text-[11px] font-black uppercase tracking-wider text-rich-black/70 group-hover:text-rich-black transition-colors text-left">
+                My Services
               </span>
             </div>
             <ChevronRight size={14} className="text-rich-black/30 group-hover:text-accent-gold group-hover:translate-x-0.5 transition-all shrink-0" />
