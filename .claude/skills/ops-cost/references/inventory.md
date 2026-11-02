@@ -38,19 +38,18 @@ ALERT_AT_PERCENT:   50, 90, 100
   billed here — confirm at console.cloud.google.com/run?project=gen-lang-client-0157826223.
 - **Invoices:** monthly, from Google Cloud EMEA Limited (Ireland), in USD with a KES
   reference. **Kenyan VAT 16% is added** to any charge. October 2026 invoice: **US$0.00 /
-  KES 0** (rate on invoice: US$1 = KES 129.75). Invoices say "You will be automatically
-  charged for any amount due" — yet AI Studio says "prepay credits depleted", so the payment
-  setup is unclear: check Billing → Overview → **How you pay**.
-- **Prepaid**: Google takes credit bought up front, not a monthly invoice. When the credit
-  runs out, paid services on the account can be **suspended** until it's topped up.
-- **2026-11-02: AI Studio showed "Prepay credits depleted … Purchase credits to resume
-  service."** But Cloud Billing → Overview showed **US$0.00 spent** (last 7 days, forecast
-  US$0) and the Top projects chart for Nov 2025 – Nov 2026 was flat at US$0. So nothing
-  drained the credit; the balance is most likely just zero. With zero prepaid credit, paid
-  usage beyond free tiers can be blocked, so check Cloud Run (`server.ts`) still answers.
+  KES 0** (rate on invoice: US$1 = KES 129.75).
+- **The account pays two ways** (Billing → Overview → How you pay, checked 2026-11-02):
+  - **Postpay — Google Cloud services** (Cloud Run, Artifact Registry, Cloud Build, everything
+    except Gemini). The card on file is charged after use, monthly or when the balance reaches
+    the **US$100 payment threshold**. Balance US$0. Services never pause for lack of credit,
+    so the **budget alert is the only early warning**.
+  - **Prepay — AI Studio** (Gemini API only). Credit balance US$0, no credit ever bought,
+    auto-reload off. This is why AI Studio says "Prepay credits depleted" — harmless, and it
+    means paid Gemini calls can't cost anything. **Keep it this way: don't buy credits or
+    turn on auto-reload** unless Task Molly starts using Gemini again.
 - A **US$75/month budget alert** exists on this account (seen 2026-11-02). Proposed: lower it
   to US$15 (see `budget.md`).
-- Check the remaining credit balance in every monthly review.
 
 ## Checking the Gemini key
 
