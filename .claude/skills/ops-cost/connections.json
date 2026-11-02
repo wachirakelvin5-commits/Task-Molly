@@ -1,0 +1,200 @@
+{
+  "_about": "Services Task Molly connects to, and how to recognise them in the repo. scripts/scan-connections.mjs flags anything it finds that isn't listed here. Wildcards: '*.example.com' matches any subdomain; 'MPESA_*' matches any env var starting MPESA_. Services with \"outsideRepo\": true are set up only in consoles/portals (fed in manually), so the scan doesn't expect to see them in the code.",
+  "services": [
+    {
+      "id": "firebase",
+      "name": "Firebase (Firestore, Auth, Cloud Messaging) - Spark plan",
+      "costs": "free (Spark)",
+      "packages": [
+        "firebase",
+        "firebase-admin",
+        "@firebase/*"
+      ],
+      "hosts": [
+        "www.gstatic.com",
+        "*.firebaseapp.com",
+        "*.firebaseio.com",
+        "firestore.googleapis.com",
+        "lh3.googleusercontent.com"
+      ],
+      "env": [
+        "VITE_VAPID_KEY",
+        "VITE_USE_FIREBASE_EMULATORS",
+        "GOOGLE_CLOUD_PROJECT",
+        "VITE_TRACK_ANALYTICS"
+      ],
+      "files": [
+        "firebase.json",
+        "firestore.rules",
+        "firebase-applet-config.json",
+        "firebase-blueprint.json",
+        "public/firebase-messaging-sw.js"
+      ]
+    },
+    {
+      "id": "cloud-run",
+      "name": "Cloud Run running server.ts (AI Studio project gen-lang-client-0157826223)",
+      "costs": "paid, free tier",
+      "packages": [
+        "express",
+        "cors",
+        "socket.io",
+        "socket.io-client",
+        "dotenv"
+      ],
+      "env": [
+        "DISABLE_HMR"
+      ],
+      "files": [
+        "server.ts",
+        "metadata.json"
+      ]
+    },
+    {
+      "id": "gemini",
+      "name": "Gemini API (2 Tier 1 keys) - unused",
+      "costs": "paid (Tier 1)",
+      "packages": [
+        "@google/genai"
+      ],
+      "hosts": [
+        "generativelanguage.googleapis.com"
+      ],
+      "env": [
+        "GEMINI_API_KEY"
+      ]
+    },
+    {
+      "id": "sentry",
+      "name": "Sentry error tracking",
+      "costs": "free plan",
+      "packages": [
+        "@sentry/*"
+      ],
+      "hosts": [
+        "*.sentry.io"
+      ]
+    },
+    {
+      "id": "github",
+      "name": "GitHub Pages + Actions",
+      "costs": "free",
+      "actions": [
+        "actions/*"
+      ],
+      "files": [
+        ".github/workflows/deploy.yml",
+        ".github/workflows/pr-check.yml",
+        "CNAME",
+        "public/CNAME",
+        "public/.nojekyll"
+      ]
+    },
+    {
+      "id": "cloudflare-pages",
+      "name": "Cloudflare Pages (admin site)",
+      "costs": "free",
+      "files": [
+        "admin/public/_headers"
+      ]
+    },
+    {
+      "id": "google-sheets",
+      "name": "Google Sheets web app (unlisted service requests)",
+      "costs": "free",
+      "hosts": [
+        "script.google.com"
+      ],
+      "env": [
+        "GOOGLE_SHEET_WEBAPP_URL"
+      ]
+    },
+    {
+      "id": "mpesa",
+      "name": "M-Pesa Daraja API - placeholders only, not live",
+      "costs": "per-transaction fees",
+      "hosts": [
+        "sandbox.safaricom.co.ke",
+        "api.safaricom.co.ke"
+      ],
+      "env": [
+        "MPESA_*",
+        "DARAJA_*"
+      ],
+      "outsideRepo": true
+    },
+    {
+      "id": "free-content",
+      "name": "Free content and lookups (Photon, Unsplash, picsum, Mixkit, Google Fonts)",
+      "costs": "free (fair use)",
+      "hosts": [
+        "photon.komoot.io",
+        "images.unsplash.com",
+        "picsum.photos",
+        "assets.mixkit.co",
+        "fonts.googleapis.com",
+        "fonts.gstatic.com"
+      ]
+    },
+    {
+      "id": "domain",
+      "name": "Domain task-molly.com (registrar TBD)",
+      "costs": "yearly renewal",
+      "outsideRepo": true
+    }
+  ],
+  "reviewed": {
+    "_about": "Things found in the repo that were checked and cost nothing (plain libraries, links, build settings).",
+    "packages": [
+      "@tailwindcss/vite",
+      "@tanstack/react-query",
+      "@vitejs/plugin-legacy",
+      "@vitejs/plugin-react",
+      "clsx",
+      "date-fns",
+      "jspdf",
+      "jspdf-autotable",
+      "lucide-react",
+      "motion",
+      "react",
+      "react-datepicker",
+      "react-dom",
+      "react-is",
+      "react-markdown",
+      "react-router-dom",
+      "recharts",
+      "sonner",
+      "tailwind-merge",
+      "terser",
+      "vite",
+      "vite-plugin-pwa",
+      "xlsx",
+      "@types/*",
+      "autoprefixer",
+      "esbuild",
+      "eslint",
+      "tailwindcss",
+      "tsx",
+      "typescript"
+    ],
+    "hosts": [
+      "www.w3.org",
+      "localhost",
+      "127.0.0.1",
+      "www.google.com",
+      "wa.me",
+      "whatsapp.com",
+      "www.instagram.com"
+    ],
+    "env": [
+      "NODE_ENV",
+      "MODE",
+      "PROD",
+      "DEV",
+      "BASE_URL",
+      "SSR"
+    ],
+    "actions": [],
+    "secrets": []
+  }
+}

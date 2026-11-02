@@ -19,8 +19,33 @@ new code from breaking it.
   where a real bill can appear.
 - **Daraja (M-Pesa) API calls are free; M-Pesa transaction fees are not.** The payment routes in
   `server.ts` are still placeholders, so fees start the day real payments go live.
-- **Budget:** see `MONTHLY_BUDGET_KES` in `references/inventory.md`. Convert USD bills to KES
-  at the day's rate and write the rate you used next to the number.
+- **Budget:** KES 2,500/month (proposed — see `references/budget.md`), with a US$15 Google
+  Cloud budget alert. Expected spend is KES 200–650. Convert USD bills to KES at the day's
+  rate and write the rate you used next to the number.
+- **Gemini:** two keys on paid Tier 1, nothing in the code uses them. Any Gemini spend is a problem.
+
+## Keeping the list of tools complete
+
+Tools reach Task Molly two ways, and both must end up in `references/inventory.md`:
+
+1. **Tools that show up in the GitHub repo** (a package, an API address, a key name, a
+   workflow, a hosting config file). Find them with:
+   ```bash
+   node .claude/skills/ops-cost/scripts/scan-connections.mjs
+   ```
+   It compares what the code uses against `connections.json` and marks anything unknown
+   **NEW**. The same scan runs on every pull request (`pr-check.yml`) and leaves a warning —
+   it never blocks a merge. For each NEW item: if it can cost money, add a service to
+   `connections.json` and a row to `inventory.md` (and `limits.md` / `budget.md` if it has a
+   free limit or a cost); if not, add it to `reviewed` in `connections.json`. Re-run until it
+   says "Nothing new".
+2. **Tools set up outside the repo** (a console, portal or account — e.g. the domain
+   registrar, Safaricom portal, WhatsApp Business, an email/SMS provider, Cloud Run
+   settings). The scan can't see these; the user tells you about them. When they do:
+   ask for anything missing (plan, cost, owner account, renewal date, where the bill is),
+   add a row to `inventory.md` with "Found by: manual", add a service with
+   `"outsideRepo": true` to `connections.json` (plus its hosts/env names, so the scan
+   recognises it if code for it is added later), and update `budget.md`.
 
 ## What to do for each kind of request
 
@@ -31,7 +56,9 @@ new code from breaking it.
 | Monthly cost review | Follow `references/monthly-review.md` step by step and update the inventory's "Last review" table. |
 | Anything about M-Pesa / Daraja money | Use `references/daraja-fees.md`. Never invent a tariff — use the table there, or ask the user for the current rate card. |
 | Code change touching Firestore, analytics, Cloud Run, sockets, or a new external service | Check it against `references/code-rules.md` **before** writing the code, and estimate the daily reads/writes it adds. |
-| Adding a new paid tool | Add a row to `references/inventory.md` (plan, free limit, owner, where to see the bill, renewal date). |
+| "Check for new tools / connections" | Run the scan (above), and use the GitHub tools to look at the latest pull request checks for "New outside connection" warnings. |
+| User reports a tool set up outside the repo | Follow "Tools set up outside the repo" above. |
+| "What should our budget be?" / budget questions | `references/budget.md`. Rebuild the table if tools were added or removed. |
 
 ## Rules
 
