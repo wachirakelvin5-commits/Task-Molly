@@ -36,6 +36,22 @@ exist — they never reach Cloud Run. Same for Socket.IO chat (`src/pages/ChatPa
 connects to the page's own address). Cloud Run is only reached by opening its own
 `*.run.app` address (e.g. the AI Studio preview). That's why it showed 0 requests/sec.
 
+**Tested on the live site 2026-11-02 (all worked — they use Firestore, not Cloud Run):**
+create a task, provider accepts it, task chat both ways (`src/lib/taskChat.ts`), chat history
+still there after logging out and back in. Cancelling from My tasks (`ClientTasks.tsx`) and
+from the chat page also use Firestore (`cancelRequest`).
+
+**Still pointing at Cloud Run (likely broken on the live site):**
+- `src/pages/Dashboard.tsx` — Cancel button on the client dashboard's ongoing-job card
+  (`/api/cancel-service-request`), and assigning a provider (`/api/assign-task`).
+- `src/components/TaskerAssignmentModal.tsx` — picking a specific tasker
+  (`/api/live-providers`, `/api/assign-task`).
+- `src/pages/ChatPage.tsx` (`/chat/:jobId`) — Socket.IO chat; messages aren't saved anywhere.
+
+Moving these to the Firestore helpers in `src/lib/serviceRequests.ts` (e.g. `cancelRequest`)
+would leave nothing using Cloud Run, so it could be turned off — removing the only
+pay-per-use service from the Google bill.
+
 Consequences:
 - Cost: it costs nothing now, but it's a public URL with open CORS — anyone who finds it can
   make it work (and bill). Keep min instances 0 and a low max instances.
