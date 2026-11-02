@@ -57,6 +57,8 @@ export const EXPIRING_SOON_MS = 30 * 60 * 1000;
 
 /** Task Molly's share of the agreed price when a request has no explicit providerPrice. */
 export const COMMISSION_RATE = 0.15;
+/** Target: M-Pesa fees on a job should be at most this share of its commission (ops-cost budget.md). */
+export const FEE_TARGET_SHARE = 0.1;
 
 export type LiveStage =
   | 'open'
@@ -112,6 +114,14 @@ export interface AdminRequest {
   payout: number;
   /** Task Molly's share (KES). */
   commission: number;
+  /** M-Pesa fee Task Molly paid to collect from the client; null until recorded. */
+  collectionFee: number | null;
+  /** M-Pesa fee Task Molly paid to send the provider's payout; null until recorded. */
+  payoutFee: number | null;
+  /** Fees recorded so far (KES). */
+  mpesaFees: number;
+  /** Commission minus M-Pesa fees (KES). Negative = the job lost money. */
+  netCommission: number;
   createdAt: Date | null;
   postedAt: Date | null;
   acceptedAt: Date | null;
@@ -147,6 +157,11 @@ export function normalizeRequest(id: string, data: Record<string, any>): AdminRe
   const price = num(data.clientPrice) || num(data.budget);
   const explicitPayout = num(data.providerPrice);
   const payout = explicitPayout > 0 ? Math.min(explicitPayout, price || explicitPayout) : Math.round(price * (1 - COMMISSION_RATE));
+  const commission = Math.max(0, price - payout);
+  const fee = (v: unknown) => (v === null || v === undefined || v === '' ? null : num(v));
+  const collectionFee = fee(data.collectionFeeKes);
+  const payoutFee = fee(data.payoutFeeKes);
+  const mpesaFees = (collectionFee ?? 0) + (payoutFee ?? 0);
   const status = STATUSES.includes(data.status) ? (data.status as RequestStatus) : 'pending';
   const category = (SERVICE_CATEGORIES as readonly string[]).includes(data.serviceCategory)
     ? (data.serviceCategory as ServiceCategory)
@@ -165,7 +180,11 @@ export function normalizeRequest(id: string, data: Record<string, any>): AdminRe
     location: data.location || '',
     price,
     payout,
-    commission: Math.max(0, price - payout),
+    commission,
+    collectionFee,
+    payoutFee,
+    mpesaFees,
+    netCommission: commission - mpesaFees,
     createdAt: toDate(data.createdAt),
     postedAt: toDate(data.postedAt) || toDate(data.createdAt),
     acceptedAt: toDate(data.acceptedAt),
@@ -495,6 +514,8 @@ export interface CategoryMoney {
   jobs: number;
   gross: number;
   commission: number;
+  mpesaFees: number;
+  netCommission: number;
   payouts: number;
   average: number | null;
 }
@@ -503,6 +524,16 @@ export interface Money {
   jobs: number;
   gross: number;
   commission: number;
+  /** M-Pesa fees recorded on these jobs (KES). */
+  mpesaFees: number;
+  /** Commission left after M-Pesa fees (KES). */
+  netCommission: number;
+  /** Jobs whose fees are more than FEE_TARGET_SHARE of their commission. */
+  overFeeTarget: number;
+  /** Jobs whose fees are more than their commission. */
+  lossMaking: number;
+  /** Jobs still missing the collection or payout fee, so the totals above are incomplete. */
+  missingFees: number;
   payouts: number;
   average: number | null;
   byCategory: CategoryMoney[];
@@ -521,6 +552,8 @@ export function money(requests: AdminRequest[], p: Period): Money {
       jobs: rs.length,
       gross,
       commission: sum(rs, (r) => r.commission),
+      mpesaFees: sum(rs, (r) => r.mpesaFees),
+      netCommission: sum(rs, (r) => r.netCommission),
       payouts: sum(rs, (r) => r.payout),
       average: rs.length ? gross / rs.length : null,
     };
@@ -542,6 +575,11 @@ export function money(requests: AdminRequest[], p: Period): Money {
     jobs: done.length,
     gross,
     commission: sum(done, (r) => r.commission),
+    mpesaFees: sum(done, (r) => r.mpesaFees),
+    netCommission: sum(done, (r) => r.netCommission),
+    overFeeTarget: done.filter((r) => r.mpesaFees > r.commission * FEE_TARGET_SHARE).length,
+    lossMaking: done.filter((r) => r.netCommission < 0).length,
+    missingFees: done.filter((r) => r.collectionFee === null || r.payoutFee === null).length,
     payouts: sum(done, (r) => r.payout),
     average: done.length ? gross / done.length : null,
     byCategory,
@@ -624,6 +662,9 @@ export function exportRows(requests: AdminRequest[], now = Date.now()) {
     'Agreed price (KES)': r.price,
     'Provider payout (KES)': r.payout,
     'Commission (KES)': r.commission,
+    'M-Pesa collection fee (KES)': r.collectionFee ?? '',
+    'M-Pesa payout fee (KES)': r.payoutFee ?? '',
+    'Commission after fees (KES)': r.netCommission,
     Posted: fmtDate(r.createdAt),
     Accepted: fmtDate(r.acceptedAt),
     Started: fmtDate(r.startedAt),

@@ -30,6 +30,11 @@ jobs:
           npm install --legacy-peer-deps
           npm install react-is --legacy-peer-deps
 
+      # Warns (never fails) when a change adds an outside service, API, key or hosting file that
+      # isn't in the cost list yet. See .claude/skills/ops-cost/.
+      - name: Check for new outside connections (cost list)
+        run: node .claude/skills/ops-cost/scripts/scan-connections.mjs --ci
+
       - name: Admin metrics unit tests
         run: npm run test:metrics
 

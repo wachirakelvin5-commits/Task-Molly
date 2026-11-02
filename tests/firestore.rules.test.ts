@@ -391,3 +391,39 @@ describe('task chat', () => {
     await assertSucceeds(getDocs(collection(db('alice'), MSGS)));
   });
 });
+
+describe('M-Pesa payments and payouts', () => {
+  const admin = () => env.authenticatedContext('admin1', { email: 'wachirakelvin5@gmail.com', email_verified: true }).firestore();
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      const fs = ctx.firestore();
+      await setDoc(doc(fs, 'payments/pay1'), { requestId: 'req1', clientId: 'alice', providerId: 'bob', amount: 2800, status: 'paid' });
+      await setDoc(doc(fs, 'payouts/po1'), { requestId: 'req1', providerId: 'bob', amount: 2380, status: 'paid' });
+    });
+  });
+
+  test('each side reads only their own record; admins read both', async () => {
+    await assertSucceeds(getDoc(doc(db('alice'), 'payments/pay1')));
+    await assertFails(getDoc(doc(db('eve'), 'payments/pay1')));
+    await assertFails(getDoc(doc(db('bob'), 'payments/pay1')));
+    await assertSucceeds(getDoc(doc(db('bob'), 'payouts/po1')));
+    await assertFails(getDoc(doc(db('alice'), 'payouts/po1')));
+    await assertSucceeds(getDoc(doc(admin(), 'payments/pay1')));
+    await assertSucceeds(getDoc(doc(admin(), 'payouts/po1')));
+  });
+
+  test('nobody can create or change them from the app, not even admins', async () => {
+    await assertFails(setDoc(doc(db('alice'), 'payments/fake'), { clientId: 'alice', amount: 1, status: 'paid' }));
+    await assertFails(updateDoc(doc(db('alice'), 'payments/pay1'), { status: 'failed' }));
+    await assertFails(setDoc(doc(db('bob'), 'payouts/fake'), { providerId: 'bob', amount: 99999, status: 'paid' }));
+    await assertFails(updateDoc(doc(admin(), 'payouts/po1'), { amount: 1 }));
+  });
+
+  test('a client cannot mark their own task as paid', async () => {
+    await seed({ status: 'completed', providerId: 'bob', providerName: 'Bob' });
+    await assertFails(updateDoc(doc(db('alice'), REQ), stamp({ paymentStatus: 'paid' })));
+    await seed({ status: 'pending' });
+    await assertFails(updateDoc(doc(db('alice'), REQ), stamp({ description: 'x', paymentStatus: 'paid' })));
+  });
+});

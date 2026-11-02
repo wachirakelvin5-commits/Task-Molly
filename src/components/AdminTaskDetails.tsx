@@ -13,7 +13,7 @@ import {
   X,
 } from 'lucide-react';
 import { db, handleFirestoreError, OperationType } from '../firebase';
-import { STAGE_LABELS, formatDateTime, formatKES, getStage, normalizeRequest } from '../lib/adminMetrics';
+import { FEE_TARGET_SHARE, STAGE_LABELS, formatDateTime, formatKES, getStage, normalizeRequest } from '../lib/adminMetrics';
 import { toDate } from '../lib/requestModel';
 import { ChatThread } from './TaskChat';
 
@@ -201,6 +201,13 @@ export default function AdminTaskDetails({ requestId, onClose }: { requestId: st
                 <Row label="Provider earns" value={formatKES(r.payout)} />
                 <Row label="Task Molly commission" value={formatKES(r.commission)} />
                 <Row label="Payment" value={data.paymentStatus} />
+                <Row label="Payout" value={data.payoutStatus} />
+                <Row label="M-Pesa fee to collect" value={r.collectionFee === null ? 'Not recorded' : formatKES(r.collectionFee)} />
+                <Row label="M-Pesa fee to pay the pro" value={r.payoutFee === null ? 'Not recorded' : formatKES(r.payoutFee)} />
+                <Row
+                  label="Commission after fees"
+                  value={`${formatKES(r.netCommission)}${r.netCommission < 0 ? ' (lost money)' : r.mpesaFees > r.commission * FEE_TARGET_SHARE ? ' (fees over target)' : ''}`}
+                />
               </Section>
 
               <Section icon={CalendarClock} title="Timeline">
