@@ -15,7 +15,7 @@ ALERT_AT_PERCENT:   50, 90, 100
 | Service | Used for | Plan | Cost now | Where to see usage / bill | Owner (account) | Renews | Found by |
 |---|---|---|---|---|---|---|---|
 | Firebase `task-molly` — Firestore, Auth, Cloud Messaging | All app data, Google sign-in, push notifications | **Spark (free)** | KES 0 | console.firebase.google.com → task-molly → Usage and billing | TBD | — | repo |
-| Cloud Run (`server.ts`) | `/api/*` routes (assign/cancel task, live providers, M-Pesa placeholders), Socket.IO chat | Pay-as-you-go with free tier | **US$0** on "My Billing Account" (2026-11-02) — within free tier, or billed elsewhere; confirm its project is on this account | console.cloud.google.com → (AI Studio's project) → Billing → Reports | TBD | monthly | repo |
+| Cloud Run service `task-molly` (`server.ts`), project `gen-lang-client-0157826223`, region europe-west3 (Frankfurt), deployed from source 2026-10-12, public access | `/api/*` routes (assign/cancel task, live providers, M-Pesa placeholders), Socket.IO chat — **but the live site doesn't reach it** (see below) | Postpay, free tier | **US$0** (Oct 2026 invoice); 0 requests/sec on 2026-11-02 | console.cloud.google.com → (AI Studio's project) → Billing → Reports | TBD | monthly | repo |
 | Artifact Registry / Cloud Build (same project as Cloud Run) | Stores and builds the Cloud Run container images | Pay-as-you-go with free tier | TBD | same Billing → Reports, group by Service | TBD | monthly | repo |
 | AI Studio Build chat (the assistant used to edit the app) | Making code changes that get pushed to GitHub | **Free tier requests** (seen in Chat settings → Usage, 2026-11-02) | KES 0 | aistudio.google.com → the app → Chat settings → Usage | TBD | — | manual |
 | Gemini API keys `...BX0Q` (created 2026-10-05) and `...ivl4` (2026-03-13), project `gen-lang-client-0157826223` | **Nothing** — Molly concierge was removed; no code calls them | **Tier 1 (paid)**, billed to "My Billing Account". Monthly spend cap US$100 (AI Studio → Spend) | **US$0.00** (6 Oct – 2 Nov 2026) | aistudio.google.com/apikey (see "Checking the Gemini key" below) | TBD | — | repo |
@@ -26,6 +26,22 @@ ALERT_AT_PERCENT:   50, 90, 100
 | Domain task-molly.com | Main website address | GoDaddy, yearly. User paid ~US$10 (likely a first-year/promo price); GoDaddy's standard .com renewal is ~US$22.99 + US$0.20 ICANN fee (third-party listing, May 2026) | ~KES 3,000/yr (~KES 250/month) until the renewal price is confirmed | godaddy.com → My Products → Domains → task-molly.com (shows renewal date and price) | TBD | TBD — check in GoDaddy | manual |
 | Google Sheets web app | Receives "unlisted service" requests | Free | KES 0 | — | TBD | — | repo |
 | Photon (komoot), Unsplash, picsum, Google Fonts | Address search, images, font | Free (fair use) | KES 0 | — | — | — | repo |
+
+## Cloud Run: is it used?
+
+The live site (task-molly.com on GitHub Pages) calls the API with relative addresses such as
+`fetch('/api/assign-task')` (`src/components/TaskerAssignmentModal.tsx`,
+`src/pages/Dashboard.tsx`). On GitHub Pages those go to task-molly.com/api/…, which doesn't
+exist — they never reach Cloud Run. Same for Socket.IO chat (`src/pages/ChatPage.tsx`
+connects to the page's own address). Cloud Run is only reached by opening its own
+`*.run.app` address (e.g. the AI Studio preview). That's why it showed 0 requests/sec.
+
+Consequences:
+- Cost: it costs nothing now, but it's a public URL with open CORS — anyone who finds it can
+  make it work (and bill). Keep min instances 0 and a low max instances.
+- Function: on the live site, assign task / cancel request / live providers / Socket.IO chat
+  likely fail. Decision for the user: point the live site at Cloud Run (API base URL), move
+  those features to Firestore, or turn Cloud Run off.
 
 ## Google billing account ("My Billing Account")
 

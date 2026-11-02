@@ -26,6 +26,9 @@ today's traffic (ask the user, or use the admin Site Analytics numbers).
 
 ## Cloud Run (`server.ts`)
 
+- The live site can't reach Cloud Run through relative `/api/...` calls (see inventory.md,
+  "Cloud Run: is it used?"). Don't add new `/api` features until that's decided.
+
 - Keep **minimum instances = 0** and a low maximum (e.g. 2–3) so a traffic spike or bot can't
   run up a bill.
 - Socket.IO chat keeps connections open and billed. Task chat already uses Firestore

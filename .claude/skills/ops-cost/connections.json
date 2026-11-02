@@ -33,7 +33,7 @@
     },
     {
       "id": "cloud-run",
-      "name": "Cloud Run running server.ts (AI Studio project gen-lang-client-0157826223)",
+      "name": "Cloud Run service task-molly running server.ts (project gen-lang-client-0157826223, europe-west3)",
       "costs": "paid, free tier",
       "packages": [
         "express",
@@ -44,6 +44,9 @@
       ],
       "env": [
         "DISABLE_HMR"
+      ],
+      "hosts": [
+        "*.run.app"
       ],
       "files": [
         "server.ts",
