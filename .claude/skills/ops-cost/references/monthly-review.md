@@ -12,7 +12,8 @@ ask for numbers or screenshots, then do the maths and update `inventory.md`.
    Cloud Run service: minimum instances should be 0 unless there's a reason.
 3. **Prepaid credit** — Billing → My Billing Account → Overview: credit left, and how many
    months it lasts at last month's spend. Under one month left = tell the user to top up.
-   (Credit ran out on 2026-11-02.)
+   (Showed as depleted on 2026-11-02 with US$0 spent.) Also open Payments → Transactions and
+   download last month's invoice: record the total, VAT and Google's KES rate.
    **Budget alert** — Billing → Budgets & alerts. There should be a budget for the Cloud Run
    billing account ("My Billing Account") of US$15 (`GCP_BUDGET_ALERT`), alerting at 50/90/100%.
    If missing, give the user the steps to create it.

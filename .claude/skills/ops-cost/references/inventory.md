@@ -33,6 +33,14 @@ ALERT_AT_PERCENT:   50, 90, 100
   aistudio.google.com). Other Google accounts see "Add billing account" in Cloud Console,
   so switch accounts (avatar, top right) before checking billing. Don't create a second
   billing account from another account: the Task Molly projects wouldn't use it.
+- **Projects on this account (2026-11-02):** only `Default Gemini Project`
+  (`gen-lang-client-0157826223`). Cloud Run for `server.ts` must be in this project to be
+  billed here — confirm at console.cloud.google.com/run?project=gen-lang-client-0157826223.
+- **Invoices:** monthly, from Google Cloud EMEA Limited (Ireland), in USD with a KES
+  reference. **Kenyan VAT 16% is added** to any charge. October 2026 invoice: **US$0.00 /
+  KES 0** (rate on invoice: US$1 = KES 129.75). Invoices say "You will be automatically
+  charged for any amount due" — yet AI Studio says "prepay credits depleted", so the payment
+  setup is unclear: check Billing → Overview → **How you pay**.
 - **Prepaid**: Google takes credit bought up front, not a monthly invoice. When the credit
   runs out, paid services on the account can be **suspended** until it's topped up.
 - **2026-11-02: AI Studio showed "Prepay credits depleted … Purchase credits to resume

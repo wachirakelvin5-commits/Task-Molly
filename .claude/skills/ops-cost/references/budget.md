@@ -1,7 +1,8 @@
 # Budget
 
-**Status: proposed 2026-11-02, not yet approved — user will review once the remaining details (M-Pesa rate card) are in.** Actual Google Cloud spend so far: **US$0** (Gemini and the whole billing account, 2026-11-02), so the Google lines below are safety margin, not expected cost. Rate used: US$1 ≈ KES 130 (check the
-day's rate when reviewing).
+**Status: proposed 2026-11-02, not yet approved — user will review once the remaining details (M-Pesa rate card) are in.** Actual Google Cloud spend so far: **US$0** (Gemini and the whole billing account, 2026-11-02), so the Google lines below are safety margin, not expected cost. Rate used: US$1 ≈ KES 130 (Google's October 2026 invoice used KES 129.75; check the
+day's rate when reviewing). **Google Cloud charges get 16% Kenyan VAT on top** — the
+Google lines below include it.
 
 ## Monthly budget: KES 2,500
 
@@ -13,7 +14,7 @@ caught before it gets expensive.
 |---|---|---|---|
 | Cloud Run (`server.ts`) | KES 0–400 | KES 1,000 | Low traffic fits the free tier. Budget covers a busy month or open chat connections. |
 | Artifact Registry + Cloud Build (same project) | KES 0–50 | (inside Cloud Run line) | Stored container images over 0.5 GB; builds usually free. |
-| Gemini API (2 Tier 1 keys) | **KES 0** (US$0 spent 6 Oct–2 Nov 2026) | KES 0 | Nothing uses Gemini. **Any** spend here is a problem to investigate. Its spend cap is US$100 — lower it to the minimum. |
+| Gemini API (2 Tier 1 keys) | **KES 0** (US$0 spent 6 Oct–2 Nov 2026; whole account invoiced US$0 for Oct 2026) | KES 0 | Nothing uses Gemini. **Any** spend here is a problem to investigate. Its spend cap is US$100 — lower it to the minimum. |
 | Firebase (Spark) | KES 0 | KES 0 | Free plan can't bill. |
 | Firebase Blaze reserve | KES 0 | KES 500 | If Spark limits start being hit, moving to Blaze at ~2× today's usage costs roughly KES 200–300/month. Reserve so that move isn't blocked. |
 | Domain task-molly.com (GoDaddy) | ~KES 250 | KES 250 | Paid ~US$10 the first time, but GoDaddy's standard .com renewal is ~US$23/yr (≈ KES 3,000). Budgeted at the renewal price until GoDaddy's account page confirms it. |
@@ -27,6 +28,9 @@ caught before it gets expensive.
 but the account had spent US$0 — the balance is most likely just zero. Top-ups are how this
 budget gets spent: top up only when actual spend appears, about one month of the Google
 Cloud lines at a time (≈ US$10–15), so a mistake can't drain a large balance.
+The October 2026 invoice says the account is "automatically charged" — if "How you pay"
+confirms automatic payments with a card, there is no prepaid balance to manage and the
+budget alert is the only safety net.
 
 ## Alerts to set
 
