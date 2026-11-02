@@ -1,0 +1,45 @@
+---
+name: ops-cost
+description: Manage what it costs to run Task Molly — Firebase (Spark plan), Cloud Run (server.ts), Gemini key, M-Pesa Daraja fees, Sentry, GitHub, Cloudflare and the domain. Use when the user asks about hosting costs, bills, budgets, free-tier limits, "are we close to the limit", a monthly cost review, Daraja/M-Pesa fees, or before adding/changing Firestore queries, live listeners, tracking events, Cloud Run settings or a new paid service.
+---
+
+# Task Molly operations: cost management
+
+Task Molly's goal is to run inside free tiers wherever possible and keep every paid item
+under a monthly budget in **KES**. This skill is how to check that, explain it, and keep
+new code from breaking it.
+
+## Key facts (read these first)
+
+- **Firebase project `task-molly` is on the Spark (free) plan.** Spark never sends a bill —
+  when a daily limit is hit, Firestore **stops working for everyone until the daily reset**
+  (midnight US Pacific ≈ 10:00–11:00 Nairobi time). On Spark the risk is an *outage*, not a bill.
+- **`server.ts` runs on Cloud Run**, deployed from Google AI Studio. Cloud Run needs a billing
+  account, so it lives in a *different* Google Cloud project from `task-molly`. That project is
+  where a real bill can appear.
+- **Daraja (M-Pesa) API calls are free; M-Pesa transaction fees are not.** The payment routes in
+  `server.ts` are still placeholders, so fees start the day real payments go live.
+- **Budget:** see `MONTHLY_BUDGET_KES` in `references/inventory.md`. Convert USD bills to KES
+  at the day's rate and write the rate you used next to the number.
+
+## What to do for each kind of request
+
+| Request | Do this |
+|---|---|
+| "What are we paying for?" / "what does X cost?" | Answer from `references/inventory.md`. If a field says TBD, say so and tell the user where to look. |
+| "Are we close to a limit?" | Compare the usage the user gives (or the console screenshot) with `references/limits.md`. Report as % of the limit. |
+| Monthly cost review | Follow `references/monthly-review.md` step by step and update the inventory's "Last review" table. |
+| Anything about M-Pesa / Daraja money | Use `references/daraja-fees.md`. Never invent a tariff — use the table there, or ask the user for the current rate card. |
+| Code change touching Firestore, analytics, Cloud Run, sockets, or a new external service | Check it against `references/code-rules.md` **before** writing the code, and estimate the daily reads/writes it adds. |
+| Adding a new paid tool | Add a row to `references/inventory.md` (plan, free limit, owner, where to see the bill, renewal date). |
+
+## Rules
+
+1. Prices and free limits change. The numbers in `references/limits.md` carry a "checked on"
+   date — if it is older than ~3 months, re-check the official pricing page before relying on it,
+   and update the file.
+2. Give costs in KES first, original currency in brackets: "KES 1,290 (US$10)".
+3. Never put API keys, M-Pesa credentials or billing account numbers in this repo.
+4. Never change billing settings, delete keys, or change Cloud Run settings yourself — give the
+   user the steps, since those live in consoles you can't reach.
+5. When a fix trades cost for features (e.g. fewer live updates), say what the user loses.
