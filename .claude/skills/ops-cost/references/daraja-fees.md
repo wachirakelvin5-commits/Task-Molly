@@ -63,8 +63,51 @@ Use them only for rough planning. They do not replace the rate card above.
   tech-ish.com, "M-Pesa Pochi / Buy Goods tariff cuts 2026" (1 Aug 2026).
 
 Rough example with the Till rate: a KES 2,000 task costs about **KES 11** to collect.
-At a 10% commission (KES 200), that is about 5.5% of the commission, inside the 10% target in
-`budget.md`. Payout fees on top are unknown until the B2C rate is in.
+Task Molly's commission is **15%** (`COMMISSION_RATE` in `src/lib/adminMetrics.ts`; the
+provider gets 85%), so KES 300. Collection alone is about 3.7% of that, inside the 10% target
+in `budget.md`. The payout fee comes on top and is the bigger cost (see the estimate below).
+
+## Estimate (2026-11-02, from the unconfirmed rates above)
+
+**Assumptions:**
+- Collections use the Till rate: 0.55%, no fee under KES 500, capped at KES 200.
+- Each task has one B2C payout costing **KES 20 (low) to KES 108 (high)**. This is the
+  third-party range; the real band rates are still TBD.
+- Commission is 15% of the price.
+- No withdrawal charges.
+
+Replace these with the rate card when it comes in.
+
+**Per task**
+
+| Task price | Commission (15%) | Collection fee | Payout fee | Total fees | Share of commission |
+|---|---|---|---|---|---|
+| KES 500 | KES 75 | ~KES 3 | KES 20–108 | KES 23–111 | **31%–148%** |
+| KES 1,000 | KES 150 | ~KES 6 | KES 20–108 | KES 26–114 | **17%–76%** |
+| KES 2,000 | KES 300 | KES 11 | KES 20–108 | KES 31–119 | **10%–40%** |
+| KES 5,000 | KES 750 | ~KES 28 | KES 20–108 | KES 48–136 | **6%–18%** |
+
+**Per month (average task KES 2,000, one payout per task)**
+
+| Tasks / month | Commission | M-Pesa fees | Left after fees |
+|---|---|---|---|
+| 50 | KES 15,000 | KES 1,550–5,950 | KES 9,050–13,450 |
+| 200 | KES 60,000 | KES 6,200–23,800 | KES 36,200–53,800 |
+| 1,000 | KES 300,000 | KES 31,000–119,000 | KES 181,000–269,000 |
+
+**What this shows:**
+- **The payout fee decides whether the 10% target holds.** The collection fee is small.
+  With one payout per task, the target is only met on tasks of about KES 2,000 or more, and
+  only if B2C is near the low end of the range.
+- **Small tasks can lose money.** At the high B2C rate, a KES 500 task costs more in fees
+  than its KES 75 commission.
+- **Ways to bring it down:**
+  - **Batch payouts:** one payout per provider per day or week, instead of one per task.
+    The trade-off is that providers wait longer for their money.
+  - **Minimum task price:** for example KES 1,000.
+  - **Pass the payout fee to the provider:** deduct it from their 85%.
+  - **Negotiate the B2C rate** with the Safaricom account manager.
+- Get the real B2C band rates (item 2) before choosing between these.
 
 ## Monthly estimate
 
