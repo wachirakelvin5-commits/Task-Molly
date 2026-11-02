@@ -13,9 +13,8 @@ ask for numbers or screenshots, then do the maths and update `inventory.md`.
 3. **How you pay / invoice** — Billing → Overview → How you pay: postpay balance (Cloud
    services) and AI Studio prepay credit (should stay US$0, auto-reload off). Payments →
    Transactions: download last month's invoice; record total, VAT and Google's KES rate.
-   **Budget alert** — Billing → Budgets & alerts. There should be a budget for the Cloud Run
-   billing account ("My Billing Account") of US$15 (`GCP_BUDGET_ALERT`), alerting at 50/90/100%.
-   If missing, give the user the steps to create it.
+   **Budget alert** — Billing → Budgets & alerts. Confirm the US$15 budget (`GCP_BUDGET_ALERT`,
+   set 2026-11-02) still exists with 50/90/100% alerts, and whether any alert emails came in.
 4. **Gemini** — confirm US$0 spent last month (AI Studio → Spend) and the prepay credit is
    still zero with auto-reload off.
 5. **Sentry** — sentry.io → Usage stats: how much of the monthly quota was used, and were

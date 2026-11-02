@@ -31,14 +31,13 @@ caught before it gets expensive.
   credits unless Gemini is used again; then add a Gemini line here first.
 - No top-ups to manage.
 
-## Alerts to set
+## Alerts
 
-- **Google Cloud budget on "My Billing Account": US$15/month (≈ KES 1,950)** — a US$75 budget
-  already exists; edit it down to US$15 under Budgets & caps — alerts at 50%,
-  90% and 100%. Covers Cloud Run, Artifact Registry, Cloud Build, Gemini — and Firebase too,
-  if it ever moves to Blaze on this account.
-  Steps: console.cloud.google.com → Billing → My Billing Account → Budgets & alerts →
-  Create budget → all projects, all services → amount US$15 → thresholds 50/90/100%.
+- **Google Cloud budget on "My Billing Account": US$15/month (≈ KES 1,950) — SET 2026-11-02.**
+  All projects, all services; email to billing admins at 50% / 90% / 100% of actual spend.
+  Covers Cloud Run, Artifact Registry, Cloud Build, Gemini — and Firebase too, if it ever
+  moves to Blaze on this account. It warns only; it doesn't stop spending.
+  To change it: Billing → Budgets & caps → click the budget → Amount → Target amount → Save.
 - **Separate check:** Gemini spend above US$0 in any month → find what's calling it.
 
 ## M-Pesa fees (outside this budget)

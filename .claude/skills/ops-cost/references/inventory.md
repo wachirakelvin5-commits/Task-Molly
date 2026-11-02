@@ -48,8 +48,9 @@ ALERT_AT_PERCENT:   50, 90, 100
     auto-reload off. This is why AI Studio says "Prepay credits depleted" — harmless, and it
     means paid Gemini calls can't cost anything. **Keep it this way: don't buy credits or
     turn on auto-reload** unless Task Molly starts using Gemini again.
-- A **US$75/month budget alert** exists on this account (seen 2026-11-02). Proposed: lower it
-  to US$15 (see `budget.md`).
+- **Budget alert: US$15/month** (lowered from US$75 on 2026-11-02). All projects, all
+  services, monthly; emails billing admins at 50% (US$7.50), 90% (US$13.50) and 100% (US$15)
+  of actual spend. Alerts only — nothing is stopped.
 
 ## Checking the Gemini key
 
