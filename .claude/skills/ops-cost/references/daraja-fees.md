@@ -31,10 +31,37 @@ on Cloud Run, so no money moves and fees are KES 0 today. Nothing in the app cal
 Do not guess these. Leave TBD until the user gives the real numbers.
 
 ```
-SHORTCODE_TYPE:          TBD   # Paybill or Till
-WHO_PAYS_COLLECTION_FEE: TBD   # business or customer
-RATE_CARD_DATE:          TBD
+SHORTCODE_TYPE:          Till (planned 2026-11-02; no Till yet)
+WHO_PAYS_COLLECTION_FEE: business (Till fees are paid by the merchant)
+RATE_CARD_DATE:          TBD   # fill in when Safaricom issues the Till
+DARAJA_TEST_KEYS:        not yet (user will share when ready)
 ```
+
+### Till decision (2026-11-02)
+
+The user plans to collect payments through a **Till (Buy Goods)**. Until the Till exists:
+- The rate card stays TBD.
+- `server/mpesaRateCard.ts` stays null.
+- The indicative Till rate below (0.55%, capped at KES 200) is the planning number.
+
+**Settings for a Till.** Set these on Cloud Run when the Till is ready:
+- `MPESA_TRANSACTION_TYPE=CustomerBuyGoodsOnline`
+- `MPESA_SHORTCODE` = the store (head office) number
+- `MPESA_PARTY_B` = the Till number
+- `MPESA_PASSKEY` = the passkey Safaricom gives for that store number
+
+**Payouts are the open question.** As far as we know, a Till can only *receive* money. B2C
+payouts need a separate B2C (bulk payment) shortcode from Safaricom, usually tied to a
+Paybill-type business account. **Confirm this with Safaricom when applying for the Till.**
+The options:
+1. **Till for collections, plus a B2C shortcode for payouts.** The payout code in
+   `server/paymentRoutes.ts` works as written, and fees are recorded automatically.
+2. **Till only, and pay providers by hand** (move money to a phone, then send). There is a
+   fee on each step, and someone has to type each payout fee into the task record
+   (`payoutFeeKes`) so tracking stays complete.
+3. **A Paybill instead of a Till.** One number handles both, but Paybill rates are
+   negotiated rather than published.
+
 
 | Transaction | Amount band (KES) | Fee (KES) |
 |---|---|---|
@@ -110,6 +137,34 @@ Replace these with the rate card when it comes in.
   - **Negotiate the B2C rate** with the Safaricom account manager.
 - Get the real B2C band rates (item 2) before choosing between these.
 
+## Tracking fees against commission (built 2026-11-02)
+
+If Task Molly keeps the commission model, each job's fees are tracked against its commission:
+
+- **Where the numbers come from:**
+  - When a client payment succeeds, the server copies its fee onto the task
+    (`serviceRequests.collectionFeeKes`).
+  - When a payout succeeds, it copies that fee too (`payoutFeeKes`).
+  - The full records are in `payments` and `payouts`.
+- **Admin dashboard → Money tab** shows, for the chosen period:
+  - total M-Pesa fees, and fees as a % of commission
+  - commission after fees
+  - **jobs over the 10% target**
+  - **jobs that lost money** (fees more than the commission)
+  - how many completed jobs still have no fee recorded, so you know when the totals are
+    incomplete
+- **Each task's details** show the collection fee, payout fee and commission after fees. They
+  mark a task "fees over target" or "lost money".
+- **Excel and CSV exports** include the same columns, per task and per category.
+- **A fee that isn't known stays blank, not 0**, so missing numbers are never mistaken for
+  free transactions. It stays blank until the rate card is filled in, or until a payout fee
+  is typed in by hand (option 2 above).
+- **In the monthly review:** if "jobs that lost money" is above 0, or "jobs over target" is
+  growing, act on it. Raise the minimum task price, batch payouts, or pass the payout fee
+  to the provider.
+
+The target (10%) is `FEE_TARGET_SHARE` in `src/lib/adminMetrics.ts`, next to `COMMISSION_RATE`.
+
 ## Monthly estimate
 
 ```
@@ -149,8 +204,9 @@ Still to do before switching on:
    Pay button on the live site would fail.
 2. **Fill in `server/mpesaRateCard.ts`** and the rate card above with the real Safaricom
    numbers.
-3. **Test with the Daraja sandbox:**
-   - Get the sandbox keys from developer.safaricom.co.ke (test shortcode `174379`).
+3. **Test with the Daraja sandbox** (waiting on the user's keys, 2026-11-02):
+   - Get the sandbox keys from developer.safaricom.co.ke. Sign-up is free and doesn't need a
+     Till. The sandbox uses test shortcode `174379`.
    - Set the `MPESA_*` variables on Cloud Run (names in `.env.example`). Make
      `MPESA_CALLBACK_TOKEN` a random string of at least 24 characters.
    - Set `MPESA_CALLBACK_BASE_URL` to the Cloud Run `https://...run.app` address.

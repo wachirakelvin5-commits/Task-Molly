@@ -11,6 +11,8 @@ import {
   Hourglass,
   Info,
   Layers,
+  Percent,
+  TrendingDown,
   RefreshCw,
   Search,
   ShieldCheck,
@@ -37,6 +39,7 @@ import { db, handleFirestoreError, OperationType } from '../firebase';
 import {
   ACTIVE_STAGES,
   AdminRequest,
+  FEE_TARGET_SHARE,
   LiveRow,
   LiveStage,
   PERIOD_LABELS,
@@ -348,6 +351,11 @@ export default function AdminDashboard() {
           { Metric: 'Completion rate', Value: formatPercent(perf.completionRate) },
           { Metric: 'Agreed value of completed jobs (KES)', Value: cash.gross },
           { Metric: 'Task Molly commission (KES)', Value: cash.commission },
+          { Metric: 'M-Pesa fees recorded (KES)', Value: cash.mpesaFees },
+          { Metric: 'Commission after M-Pesa fees (KES)', Value: cash.netCommission },
+          { Metric: `Jobs with fees over ${Math.round(FEE_TARGET_SHARE * 100)}% of commission`, Value: cash.overFeeTarget },
+          { Metric: 'Jobs where fees were more than the commission', Value: cash.lossMaking },
+          { Metric: 'Jobs missing an M-Pesa fee', Value: cash.missingFees },
           { Metric: 'Provider payouts (KES)', Value: cash.payouts },
           { Metric: 'Average job value (KES)', Value: cash.average === null ? '' : Math.round(cash.average) },
         ]),
@@ -367,6 +375,8 @@ export default function AdminDashboard() {
               'Median time to accept': formatDuration(c.medianAcceptMs),
               'Agreed value (KES)': m?.gross ?? 0,
               'Commission (KES)': m?.commission ?? 0,
+              'M-Pesa fees (KES)': m?.mpesaFees ?? 0,
+              'Commission after fees (KES)': m?.netCommission ?? 0,
             };
           })
         ),
@@ -889,6 +899,41 @@ export default function AdminDashboard() {
             icon={Activity}
             hint={cash.average === null ? 'No completed jobs yet' : <ChangeBadge value={change(cash.average, cashPrev?.average)} />}
           />
+        </div>
+
+        <div>
+          <p className="text-xs font-semibold text-rich-black/60 mb-2">
+            M-Pesa fees · target: at most {Math.round(FEE_TARGET_SHARE * 100)}% of the commission on each job
+          </p>
+          <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+            <StatTile
+              label="M-Pesa fees"
+              value={formatKES(cash.mpesaFees)}
+              icon={Percent}
+              hint={cash.commission ? `${formatPercent(cash.mpesaFees / cash.commission)} of commission` : 'No commission yet'}
+            />
+            <StatTile label="Commission after fees" value={formatKES(cash.netCommission)} icon={ShieldCheck} />
+            <StatTile
+              label={`Jobs over the ${Math.round(FEE_TARGET_SHARE * 100)}% target`}
+              value={cash.overFeeTarget}
+              icon={AlertTriangle}
+              tone={cash.overFeeTarget ? 'warn' : 'neutral'}
+              hint="Fees too high for the commission"
+            />
+            <StatTile
+              label="Jobs that lost money"
+              value={cash.lossMaking}
+              icon={TrendingDown}
+              tone={cash.lossMaking ? 'urgent' : 'neutral'}
+              hint="Fees more than the commission"
+            />
+          </div>
+          {cash.missingFees > 0 && (
+            <p className="text-xs text-rich-black/50 mt-2">
+              {cash.missingFees} of {cash.jobs} completed {cash.jobs === 1 ? 'job has' : 'jobs have'} no collection or payout fee recorded yet, so
+              these totals are incomplete.
+            </p>
+          )}
         </div>
 
         <Card>

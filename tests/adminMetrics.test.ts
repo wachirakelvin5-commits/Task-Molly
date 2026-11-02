@@ -245,3 +245,42 @@ describe('helpers', () => {
     assert.ok(line.includes('"Fix ""big"" leak"'));
   });
 });
+
+describe('M-Pesa fees against commission', () => {
+  const done = (price: number, fees: Record<string, any> = {}) =>
+    req({ status: 'completed', budget: price, clientPrice: price, providerPrice: price * 0.85, completedAt: NOW, ...fees });
+
+  test('fees come off the commission, per task', () => {
+    const r = done(2000, { collectionFeeKes: 11, payoutFeeKes: 20 });
+    assert.equal(r.commission, 300);
+    assert.equal(r.collectionFee, 11);
+    assert.equal(r.payoutFee, 20);
+    assert.equal(r.mpesaFees, 31);
+    assert.equal(r.netCommission, 269);
+  });
+
+  test('unrecorded fees stay null, not zero', () => {
+    const r = done(2000, { collectionFeeKes: null });
+    assert.equal(r.collectionFee, null);
+    assert.equal(r.payoutFee, null);
+    assert.equal(r.mpesaFees, 0);
+    assert.equal(r.collectionFee === 0, false);
+    assert.equal(done(2000, { collectionFeeKes: 0 }).collectionFee, 0);
+  });
+
+  test('money() counts jobs over target, losing money, and missing fees', () => {
+    const rows = [
+      done(2000, { collectionFeeKes: 11, payoutFeeKes: 15 }), // 26 of 300 = 8.7%: fine
+      done(2000, { collectionFeeKes: 11, payoutFeeKes: 108 }), // 119 of 300: over target
+      done(500, { collectionFeeKes: 3, payoutFeeKes: 108 }), // 111 of 75: lost money
+      done(1000), // nothing recorded yet
+    ];
+    const m = money(rows, makePeriod('30d', NOW));
+    assert.equal(m.commission, 300 + 300 + 75 + 150);
+    assert.equal(m.mpesaFees, 26 + 119 + 111);
+    assert.equal(m.netCommission, m.commission - m.mpesaFees);
+    assert.equal(m.overFeeTarget, 2);
+    assert.equal(m.lossMaking, 1);
+    assert.equal(m.missingFees, 1);
+  });
+});

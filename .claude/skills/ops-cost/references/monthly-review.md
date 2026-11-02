@@ -20,8 +20,9 @@ ask for numbers or screenshots, then do the maths and update `inventory.md`.
 5. **Sentry** — run `find_dropped_events` via the Sentry tools (or sentry.io → Usage stats):
    accepted errors/spans for the month, and any drops for quota.
 6. **GitHub / Cloudflare** — only check if a build failed for "minutes" or "quota" reasons.
-7. **M-Pesa** (once live) — add up last month's fees from Firestore payment records using
-   `daraja-fees.md`; report total and KES per task.
+7. **M-Pesa** (once live) — admin dashboard → Money → last month: M-Pesa fees, commission
+   after fees, jobs over the 10% target, jobs that lost money, jobs missing a fee. Report the
+   total and KES per task (see "Tracking fees against commission" in `daraja-fees.md`).
 8. **Renewals** — anything renewing in the next 60 days (domain especially)?
 9. **New tools** — run `scan-connections.mjs`, and ask the user if anything was set up
    outside the repo this month (new accounts, portals, subscriptions).

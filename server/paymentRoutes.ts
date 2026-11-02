@@ -140,7 +140,8 @@ export function registerPaymentRoutes(app: Express, db: Firestore, auth: Auth) {
         });
         tx.update(db.collection('serviceRequests').doc(payment.requestId), {
           paymentStatus: status, updatedAt: FieldValue.serverTimestamp(),
-          ...(paid ? { paidAt: FieldValue.serverTimestamp() } : {}),
+          // Copied onto the task so the admin dashboard can show fees vs commission per job.
+          ...(paid ? { paidAt: FieldValue.serverTimestamp(), collectionFeeKes: payment.feeKes ?? null } : {}),
         });
       });
     } catch (error) {
@@ -210,7 +211,10 @@ export function registerPaymentRoutes(app: Express, db: Firestore, auth: Auth) {
       const next = update(payout);
       if (!next) return;
       tx.update(payoutRef, { status: next.status, ...next.fields, updatedAt: FieldValue.serverTimestamp() });
-      tx.update(db.collection('serviceRequests').doc(payout.requestId), { payoutStatus: next.status, updatedAt: FieldValue.serverTimestamp() });
+      tx.update(db.collection('serviceRequests').doc(payout.requestId), {
+        payoutStatus: next.status, updatedAt: FieldValue.serverTimestamp(),
+        ...(next.status === 'paid' ? { payoutFeeKes: payout.feeKes ?? null } : {}),
+      });
     });
   }
 
