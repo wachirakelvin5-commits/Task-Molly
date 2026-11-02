@@ -56,6 +56,7 @@ Tools reach Task Molly two ways, and both must end up in `references/inventory.m
 | Monthly cost review | Follow `references/monthly-review.md` step by step and update the inventory's "Last review" table. |
 | Anything about M-Pesa / Daraja money | Use `references/daraja-fees.md`. Never invent a tariff — use the table there, or ask the user for the current rate card. |
 | Code change touching Firestore, analytics, Cloud Run, sockets, or a new external service | Check it against `references/code-rules.md` **before** writing the code, and estimate the daily reads/writes it adds. |
+| Sentry usage | If the Sentry tools are connected, use `find_dropped_events` (org `task-molly`, datasets `errors` and `spans`, 30d) — any `rate_limited` drop for quota means the plan limit is being hit. |
 | "Check for new tools / connections" | Run the scan (above), and use the GitHub tools to look at the latest pull request checks for "New outside connection" warnings. |
 | User reports a tool set up outside the repo | Follow "Tools set up outside the repo" above. |
 | "What should our budget be?" / budget questions | `references/budget.md`. Rebuild the table if tools were added or removed. |

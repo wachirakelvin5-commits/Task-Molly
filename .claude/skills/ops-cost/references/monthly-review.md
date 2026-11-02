@@ -17,8 +17,8 @@ ask for numbers or screenshots, then do the maths and update `inventory.md`.
    set 2026-11-02) still exists with 50/90/100% alerts, and whether any alert emails came in.
 4. **Gemini** — confirm US$0 spent last month (AI Studio → Spend) and the prepay credit is
    still zero with auto-reload off.
-5. **Sentry** — sentry.io → Usage stats: how much of the monthly quota was used, and were
-   events dropped?
+5. **Sentry** — run `find_dropped_events` via the Sentry tools (or sentry.io → Usage stats):
+   accepted errors/spans for the month, and any drops for quota.
 6. **GitHub / Cloudflare** — only check if a build failed for "minutes" or "quota" reasons.
 7. **M-Pesa** (once live) — add up last month's fees from Firestore payment records using
    `daraja-fees.md`; report total and KES per task.
