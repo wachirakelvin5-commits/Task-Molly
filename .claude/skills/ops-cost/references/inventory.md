@@ -15,7 +15,7 @@ ALERT_AT_PERCENT:   50, 90, 100
 | Cloud Run (`server.ts`) | `/api/*` routes (assign/cancel task, live providers, M-Pesa placeholders), Socket.IO chat | Pay-as-you-go with free tier | TBD | console.cloud.google.com → (AI Studio's project) → Billing → Reports | TBD | monthly |
 | Artifact Registry / Cloud Build (same project as Cloud Run) | Stores and builds the Cloud Run container images | Pay-as-you-go with free tier | TBD | same Billing → Reports, group by Service | TBD | monthly |
 | AI Studio Build chat (the assistant used to edit the app) | Making code changes that get pushed to GitHub | **Free tier requests** (seen in Chat settings → Usage, 2026-11-02) | KES 0 | aistudio.google.com → the app → Chat settings → Usage | TBD | — |
-| Gemini API key (`GEMINI_API_KEY`) | **Nothing** — Molly concierge was removed; no code calls it | TBD (Free or Paid) | TBD | aistudio.google.com/apikey (see "Checking the Gemini key" below) | TBD | — |
+| Gemini API keys `...BX0Q` (created 2026-10-05) and `...ivl4` (2026-03-13), project `gen-lang-client-0157826223` | **Nothing** — Molly concierge was removed; no code calls them | **Tier 1 (paid)**, billed to "My Billing Account" | TBD — check each key's usage/spend icons | aistudio.google.com/apikey (see "Checking the Gemini key" below) | TBD | — |
 | M-Pesa via Daraja | Client payments (STK push) and provider payouts (B2C) — **not live yet** | Per-transaction fees | KES 0 (placeholders) | M-PESA for Business portal (org.ke.m-pesa.com) | TBD | — |
 | GitHub Pages + Actions | Hosts task-molly.com; builds PRs and deploys | Free | KES 0 | github.com → Settings → Billing and plans | wachirakelvin5-commits | — |
 | Cloudflare Pages | Hosts the admin site | Free | KES 0 | dash.cloudflare.com → Workers & Pages | TBD | — |
