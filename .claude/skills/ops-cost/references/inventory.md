@@ -15,7 +15,7 @@ ALERT_AT_PERCENT:   50, 90, 100
 | Service | Used for | Plan | Cost now | Where to see usage / bill | Owner (account) | Renews | Found by |
 |---|---|---|---|---|---|---|---|
 | Firebase `task-molly` — Firestore, Auth, Cloud Messaging | All app data, Google sign-in, push notifications | **Spark (free)** | KES 0 | console.firebase.google.com → task-molly → Usage and billing | TBD | — | repo |
-| Cloud Run (`server.ts`) | `/api/*` routes (assign/cancel task, live providers, M-Pesa placeholders), Socket.IO chat | Pay-as-you-go with free tier | TBD | console.cloud.google.com → (AI Studio's project) → Billing → Reports | TBD | monthly | repo |
+| Cloud Run (`server.ts`) | `/api/*` routes (assign/cancel task, live providers, M-Pesa placeholders), Socket.IO chat | Pay-as-you-go with free tier | **US$0** on "My Billing Account" (2026-11-02) — within free tier, or billed elsewhere; confirm its project is on this account | console.cloud.google.com → (AI Studio's project) → Billing → Reports | TBD | monthly | repo |
 | Artifact Registry / Cloud Build (same project as Cloud Run) | Stores and builds the Cloud Run container images | Pay-as-you-go with free tier | TBD | same Billing → Reports, group by Service | TBD | monthly | repo |
 | AI Studio Build chat (the assistant used to edit the app) | Making code changes that get pushed to GitHub | **Free tier requests** (seen in Chat settings → Usage, 2026-11-02) | KES 0 | aistudio.google.com → the app → Chat settings → Usage | TBD | — | manual |
 | Gemini API keys `...BX0Q` (created 2026-10-05) and `...ivl4` (2026-03-13), project `gen-lang-client-0157826223` | **Nothing** — Molly concierge was removed; no code calls them | **Tier 1 (paid)**, billed to "My Billing Account". Monthly spend cap US$100 (AI Studio → Spend) | **US$0.00** (6 Oct – 2 Nov 2026) | aistudio.google.com/apikey (see "Checking the Gemini key" below) | TBD | — | repo |
@@ -36,10 +36,12 @@ ALERT_AT_PERCENT:   50, 90, 100
 - **Prepaid**: Google takes credit bought up front, not a monthly invoice. When the credit
   runs out, paid services on the account can be **suspended** until it's topped up.
 - **2026-11-02: AI Studio showed "Prepay credits depleted … Purchase credits to resume
-  service."** Gemini spent US$0 in the previous 28 days, so the credit went on something
-  else on this account, most likely Cloud Run / Artifact Registry / Cloud Build. Confirm in
-  console.cloud.google.com → Billing → My Billing Account → Reports (last 3 months, group
-  by Service), and check Cloud Run (`server.ts`) is still serving.
+  service."** But Cloud Billing → Overview showed **US$0.00 spent** (last 7 days, forecast
+  US$0) and the Top projects chart for Nov 2025 – Nov 2026 was flat at US$0. So nothing
+  drained the credit; the balance is most likely just zero. With zero prepaid credit, paid
+  usage beyond free tiers can be blocked, so check Cloud Run (`server.ts`) still answers.
+- A **US$75/month budget alert** exists on this account (seen 2026-11-02). Proposed: lower it
+  to US$15 (see `budget.md`).
 - Check the remaining credit balance in every monthly review.
 
 ## Checking the Gemini key

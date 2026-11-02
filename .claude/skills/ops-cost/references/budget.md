@@ -1,6 +1,6 @@
 # Budget
 
-**Status: proposed 2026-11-02, not yet approved — user will review once the remaining details (M-Pesa rate card, Gemini usage, Cloud Run bill) are in.** Rate used: US$1 ≈ KES 130 (check the
+**Status: proposed 2026-11-02, not yet approved — user will review once the remaining details (M-Pesa rate card) are in.** Actual Google Cloud spend so far: **US$0** (Gemini and the whole billing account, 2026-11-02), so the Google lines below are safety margin, not expected cost. Rate used: US$1 ≈ KES 130 (check the
 day's rate when reviewing).
 
 ## Monthly budget: KES 2,500
@@ -23,14 +23,15 @@ caught before it gets expensive.
 
 ## The billing account is prepaid
 
-"My Billing Account" runs on prepaid credit, which ran out on 2026-11-02. Top-ups are how
-this budget gets spent: topping up about one month of the Google Cloud lines at a time
-(≈ US$10–15) keeps a mistake from draining a large balance. What actually used up the
-credit is still unknown — find it before topping up much.
+"My Billing Account" runs on prepaid credit. On 2026-11-02 the balance showed as depleted,
+but the account had spent US$0 — the balance is most likely just zero. Top-ups are how this
+budget gets spent: top up only when actual spend appears, about one month of the Google
+Cloud lines at a time (≈ US$10–15), so a mistake can't drain a large balance.
 
 ## Alerts to set
 
-- **Google Cloud budget on "My Billing Account": US$15/month (≈ KES 1,950)**, alerts at 50%,
+- **Google Cloud budget on "My Billing Account": US$15/month (≈ KES 1,950)** — a US$75 budget
+  already exists; edit it down to US$15 under Budgets & caps — alerts at 50%,
   90% and 100%. Covers Cloud Run, Artifact Registry, Cloud Build, Gemini — and Firebase too,
   if it ever moves to Blaze on this account.
   Steps: console.cloud.google.com → Billing → My Billing Account → Budgets & alerts →
