@@ -29,6 +29,10 @@ ALERT_AT_PERCENT:   50, 90, 100
 
 ## Google billing account ("My Billing Account")
 
+- **Owner:** the Google account signed in to AI Studio (shown at the bottom left of
+  aistudio.google.com). Other Google accounts see "Add billing account" in Cloud Console,
+  so switch accounts (avatar, top right) before checking billing. Don't create a second
+  billing account from another account: the Task Molly projects wouldn't use it.
 - **Prepaid**: Google takes credit bought up front, not a monthly invoice. When the credit
   runs out, paid services on the account can be **suspended** until it's topped up.
 - **2026-11-02: AI Studio showed "Prepay credits depleted … Purchase credits to resume
