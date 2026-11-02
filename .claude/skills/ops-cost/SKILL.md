@@ -17,8 +17,10 @@ new code from breaking it.
 - **`server.ts` runs on Cloud Run**, deployed from Google AI Studio. Cloud Run needs a billing
   account, so it lives in a *different* Google Cloud project from `task-molly`. That project is
   where a real bill can appear.
-- **Daraja (M-Pesa) API calls are free; M-Pesa transaction fees are not.** The payment routes in
-  `server.ts` are still placeholders, so fees start the day real payments go live.
+- **Daraja (M-Pesa) API calls are free; M-Pesa transaction fees are not.** The Daraja code
+  (`server/mpesa.ts`, `server/paymentRoutes.ts`) is switched off until the `MPESA_*` Cloud Run
+  variables are set, so fees start the day those are set. Fees are recorded per payment from
+  `server/mpesaRateCard.ts`, which must match `references/daraja-fees.md`.
 - **Budget:** KES 2,500/month (proposed, not approved — user reviews it once the remaining details are in; see `references/budget.md`), with a US$15 Google
   Cloud budget alert. Expected spend is KES 250–700. Convert USD bills to KES at the day's
   rate and write the rate you used next to the number.

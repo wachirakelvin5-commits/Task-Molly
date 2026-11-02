@@ -1,7 +1,8 @@
 # M-Pesa (Daraja) fees
 
-**Status (2026-11-02):** `/api/payment/lipa-na-mpesa` and `/api/payment/b2c-payout` in
-`server.ts` are placeholders. No real money moves, so fees are KES 0 today.
+**Status (2026-11-02):** the Daraja code is written (`server/mpesa.ts`,
+`server/paymentRoutes.ts`) but **switched off**. It stays off until the `MPESA_*` variables are set
+on Cloud Run, so no money moves and fees are KES 0 today. Nothing in the app calls it yet.
 
 ## How the money works
 
@@ -123,8 +124,37 @@ per task) cuts the B2C count; say what that does to provider payout speed.
 
 ## When payments go live
 
-Before the placeholders are replaced, make sure:
-- Callback URLs point at Cloud Run (each callback is one extra Cloud Run request — tiny cost).
-- Every payment and payout is written to Firestore with its fee, so the monthly review can
-  add them up instead of guessing.
-- Daraja credentials go in Cloud Run environment variables / Secret Manager, never in the repo.
+What the code already does:
+- **Records:** every STK payment is saved in `payments` and every provider payout in `payouts`.
+  Each record has `amount`, `feeKes`, `feeKnown` and `feeRateCardDate`. Fees come from
+  `server/mpesaRateCard.ts`. While the rate card is TBD, `feeKes` is null, so a review can
+  see which records still need the fee filled in.
+- **Who can pay what:** the client must be signed in to pay. The amount is taken from the
+  task, not from the app.
+- **Payouts:** only an admin can send one, and only for a completed task the client has paid.
+  The amount is the task's `providerPrice`, or 85% of the price if that is missing.
+- **No double payments:** a double tap can't send two prompts or two payouts. If Safaricom
+  times out on a payout, it is marked `unknown` and won't be retried until someone checks the
+  M-PESA portal.
+- **Callbacks:**
+  - Callback addresses carry a secret (`MPESA_CALLBACK_TOKEN`); requests without it get 403.
+  - A result only counts if its amount matches.
+  - Each callback is one extra Cloud Run request and about 2 Firestore writes, which is tiny.
+- **Access:** Firestore rules let the client read their payments and the provider read their
+  payouts. Nobody can write either from the app.
+
+Still to do before switching on:
+1. **Make Cloud Run reachable from the live site.** The site calls `/api/...` on
+   task-molly.com, which never reaches Cloud Run (see `inventory.md`). Until that's decided, a
+   Pay button on the live site would fail.
+2. **Fill in `server/mpesaRateCard.ts`** and the rate card above with the real Safaricom
+   numbers.
+3. **Test with the Daraja sandbox:**
+   - Get the sandbox keys from developer.safaricom.co.ke (test shortcode `174379`).
+   - Set the `MPESA_*` variables on Cloud Run (names in `.env.example`). Make
+     `MPESA_CALLBACK_TOKEN` a random string of at least 24 characters.
+   - Set `MPESA_CALLBACK_BASE_URL` to the Cloud Run `https://...run.app` address.
+4. **Add the buttons:** a Pay button for clients and a Pay provider button on the admin site.
+   Both must send the Firebase ID token in an `Authorization: Bearer` header.
+5. **Go live:** change to `MPESA_ENV=production` with the real Paybill/Till keys, passkey and
+   B2C initiator credential. Keep these in Secret Manager.

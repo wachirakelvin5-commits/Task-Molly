@@ -227,6 +227,20 @@ service cloud.firestore {
       allow create: if isValidUnlisted(incoming()); 
     }
 
+    // ===============================================================
+    // M-Pesa records: written only by server.ts (server/paymentRoutes.ts) with the Admin SDK.
+    // The client sees their payments, the provider their payouts, admins see all.
+    // ===============================================================
+    match /payments/{paymentId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.clientId == request.auth.uid);
+      allow write: if false;
+    }
+
+    match /payouts/{payoutId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.providerId == request.auth.uid);
+      allow write: if false;
+    }
+
     match /health-check/{docId} {
       allow read: if true;
       allow write: if isAdmin();

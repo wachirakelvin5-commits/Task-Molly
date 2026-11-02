@@ -114,7 +114,7 @@
     },
     {
       "id": "mpesa",
-      "name": "M-Pesa Daraja API - placeholders only, not live",
+      "name": "M-Pesa Daraja API - server/mpesa.ts, off until MPESA_* is set",
       "costs": "per-transaction fees",
       "hosts": [
         "sandbox.safaricom.co.ke",

@@ -9,6 +9,8 @@ import cors from "cors";
 import admin from "firebase-admin";
 import { getFirestore, FieldValue } from "firebase-admin/firestore";
 import { getMessaging } from "firebase-admin/messaging";
+import { getAuth } from "firebase-admin/auth";
+import { registerPaymentRoutes } from "./server/paymentRoutes.ts";
 
 // Load Firebase config safely
 const configPath = path.join(process.cwd(), "firebase-applet-config.json");
@@ -449,16 +451,8 @@ async function startServer() {
     }
   });
 
-  // M-Pesa Placeholders
-  app.post("/api/payment/lipa-na-mpesa", (req, res) => {
-    console.log("M-Pesa Lipa Na M-Pesa request received:", req.body);
-    res.json({ success: true, message: "M-Pesa prompt sent to user device (Placeholder)" });
-  });
-
-  app.post("/api/payment/b2c-payout", (req, res) => {
-    console.log("M-Pesa B2C Payout request received:", req.body);
-    res.json({ success: true, message: "Payout initiated (Placeholder)" });
-  });
+  // M-Pesa (Daraja): off until the MPESA_* environment variables are set. See server/paymentRoutes.ts.
+  registerPaymentRoutes(app, db, getAuth());
 
   // Vite middleware for development
   if (process.env.NODE_ENV !== "production") {
