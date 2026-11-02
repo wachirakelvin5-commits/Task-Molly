@@ -45,6 +45,27 @@ RATE_CARD_DATE:          TBD
 | B2C payout | 20,001–250,000 | TBD |
 | Withdraw to bank | — | TBD |
 
+## Indicative rates from news and third-party guides (2026-11-02, NOT confirmed)
+
+Safaricom's own pages were blocked from the session, so these come from secondary sources.
+Use them only for rough planning. They do not replace the rate card above.
+
+- **Till (Buy Goods) collections:** about **0.55% of each payment, paid by the merchant**,
+  free under KES 500, capped at KES 200 (from KES ~36,363 up).
+  Source: paybillke.com, "M-Pesa Till charges for business 2026".
+- **Paybill collections and B2C payouts:** no public table. Guides say Safaricom
+  **negotiates these per merchant** through a Safaricom Business Account Manager, with lower
+  rates at high volume (5,000+ transactions a month).
+- **Moving money out of a Till** (to a phone or a Paybill): cut by up to 50% from
+  **7 Aug 2026**. Transfers of KES 100 or less are free. Reports did not say whether the cut
+  continues past **31 Oct 2026**, so confirm before using it.
+  Sources: The Standard, "Safaricom halves M-Pesa merchant fees in CBK-led move";
+  tech-ish.com, "M-Pesa Pochi / Buy Goods tariff cuts 2026" (1 Aug 2026).
+
+Rough example with the Till rate: a KES 2,000 task costs about **KES 11** to collect.
+At a 10% commission (KES 200), that is about 5.5% of the commission, inside the 10% target in
+`budget.md`. Payout fees on top are unknown until the B2C rate is in.
+
 ## Monthly estimate
 
 ```
