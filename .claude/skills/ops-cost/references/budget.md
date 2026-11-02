@@ -13,13 +13,20 @@ caught before it gets expensive.
 |---|---|---|---|
 | Cloud Run (`server.ts`) | KES 0–400 | KES 1,000 | Low traffic fits the free tier. Budget covers a busy month or open chat connections. |
 | Artifact Registry + Cloud Build (same project) | KES 0–50 | (inside Cloud Run line) | Stored container images over 0.5 GB; builds usually free. |
-| Gemini API (2 Tier 1 keys) | **KES 0** | KES 0 | Nothing uses Gemini. **Any** spend here is a problem to investigate. |
+| Gemini API (2 Tier 1 keys) | **KES 0** (US$0 spent 6 Oct–2 Nov 2026) | KES 0 | Nothing uses Gemini. **Any** spend here is a problem to investigate. Its spend cap is US$100 — lower it to the minimum. |
 | Firebase (Spark) | KES 0 | KES 0 | Free plan can't bill. |
 | Firebase Blaze reserve | KES 0 | KES 500 | If Spark limits start being hit, moving to Blaze at ~2× today's usage costs roughly KES 200–300/month. Reserve so that move isn't blocked. |
 | Domain task-molly.com (GoDaddy) | ~KES 250 | KES 250 | Paid ~US$10 the first time, but GoDaddy's standard .com renewal is ~US$23/yr (≈ KES 3,000). Budgeted at the renewal price until GoDaddy's account page confirms it. |
 | Sentry, GitHub, Cloudflare Pages, Google Sheets, Photon, images | KES 0 | KES 0 | Free plans. |
 | Buffer | — | KES 750 | Anything not listed yet. |
 | **Total** | **KES 250–700** | **KES 2,500** | |
+
+## The billing account is prepaid
+
+"My Billing Account" runs on prepaid credit, which ran out on 2026-11-02. Top-ups are how
+this budget gets spent: topping up about one month of the Google Cloud lines at a time
+(≈ US$10–15) keeps a mistake from draining a large balance. What actually used up the
+credit is still unknown — find it before topping up much.
 
 ## Alerts to set
 

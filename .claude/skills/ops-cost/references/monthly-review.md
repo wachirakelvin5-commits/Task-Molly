@@ -10,10 +10,14 @@ ask for numbers or screenshots, then do the maths and update `inventory.md`.
 2. **Cloud Run project** — console.cloud.google.com → Billing → Reports → last month,
    group by Service. Note Cloud Run, Artifact Registry, Cloud Build, Gemini. Also check the
    Cloud Run service: minimum instances should be 0 unless there's a reason.
-3. **Budget alert** — Billing → Budgets & alerts. There should be a budget for the Cloud Run
+3. **Prepaid credit** — Billing → My Billing Account → Overview: credit left, and how many
+   months it lasts at last month's spend. Under one month left = tell the user to top up.
+   (Credit ran out on 2026-11-02.)
+   **Budget alert** — Billing → Budgets & alerts. There should be a budget for the Cloud Run
    billing account ("My Billing Account") of US$15 (`GCP_BUDGET_ALERT`), alerting at 50/90/100%.
    If missing, give the user the steps to create it.
-4. **Gemini** — both keys are paid Tier 1: confirm they are deleted, or spent US$0 last month.
+4. **Gemini** — both keys are paid Tier 1: confirm they are deleted, or spent US$0 last month
+   (AI Studio → Spend). The spend cap there should be the lowest it allows, not US$100.
 5. **Sentry** — sentry.io → Usage stats: how much of the monthly quota was used, and were
    events dropped?
 6. **GitHub / Cloudflare** — only check if a build failed for "minutes" or "quota" reasons.

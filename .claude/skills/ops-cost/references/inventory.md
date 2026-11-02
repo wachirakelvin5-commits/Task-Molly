@@ -18,7 +18,7 @@ ALERT_AT_PERCENT:   50, 90, 100
 | Cloud Run (`server.ts`) | `/api/*` routes (assign/cancel task, live providers, M-Pesa placeholders), Socket.IO chat | Pay-as-you-go with free tier | TBD | console.cloud.google.com → (AI Studio's project) → Billing → Reports | TBD | monthly | repo |
 | Artifact Registry / Cloud Build (same project as Cloud Run) | Stores and builds the Cloud Run container images | Pay-as-you-go with free tier | TBD | same Billing → Reports, group by Service | TBD | monthly | repo |
 | AI Studio Build chat (the assistant used to edit the app) | Making code changes that get pushed to GitHub | **Free tier requests** (seen in Chat settings → Usage, 2026-11-02) | KES 0 | aistudio.google.com → the app → Chat settings → Usage | TBD | — | manual |
-| Gemini API keys `...BX0Q` (created 2026-10-05) and `...ivl4` (2026-03-13), project `gen-lang-client-0157826223` | **Nothing** — Molly concierge was removed; no code calls them | **Tier 1 (paid)**, billed to "My Billing Account" | TBD — check each key's usage/spend icons | aistudio.google.com/apikey (see "Checking the Gemini key" below) | TBD | — | repo |
+| Gemini API keys `...BX0Q` (created 2026-10-05) and `...ivl4` (2026-03-13), project `gen-lang-client-0157826223` | **Nothing** — Molly concierge was removed; no code calls them | **Tier 1 (paid)**, billed to "My Billing Account". Monthly spend cap US$100 (AI Studio → Spend) | **US$0.00** (6 Oct – 2 Nov 2026) | aistudio.google.com/apikey (see "Checking the Gemini key" below) | TBD | — | repo |
 | M-Pesa via Daraja | Client payments (STK push) and provider payouts (B2C) — **not live yet** | Per-transaction fees | KES 0 (placeholders) | M-PESA for Business portal (org.ke.m-pesa.com) | TBD | — | manual |
 | GitHub Pages + Actions | Hosts task-molly.com; builds PRs and deploys | Free | KES 0 | github.com → Settings → Billing and plans | wachirakelvin5-commits | — | repo |
 | Cloudflare Pages | Hosts the admin site | Free | KES 0 | dash.cloudflare.com → Workers & Pages | TBD | — | repo |
@@ -26,6 +26,17 @@ ALERT_AT_PERCENT:   50, 90, 100
 | Domain task-molly.com | Main website address | GoDaddy, yearly. User paid ~US$10 (likely a first-year/promo price); GoDaddy's standard .com renewal is ~US$22.99 + US$0.20 ICANN fee (third-party listing, May 2026) | ~KES 3,000/yr (~KES 250/month) until the renewal price is confirmed | godaddy.com → My Products → Domains → task-molly.com (shows renewal date and price) | TBD | TBD — check in GoDaddy | manual |
 | Google Sheets web app | Receives "unlisted service" requests | Free | KES 0 | — | TBD | — | repo |
 | Photon (komoot), Unsplash, picsum, Google Fonts | Address search, images, font | Free (fair use) | KES 0 | — | — | — | repo |
+
+## Google billing account ("My Billing Account")
+
+- **Prepaid**: Google takes credit bought up front, not a monthly invoice. When the credit
+  runs out, paid services on the account can be **suspended** until it's topped up.
+- **2026-11-02: AI Studio showed "Prepay credits depleted … Purchase credits to resume
+  service."** Gemini spent US$0 in the previous 28 days, so the credit went on something
+  else on this account, most likely Cloud Run / Artifact Registry / Cloud Build. Confirm in
+  console.cloud.google.com → Billing → My Billing Account → Reports (last 3 months, group
+  by Service), and check Cloud Run (`server.ts`) is still serving.
+- Check the remaining credit balance in every monthly review.
 
 ## Checking the Gemini key
 
