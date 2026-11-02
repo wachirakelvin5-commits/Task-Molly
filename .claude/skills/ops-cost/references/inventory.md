@@ -23,7 +23,7 @@ ALERT_AT_PERCENT:   50, 90, 100
 | GitHub Pages + Actions | Hosts task-molly.com; builds PRs and deploys | Free | KES 0 | github.com → Settings → Billing and plans | wachirakelvin5-commits | — | repo |
 | Cloudflare Pages | Hosts the admin site | Free | KES 0 | dash.cloudflare.com → Workers & Pages | TBD | — | repo |
 | Sentry | Error tracking, 10% of page loads traced | TBD (likely free Developer plan) | TBD | sentry.io → Settings → Subscription / Usage stats | TBD | monthly | repo |
-| Domain task-molly.com | Main website address | Yearly | TBD | Registrar: TBD | TBD | TBD | manual |
+| Domain task-molly.com | Main website address | GoDaddy, yearly. User paid ~US$10 (likely a first-year/promo price); GoDaddy's standard .com renewal is ~US$22.99 + US$0.20 ICANN fee (third-party listing, May 2026) | ~KES 3,000/yr (~KES 250/month) until the renewal price is confirmed | godaddy.com → My Products → Domains → task-molly.com (shows renewal date and price) | TBD | TBD — check in GoDaddy | manual |
 | Google Sheets web app | Receives "unlisted service" requests | Free | KES 0 | — | TBD | — | repo |
 | Photon (komoot), Unsplash, picsum, Google Fonts | Address search, images, font | Free (fair use) | KES 0 | — | — | — | repo |
 

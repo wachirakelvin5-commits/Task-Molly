@@ -16,6 +16,15 @@
 - **Moving money out** — withdrawing from the Paybill/Till to a bank or wallet has its own
   charge. Safaricom cut these by up to 50% from 7 Aug 2026.
 
+## Where the rates come from
+
+- **Consumer tariffs** (what *clients and providers* pay to send, withdraw, or pay a Paybill
+  when the customer bears the fee): safaricom.co.ke → M-PESA → Tariffs & limits →
+  Consumer tariffs. Matters when deciding whether Task Molly or the client pays the fee.
+- **Business tariffs** (what *Task Molly* pays for collections, B2C payouts and
+  withdrawals): the M-PESA for Business tariff page, or the rate in the Paybill/Till
+  contract from Safaricom. These are the numbers the budget needs.
+
 ## Rate card (fill in from the M-PESA for Business portal or the Safaricom account manager)
 
 Do not guess these. Leave TBD until the user gives the real numbers.

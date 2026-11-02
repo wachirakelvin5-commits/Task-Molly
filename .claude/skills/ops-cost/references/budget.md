@@ -1,6 +1,6 @@
 # Budget
 
-**Status: proposed 2026-11-02, not yet approved.** Rate used: US$1 ≈ KES 130 (check the
+**Status: proposed 2026-11-02, not yet approved — user will review once the remaining details (M-Pesa rate card, Gemini usage, Cloud Run bill) are in.** Rate used: US$1 ≈ KES 130 (check the
 day's rate when reviewing).
 
 ## Monthly budget: KES 2,500
@@ -16,10 +16,10 @@ caught before it gets expensive.
 | Gemini API (2 Tier 1 keys) | **KES 0** | KES 0 | Nothing uses Gemini. **Any** spend here is a problem to investigate. |
 | Firebase (Spark) | KES 0 | KES 0 | Free plan can't bill. |
 | Firebase Blaze reserve | KES 0 | KES 500 | If Spark limits start being hit, moving to Blaze at ~2× today's usage costs roughly KES 200–300/month. Reserve so that move isn't blocked. |
-| Domain task-molly.com | ~KES 200 | KES 200 | Yearly renewal (~US$10–20) set aside monthly. Exact price TBD from registrar. |
+| Domain task-molly.com (GoDaddy) | ~KES 250 | KES 250 | Paid ~US$10 the first time, but GoDaddy's standard .com renewal is ~US$23/yr (≈ KES 3,000). Budgeted at the renewal price until GoDaddy's account page confirms it. |
 | Sentry, GitHub, Cloudflare Pages, Google Sheets, Photon, images | KES 0 | KES 0 | Free plans. |
-| Buffer | — | KES 800 | Anything not listed yet. |
-| **Total** | **KES 200–650** | **KES 2,500** | |
+| Buffer | — | KES 750 | Anything not listed yet. |
+| **Total** | **KES 250–700** | **KES 2,500** | |
 
 ## Alerts to set
 

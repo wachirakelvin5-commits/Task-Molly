@@ -19,8 +19,8 @@ new code from breaking it.
   where a real bill can appear.
 - **Daraja (M-Pesa) API calls are free; M-Pesa transaction fees are not.** The payment routes in
   `server.ts` are still placeholders, so fees start the day real payments go live.
-- **Budget:** KES 2,500/month (proposed — see `references/budget.md`), with a US$15 Google
-  Cloud budget alert. Expected spend is KES 200–650. Convert USD bills to KES at the day's
+- **Budget:** KES 2,500/month (proposed, not approved — user reviews it once the remaining details are in; see `references/budget.md`), with a US$15 Google
+  Cloud budget alert. Expected spend is KES 250–700. Convert USD bills to KES at the day's
   rate and write the rate you used next to the number.
 - **Gemini:** two keys on paid Tier 1, nothing in the code uses them. Any Gemini spend is a problem.
 
