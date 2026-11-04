@@ -110,6 +110,10 @@ export default function PrivacyView() {
                 We may share your information with other users to facilitate bookings, with trusted service providers (data processors), or for legal reasons. 
                 <span className="block mt-2 font-bold text-rich-black">We do not sell your personal data to third parties.</span>
               </p>
+              <p className="text-sm text-rich-black/70 leading-relaxed">
+                To count visits to our website we use Cloudflare Web Analytics. It records which pages are viewed, the
+                type of device and browser, and the approximate country, without cookies and without identifying you.
+              </p>
             </div>
           </section>
 
