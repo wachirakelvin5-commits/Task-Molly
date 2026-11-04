@@ -507,6 +507,12 @@ export default function AdminDashboard() {
           >
             <Layers size={14} className="text-accent-gold" /> Site analytics
           </Link>
+          <Link
+            to="/admin-verifications"
+            className="px-5 py-3 bg-white border border-warm-gray rounded-xl text-xs font-semibold text-rich-black hover:border-rich-black/40 flex items-center gap-2"
+          >
+            <ShieldCheck size={14} className="text-emerald-600" /> Provider verifications
+          </Link>
         </div>
       </div>
 

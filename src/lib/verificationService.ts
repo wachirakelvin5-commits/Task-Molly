@@ -1,8 +1,10 @@
-import { doc, getDoc, updateDoc } from 'firebase/firestore';
-import { db } from '../firebase';
-import { ServiceVerification, ServiceVerificationDoc, UserProfile } from '../types';
+import {
+  collection, deleteDoc, doc, getDoc, getDocs, onSnapshot, query, setDoc, updateDoc, where,
+} from 'firebase/firestore';
+import { auth, db } from '../firebase';
+import { syncProviderProfile } from './providerProfile';
+import { ServiceVerification, UserProfile } from '../types';
 import { getCatalogServiceCategory, ALL_SERVICES_CATALOG } from '../data/serviceCatalog';
-import { ServiceCategory } from './requestModel';
 
 export const STORAGE_KEY_PREFIX = 'taskmolly_provider_verifications_';
 
@@ -58,36 +60,104 @@ export async function compressImageFile(file: File, maxWidth = 800, maxHeight = 
   });
 }
 
-/** Loads provider's service verifications from localStorage or Firestore */
-export async function getProviderVerifications(uid: string): Promise<Record<string, ServiceVerification>> {
-  if (!uid) return {};
+/**
+ * Verification documents live in providerVerifications/<uid>_<serviceId>, readable only by
+ * the provider and the admins (see firestore.rules). Providers submit them for review; an
+ * admin approves them on the admin site, which is what grants the service category.
+ *
+ * Older submissions were stored on the user record (users/<uid>.serviceVerifications); they
+ * are still read so providers keep seeing them.
+ */
+export const VERIFICATIONS = 'providerVerifications';
 
-  // Check local storage cache first
-  let cached: Record<string, ServiceVerification> = {};
-  try {
-    const raw = localStorage.getItem(`${STORAGE_KEY_PREFIX}${uid}`);
-    if (raw) cached = JSON.parse(raw);
-  } catch (e) {
-    console.warn("Could not read verifications from local storage:", e);
-  }
+export const verificationId = (uid: string, serviceId: string) => `${uid}_${serviceId}`;
 
-  // Check user profile in Firestore
-  try {
-    const userSnap = await getDoc(doc(db, 'users', uid));
-    if (userSnap.exists()) {
-      const data = userSnap.data();
-      const firestoreVerifications = (data.serviceVerifications as Record<string, ServiceVerification>) || {};
-      const merged = { ...cached, ...firestoreVerifications };
-      return merged;
-    }
-  } catch (err) {
-    console.warn("Could not fetch verifications from firestore:", err);
-  }
-
-  return cached;
+/** The service category (one of the five) a catalog service belongs to. */
+export function categoryForService(serviceId: string): string | undefined {
+  const item = ALL_SERVICES_CATALOG.find(s => s.id === serviceId);
+  return item ? getCatalogServiceCategory(item) || undefined : undefined;
 }
 
-/** Saves or updates a service verification and synchronizes high-level categories */
+// Demo sessions (AI Studio preview, no Firebase sign-in) keep everything in this browser.
+const isLocalSession = () => !auth.currentUser;
+
+function readLocal(uid: string): Record<string, ServiceVerification> {
+  try {
+    const raw = localStorage.getItem(`${STORAGE_KEY_PREFIX}${uid}`);
+    return raw ? JSON.parse(raw) : {};
+  } catch {
+    return {};
+  }
+}
+
+function writeLocal(uid: string, all: Record<string, ServiceVerification>) {
+  try {
+    localStorage.setItem(`${STORAGE_KEY_PREFIX}${uid}`, JSON.stringify(all));
+  } catch {}
+}
+
+async function readLegacy(uid: string): Promise<Record<string, ServiceVerification>> {
+  try {
+    const snap = await getDoc(doc(db, 'users', uid));
+    return (snap.data()?.serviceVerifications as Record<string, ServiceVerification>) || {};
+  } catch {
+    return {};
+  }
+}
+
+const byService = (docs: { data: () => any }[]) => {
+  const out: Record<string, ServiceVerification> = {};
+  docs.forEach(d => {
+    const v = d.data() as ServiceVerification;
+    out[v.serviceId] = v;
+  });
+  return out;
+};
+
+/** Loads a provider's service verifications. */
+export async function getProviderVerifications(uid: string): Promise<Record<string, ServiceVerification>> {
+  if (!uid) return {};
+  if (isLocalSession()) return readLocal(uid);
+
+  const legacy = await readLegacy(uid);
+  try {
+    const snap = await getDocs(query(collection(db, VERIFICATIONS), where('uid', '==', uid)));
+    return { ...legacy, ...byService(snap.docs) };
+  } catch (err) {
+    console.warn('Could not load verifications:', err);
+    return legacy;
+  }
+}
+
+/** Follows a provider's verifications live (status changes when an admin reviews them). */
+export function subscribeProviderVerifications(
+  uid: string,
+  onChange: (verifications: Record<string, ServiceVerification>) => void,
+): () => void {
+  if (!uid || isLocalSession()) return () => {};
+  let legacy: Record<string, ServiceVerification> = {};
+  let latest: Record<string, ServiceVerification> = {};
+  readLegacy(uid).then(l => {
+    legacy = l;
+    onChange({ ...legacy, ...latest });
+  });
+  return onSnapshot(
+    query(collection(db, VERIFICATIONS), where('uid', '==', uid)),
+    snap => {
+      latest = byService(snap.docs);
+      onChange({ ...legacy, ...latest });
+    },
+    err => console.warn('Could not follow verifications:', err),
+  );
+}
+
+/** Firestore rejects undefined values; drop them. */
+const clean = <T>(value: T): T => JSON.parse(JSON.stringify(value));
+
+/**
+ * Submits a service verification for review. It is always saved as pending: only an admin can
+ * mark it verified (on the admin site), which is what lets the provider take jobs in that category.
+ */
 export async function saveServiceVerification(
   uid: string,
   verification: ServiceVerification,
@@ -95,64 +165,31 @@ export async function saveServiceVerification(
 ): Promise<void> {
   if (!uid) return;
 
-  // 1. Update local storage cache
-  let allVerifications: Record<string, ServiceVerification> = {};
-  try {
-    const raw = localStorage.getItem(`${STORAGE_KEY_PREFIX}${uid}`);
-    if (raw) allVerifications = JSON.parse(raw);
-  } catch (e) {}
+  const { reviewedAt, rejectionReason, ...rest } = verification;
+  const submission: ServiceVerification = {
+    ...rest,
+    status: 'pending',
+    categoryGroup: categoryForService(verification.serviceId) || verification.categoryGroup,
+  };
 
-  allVerifications[verification.serviceId] = verification;
-  localStorage.setItem(`${STORAGE_KEY_PREFIX}${uid}`, JSON.stringify(allVerifications));
-
-  // 2. Compute updated service categories
-  // Look at all verified services and map them to the 5 high-level categories
-  const verifiedServices = Object.values(allVerifications).filter(v => v.status === 'verified');
-  const derivedCategories = new Set<ServiceCategory>();
-
-  for (const v of verifiedServices) {
-    const catalogItem = ALL_SERVICES_CATALOG.find(s => s.id === v.serviceId);
-    if (catalogItem) {
-      const cat = getCatalogServiceCategory(catalogItem);
-      if (cat) derivedCategories.add(cat);
-    }
+  if (isLocalSession()) {
+    writeLocal(uid, { ...readLocal(uid), [verification.serviceId]: submission });
+    return;
   }
 
-  // Also include any existing categories that the user already had
-  const existingServices = currentUser.services || [];
-  existingServices.forEach(s => {
-    if (['Cleaning & Domestic', 'Plumbing & Water', 'Electrical & Solar', 'Repairs & Fundi', 'Outdoor & Relocation'].includes(s)) {
-      derivedCategories.add(s as ServiceCategory);
-    }
-  });
-
-  const updatedCategoriesList = Array.from(derivedCategories);
-
-  // 3. Update mock user if dev/mock account
-  const mockUserStr = localStorage.getItem('taskmolly_mock_user');
-  if (mockUserStr) {
-    try {
-      const mockUser = JSON.parse(mockUserStr);
-      mockUser.serviceVerifications = allVerifications;
-      mockUser.services = updatedCategoriesList;
-      localStorage.setItem('taskmolly_mock_user', JSON.stringify(mockUser));
-    } catch (e) {}
-  }
-
-  // 4. Update Firestore user document
-  try {
-    const userRef = doc(db, 'users', uid);
-    // Remove heavy dataUrls from firestore if size could be an issue or store compressed
-    await updateDoc(userRef, {
-      serviceVerifications: allVerifications,
-      services: updatedCategoriesList
-    });
-  } catch (err) {
-    console.warn("Could not save verification to Firestore (offline/local fallback):", err);
-  }
+  // Errors reach the form, which tells the provider it was not sent.
+  await setDoc(
+    doc(db, VERIFICATIONS, verificationId(uid, verification.serviceId)),
+    clean({
+      ...submission,
+      uid,
+      providerName: currentUser.displayName || currentUser.email || '',
+    }),
+  );
 }
 
-/** Deactivates an active service offering */
+/** Stops offering a service: removes its verification and, if no other verified service is in
+ * the same category, drops that category from the provider's profile. */
 export async function deactivateService(
   uid: string,
   serviceId: string,
@@ -160,47 +197,29 @@ export async function deactivateService(
 ): Promise<void> {
   if (!uid) return;
 
-  let allVerifications: Record<string, ServiceVerification> = {};
-  try {
-    const raw = localStorage.getItem(`${STORAGE_KEY_PREFIX}${uid}`);
-    if (raw) allVerifications = JSON.parse(raw);
-  } catch (e) {}
-
-  delete allVerifications[serviceId];
-  localStorage.setItem(`${STORAGE_KEY_PREFIX}${uid}`, JSON.stringify(allVerifications));
-
-  // Recompute categories
-  const verifiedServices = Object.values(allVerifications).filter(v => v.status === 'verified');
-  const derivedCategories = new Set<ServiceCategory>();
-
-  for (const v of verifiedServices) {
-    const catalogItem = ALL_SERVICES_CATALOG.find(s => s.id === v.serviceId);
-    if (catalogItem) {
-      const cat = getCatalogServiceCategory(catalogItem);
-      if (cat) derivedCategories.add(cat);
-    }
+  if (isLocalSession()) {
+    const all = readLocal(uid);
+    delete all[serviceId];
+    writeLocal(uid, all);
+    return;
   }
 
-  const updatedCategoriesList = Array.from(derivedCategories);
+  const all = await getProviderVerifications(uid);
+  const category = categoryForService(serviceId);
+  const stillCovered = Object.values(all).some(
+    v => v.serviceId !== serviceId && v.status === 'verified' && categoryForService(v.serviceId) === category,
+  );
 
-  // Update mock
-  const mockUserStr = localStorage.getItem('taskmolly_mock_user');
-  if (mockUserStr) {
-    try {
-      const mockUser = JSON.parse(mockUserStr);
-      mockUser.serviceVerifications = allVerifications;
-      mockUser.services = updatedCategoriesList;
-      localStorage.setItem('taskmolly_mock_user', JSON.stringify(mockUser));
-    } catch (e) {}
-  }
+  await deleteDoc(doc(db, VERIFICATIONS, verificationId(uid, serviceId))).catch(err =>
+    console.warn('Could not remove verification:', err),
+  );
 
-  try {
+  if (category && !stillCovered) {
     const userRef = doc(db, 'users', uid);
-    await updateDoc(userRef, {
-      serviceVerifications: allVerifications,
-      services: updatedCategoriesList
-    });
-  } catch (err) {
-    console.warn("Could not update Firestore after deactivation:", err);
+    const services: string[] = (await getDoc(userRef)).data()?.services || currentUser.services || [];
+    if (services.includes(category)) {
+      await updateDoc(userRef, { services: services.filter(s => s !== category) });
+      await syncProviderProfile(uid).catch(err => console.warn('Could not update public profile:', err));
+    }
   }
 }

@@ -13,6 +13,7 @@ import { useTaskNumbering } from './useTaskNumbering';
 const AdminDashboard = lazy(() => import('../../src/pages/AdminDashboard'));
 const AdminComplaints = lazy(() => import('../../src/pages/AdminComplaints'));
 const AdminAnalytics = lazy(() => import('../../src/pages/AdminAnalytics'));
+const AdminVerifications = lazy(() => import('../../src/pages/AdminVerifications'));
 
 /** Hands out task numbers while an admin is signed in (renders nothing). */
 function TaskNumbering() {
@@ -83,6 +84,7 @@ export default function AdminApp() {
               <Route path="/admin-dashboard" element={<AdminDashboard />} />
               <Route path="/admin-complaints" element={<AdminComplaints />} />
               <Route path="/admin-analytics" element={<AdminAnalytics />} />
+              <Route path="/admin-verifications" element={<AdminVerifications />} />
               <Route path="*" element={<Navigate to="/admin-dashboard" replace />} />
             </Routes>
           </Suspense>

@@ -52,7 +52,6 @@ export default function Dashboard({ user }: DashboardProps) {
   const [showCreateModal, setShowCreateModal] = useState(false);
   const [showEditProfileModal, setShowEditProfileModal] = useState(false);
   const [selectedServiceForCreate, setSelectedServiceForCreate] = useState<string | undefined>();
-  const [onlineProviders, setOnlineProviders] = useState<any[]>([]);
   const [optimisticHiddenIds, setOptimisticHiddenIds] = useState<Set<string>>(new Set());
 
   const getServiceIcon = (type: string) => {
@@ -174,30 +173,6 @@ export default function Dashboard({ user }: DashboardProps) {
 
     return () => unsubscribePast();
   }, [user.uid]);
-
-  // Fetch online providers
-  useEffect(() => {
-    if (!auth.currentUser) return;
-    const qOnline = query(
-      collection(db, 'users'),
-      where('role', '==', 'tasker'),
-      where('isOnline', '==', true)
-    );
-
-    const unsubscribe = onSnapshot(qOnline, (snapshot) => {
-      const providers = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data(),
-        name: doc.data().name || doc.data().displayName || 'Provider',
-        photo: doc.data().photo || doc.data().photoURL || `https://picsum.photos/seed/${doc.id}/200`
-      }));
-      setOnlineProviders(providers);
-    }, (err) => {
-      handleFirestoreError(err, OperationType.GET, 'users/online-taskers');
-    });
-
-    return () => unsubscribe();
-  }, []);
 
   useEffect(() => {
     if (!user.uid) {

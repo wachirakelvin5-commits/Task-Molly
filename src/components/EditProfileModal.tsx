@@ -3,6 +3,7 @@ import { motion, AnimatePresence } from 'motion/react';
 import { X, User, Mail, Phone, MapPin, Camera, Save } from 'lucide-react';
 import { doc, updateDoc } from 'firebase/firestore';
 import { db } from '../firebase';
+import { syncProviderProfile } from '../lib/providerProfile';
 import { toast } from 'sonner';
 import { UserProfile } from '../types';
 
@@ -52,6 +53,9 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
       try {
         const userDocRef = doc(db, 'users', user.uid);
         await updateDoc(userDocRef, updatedProfile);
+        if (user.role === 'tasker') {
+          await syncProviderProfile(user.uid).catch(err => console.warn('Could not update public profile:', err));
+        }
       } catch (dbErr) {
         console.warn("Could not save to firestore (expected for some offline dev sessions):", dbErr);
       }

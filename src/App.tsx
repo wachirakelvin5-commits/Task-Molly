@@ -7,6 +7,7 @@ import { BrowserRouter as Router, Routes, Route, Navigate, useLocation } from 'r
 import { useState, useEffect, lazy, Suspense } from 'react';
 import { onAuthStateChanged } from 'firebase/auth';
 import { auth, db } from './firebase';
+import { syncProviderProfile } from './lib/providerProfile';
 import { doc, getDoc, getDocFromServer } from 'firebase/firestore';
 import { UserProfile } from './types';
 import { trackPage } from './lib/analytics';
@@ -91,7 +92,12 @@ export default function App() {
         if (firebaseUser) {
           const userDoc = await getDoc(doc(db, 'users', firebaseUser.uid));
           if (userDoc.exists()) {
-            setUser(userDoc.data() as UserProfile);
+            const profile = userDoc.data() as UserProfile;
+            setUser(profile);
+            // Keep the public provider profile (what clients can see) in step.
+            if (profile.role === 'tasker') {
+              syncProviderProfile(firebaseUser.uid).catch(err => console.warn('Could not update public profile:', err));
+            }
           } else {
             console.warn("Auth user found but no user document exists");
             setUser(null);

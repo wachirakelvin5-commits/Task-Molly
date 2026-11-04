@@ -9,10 +9,8 @@ import {
 import { useNavigate } from 'react-router-dom';
 import { UserProfile, ServiceVerification } from '../types';
 import { ALL_SERVICES_CATALOG, ServiceItem, getCatalogServiceCategory } from '../data/serviceCatalog';
-import { getProviderVerifications } from '../lib/verificationService';
+import { getProviderVerifications, subscribeProviderVerifications } from '../lib/verificationService';
 import ServiceActivationModal from '../components/ServiceActivationModal';
-import { onSnapshot, doc } from 'firebase/firestore';
-import { db } from '../firebase';
 
 interface ProviderMyServicesProps {
   user: UserProfile;
@@ -42,21 +40,10 @@ export default function ProviderMyServices({ user }: ProviderMyServicesProps) {
     loadVerifications();
   }, [user.uid]);
 
-  // Real-time listener for user profile updates in Firestore
+  // Follow review results live (an admin approves or rejects on the admin site)
   useEffect(() => {
     if (!user.uid) return;
-    const unsub = onSnapshot(doc(db, 'users', user.uid), (snap) => {
-      if (snap.exists()) {
-        const data = snap.data();
-        if (data.serviceVerifications) {
-          setVerifications(prev => ({ ...prev, ...data.serviceVerifications }));
-        }
-      }
-    }, (err) => {
-      console.warn("Could not listen to user verifications:", err);
-    });
-
-    return () => unsub();
+    return subscribeProviderVerifications(user.uid, setVerifications);
   }, [user.uid]);
 
   return (
