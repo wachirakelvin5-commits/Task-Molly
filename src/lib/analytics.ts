@@ -10,17 +10,15 @@
  *   page_exit  { page, durationMs }   the visitor left that screen (or hid the tab)
  *   blog_view  { page, title }        a blog article was opened
  */
-import { addDoc, collection, serverTimestamp } from 'firebase/firestore';
+import { addDoc, collection } from 'firebase/firestore';
 import { auth, db } from '../firebase';
+import { AnalyticsEventType, DeviceType, buildAnalyticsEvent } from './analyticsEvent';
 
-export type AnalyticsEventType = 'page_view' | 'page_exit' | 'blog_view';
-export type DeviceType = 'mobile' | 'tablet' | 'desktop';
+export type { AnalyticsEventType, DeviceType } from './analyticsEvent';
 
 const VISITOR_KEY = 'taskmolly_visitor_id';
 const SESSION_KEY = 'taskmolly_session';
 export const SESSION_IDLE_MS = 30 * 60 * 1000;
-/** Time on a page longer than this is capped (tab left open overnight). */
-const MAX_PAGE_MS = 30 * 60 * 1000;
 
 const randomId = () =>
   typeof crypto !== 'undefined' && 'randomUUID' in crypto
@@ -90,21 +88,15 @@ function enabled(): boolean {
 export function track(type: AnalyticsEventType, data: { page: string; title?: string; durationMs?: number }) {
   if (!enabled()) return;
   const s = session();
-  const event: Record<string, unknown> = {
-    type,
-    page: data.page.slice(0, 200),
+  // The rules accept only this exact shape (see analyticsEvent.ts).
+  const event = buildAnalyticsEvent(type, data, {
     sessionId: s.id,
+    isNewSession: s.isNew,
     visitorId: visitorId(),
     device: deviceType(),
     signedIn: !!auth.currentUser,
-    timestamp: serverTimestamp(),
-  };
-  if (s.isNew) {
-    event.newSession = true;
-    event.referrer = referrer();
-  }
-  if (data.title) event.title = data.title.slice(0, 200);
-  if (typeof data.durationMs === 'number') event.durationMs = Math.round(Math.min(Math.max(0, data.durationMs), MAX_PAGE_MS));
+    referrer: s.isNew ? referrer() : '',
+  });
   addDoc(collection(db, 'analytics'), event).catch(() => {
     // Analytics must never get in the visitor's way.
   });
