@@ -1,6 +1,7 @@
 import { collection, getDocs, query, where, limit } from 'firebase/firestore';
 import { db } from '../firebase';
 import { getServiceCategory, normalizeProviderCategories } from '../lib/serviceRequests';
+import { PROVIDER_PROFILES } from '../lib/providerProfile';
 
 export interface AvailabilityStatus {
   available: boolean;
@@ -11,18 +12,18 @@ export interface AvailabilityStatus {
 export async function checkProviderAvailability(serviceType: string): Promise<AvailabilityStatus> {
   try {
     // Providers offer whole categories, so match on the request's category.
-    // Fetch taskers first, then filter in memory to avoid complex indexing
+    // Fetch online providers' public profiles, then filter in memory to avoid complex indexing
     const category = getServiceCategory(serviceType);
     const providersQuery = query(
-      collection(db, 'users'),
-      where('role', '==', 'tasker'),
+      collection(db, PROVIDER_PROFILES),
+      where('isOnline', '==', true),
       limit(50)
     );
 
     const providersSnapshot = await getDocs(providersQuery);
     const availableMatch = providersSnapshot.docs.find(doc => {
       const data = doc.data();
-      return normalizeProviderCategories(data.services).includes(category) && data.isOnline === true;
+      return normalizeProviderCategories(data.services).includes(category);
     });
 
     if (availableMatch) {

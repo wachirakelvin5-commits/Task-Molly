@@ -42,13 +42,61 @@ service cloud.firestore {
                data.email is string && data.email.size() <= 200 &&
                data.role in ['client', 'tasker', 'admin'];
       }
-      allow get: if isSignedIn();
-      allow list: if (resource.data.role == 'tasker') || isAdmin();
-      allow create: if ((isOwner(uid) && incoming().role in ['client', 'tasker']) || isAdmin()) && isValidUser(incoming());
-      allow update: if (isOwner(uid) || isAdmin()) && 
-        incoming().role == existing().role &&
+      function changedKeys() { return incoming().diff(existing()).affectedKeys(); }
+
+      // A user record holds contact details, so only its owner and the admins can read it.
+      // Other people see providers through providerProfiles below.
+      allow get: if isOwner(uid) || isAdmin();
+      allow list: if isAdmin();
+
+      // Service categories are granted by an admin when they approve a verification
+      // (providerVerifications below), so a new user cannot start with any.
+      allow create: if isValidUser(incoming()) && (isAdmin() ||
+        (isOwner(uid) && incoming().role in ['client', 'tasker'] &&
+         !incoming().keys().hasAny(['services', 'serviceVerifications'])));
+
+      // Owners edit their own details, but cannot change their role, verification status or
+      // wallet, and can only drop service categories (to stop offering one), never add them.
+      allow update: if incoming().role == existing().role &&
         (!('services' in incoming()) || (incoming().services is list && incoming().services.size() <= 20)) &&
-        (!('fcmToken' in incoming()) || (incoming().fcmToken is string && incoming().fcmToken.size() <= 500));
+        (!('fcmToken' in incoming()) || (incoming().fcmToken is string && incoming().fcmToken.size() <= 500)) &&
+        (isAdmin() || (isOwner(uid) &&
+          !changedKeys().hasAny(['serviceVerifications', 'isVerified', 'walletBalance']) &&
+          (!changedKeys().hasAny(['services']) ||
+            (incoming().services is list && incoming().services.hasOnly(existing().get('services', []))))));
+    }
+
+    // Public provider profile: only the fields clients may see (src/lib/providerProfile.ts).
+    // The provider keeps it in step with their user record; categories must match the ones an
+    // admin granted on that record.
+    match /providerProfiles/{uid} {
+      function owned() { return get(/databases/$(database)/documents/users/$(uid)).data; }
+
+      allow read: if true;
+      allow create, update: if isAdmin() || (isOwner(uid) &&
+        owned().role == 'tasker' &&
+        incoming().keys().hasOnly(['uid', 'name', 'photo', 'services', 'isOnline', 'updatedAt']) &&
+        incoming().uid == uid &&
+        incoming().get('name', '') is string && incoming().get('name', '').size() <= 100 &&
+        incoming().get('photo', '') is string && incoming().get('photo', '').size() <= 1000 &&
+        incoming().get('isOnline', false) is bool &&
+        incoming().get('services', []) == owned().get('services', []) &&
+        incoming().updatedAt == request.time);
+      allow delete: if isAdmin();
+    }
+
+    // Provider verification documents (selfie, ID, permit), one per provider and service, with
+    // the id "<uid>_<serviceId>". Only the provider and the admins can read them. The provider
+    // can only submit them for review; only an admin can mark them verified or rejected.
+    match /providerVerifications/{verificationId} {
+      allow read: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
+      allow create, update: if isAdmin() || (isSignedIn() &&
+        incoming().uid == request.auth.uid &&
+        incoming().serviceId is string && incoming().serviceId.size() <= 100 &&
+        verificationId == request.auth.uid + '_' + incoming().serviceId &&
+        incoming().status == 'pending' &&
+        !incoming().keys().hasAny(['reviewedAt', 'reviewedBy', 'rejectionReason']));
+      allow delete: if isAdmin() || (isSignedIn() && resource.data.uid == request.auth.uid);
     }
 
     match /taskerProfiles/{uid} {

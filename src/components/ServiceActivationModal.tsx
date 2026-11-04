@@ -14,8 +14,7 @@ import {
   RefreshCw, 
   Eye, 
   Check, 
-  Clock, 
-  Sparkles
+  Clock
 } from 'lucide-react';
 import { ServiceItem, getCatalogServiceCategory } from '../data/serviceCatalog';
 import { ServiceVerification, ServiceVerificationDoc, UserProfile } from '../types';
@@ -127,7 +126,6 @@ export default function ServiceActivationModal({
   );
 
   // Fast test mode toggle
-  const [instantApprove, setInstantApprove] = useState(true);
   const [isSubmitting, setIsSubmitting] = useState(false);
 
   // Synchronize state when selected service changes or verification updates
@@ -339,9 +337,9 @@ export default function ServiceActivationModal({
         serviceId: service.id,
         serviceName: service.name,
         categoryGroup,
-        status: instantApprove ? 'verified' : 'pending',
+        // Always reviewed by an admin first (admin site → Verifications).
+        status: 'pending',
         submittedAt: new Date().toISOString(),
-        reviewedAt: instantApprove ? new Date().toISOString() : undefined,
         selfie: selfieDoc,
         idDocument: idDoc ? {
           ...idDoc,
@@ -358,11 +356,7 @@ export default function ServiceActivationModal({
 
       await saveServiceVerification(user.uid, newVerification, user);
 
-      if (instantApprove) {
-        toast.success(`Service "${service.name}" activated and verified! You can now receive job requests.`);
-      } else {
-        toast.success(`Verification submitted for "${service.name}". Our compliance team reviews documents within 24 hours.`);
-      }
+      toast.success(`Verification submitted for "${service.name}". Our compliance team reviews documents within 24 hours.`);
 
       onVerificationSaved?.();
       onClose();
@@ -980,28 +974,6 @@ export default function ServiceActivationModal({
                   )}
                 </div>
 
-                {/* Instant verification toggle for developer / testing flow */}
-                <div className="bg-primary-bg/70 border border-warm-gray/80 rounded-2xl p-3 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <Sparkles size={16} className="text-accent-gold" />
-                    <div>
-                      <p className="text-xs font-bold text-rich-black">Auto-Approve (Demo Mode)</p>
-                      <p className="text-[10px] text-rich-black/50">
-                        Instantly activates service for immediate live testing in this preview
-                      </p>
-                    </div>
-                  </div>
-                  <label className="relative inline-flex items-center cursor-pointer">
-                    <input 
-                      type="checkbox" 
-                      checked={instantApprove} 
-                      onChange={(e) => setInstantApprove(e.target.checked)} 
-                      className="sr-only peer" 
-                    />
-                    <div className="w-10 h-5 bg-gray-300 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-emerald-500"></div>
-                  </label>
-                </div>
-
                 {/* Actions */}
                 <div className="flex items-center justify-end gap-3 pt-2">
                   {currentVerification && (
@@ -1020,7 +992,7 @@ export default function ServiceActivationModal({
                   >
                     <ShieldCheck size={16} className="text-accent-gold" />
                     <span>
-                      {isSubmitting ? 'Saving...' : instantApprove ? 'Activate & Verify Service' : 'Submit for Verification'}
+                      {isSubmitting ? 'Saving...' : 'Submit for Verification'}
                     </span>
                   </button>
                 </div>

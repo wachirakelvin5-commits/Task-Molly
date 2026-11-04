@@ -427,3 +427,114 @@ describe('M-Pesa payments and payouts', () => {
     await assertFails(updateDoc(doc(db('alice'), REQ), stamp({ description: 'x', paymentStatus: 'paid' })));
   });
 });
+
+describe('user records are private', () => {
+  const admin = () => env.authenticatedContext('admin1', { email: 'wachirakelvin5@gmail.com', email_verified: true }).firestore();
+  const taskers = (fs: any) => query(collection(fs, 'users'), where('role', '==', 'tasker'));
+
+  test('signed-out visitors cannot list or read provider records', async () => {
+    await assertFails(getDocs(taskers(db())));
+    await assertFails(getDoc(doc(db(), 'users/bob')));
+  });
+
+  test("signed-in users cannot read or list anyone else's record", async () => {
+    await assertFails(getDoc(doc(db('alice'), 'users/bob')));
+    await assertFails(getDoc(doc(db('bob'), 'users/alice')));
+    await assertFails(getDocs(taskers(db('alice'))));
+  });
+
+  test('owners and admins can', async () => {
+    await assertSucceeds(getDoc(doc(db('bob'), 'users/bob')));
+    await assertSucceeds(getDoc(doc(admin(), 'users/bob')));
+    await assertSucceeds(getDocs(taskers(admin())));
+  });
+
+  test('owners can still edit their own details', async () => {
+    await assertSucceeds(updateDoc(doc(db('bob'), 'users/bob'), { displayName: 'Bob K', phone: '0700', isOnline: true, fcmToken: 't' }));
+  });
+});
+
+describe('providers cannot verify themselves', () => {
+  const admin = () => env.authenticatedContext('admin1', { email: 'wachirakelvin5@gmail.com', email_verified: true }).firestore();
+  const submission = (uid: string, overrides: Record<string, any> = {}) => ({
+    uid,
+    serviceId: 'plumber',
+    serviceName: 'Plumber',
+    status: 'pending',
+    submittedAt: new Date().toISOString(),
+    selfie: { dataUrl: 'data:image/jpeg;base64,AAAA' },
+    ...overrides,
+  });
+
+  test('a provider cannot add service categories to their own record', async () => {
+    await assertFails(updateDoc(doc(db('bob'), 'users/bob'), { services: ['Plumbing & Water', 'Electrical & Solar'] }));
+    await assertFails(updateDoc(doc(db('bob'), 'users/bob'), { services: ['Electrical & Solar'] }));
+  });
+
+  test('a provider can drop a category they have', async () => {
+    await assertSucceeds(updateDoc(doc(db('dave'), 'users/dave'), { services: ['Repairs & Fundi'] }));
+  });
+
+  test('a provider cannot mark themselves verified or change their wallet', async () => {
+    await assertFails(updateDoc(doc(db('bob'), 'users/bob'), { isVerified: true }));
+    await assertFails(updateDoc(doc(db('bob'), 'users/bob'), { walletBalance: 999999 }));
+    await assertFails(updateDoc(doc(db('bob'), 'users/bob'), { 'serviceVerifications.plumber.status': 'verified' }));
+  });
+
+  test('new accounts cannot start with categories', async () => {
+    await assertFails(setDoc(doc(db('newpro'), 'users/newpro'), { uid: 'newpro', email: 'n@x.com', role: 'tasker', services: ['Plumbing & Water'] }));
+  });
+
+  test('an admin can grant categories', async () => {
+    await assertSucceeds(updateDoc(doc(admin(), 'users/bob'), { services: arrayUnion('Electrical & Solar') }));
+  });
+
+  test('a provider can submit documents for review, only as pending', async () => {
+    await assertSucceeds(setDoc(doc(db('bob'), 'providerVerifications/bob_plumber'), submission('bob')));
+    await assertFails(setDoc(doc(db('bob'), 'providerVerifications/bob_plumber'), submission('bob', { status: 'verified' })));
+    await assertFails(setDoc(doc(db('bob'), 'providerVerifications/bob_plumber'), submission('bob', { reviewedAt: 'now' })));
+  });
+
+  test("a provider cannot submit for someone else or under another id", async () => {
+    await assertFails(setDoc(doc(db('bob'), 'providerVerifications/carol_plumber'), submission('carol')));
+    await assertFails(setDoc(doc(db('bob'), 'providerVerifications/bob_other'), submission('bob')));
+  });
+
+  test('only the provider and admins can read verification documents', async () => {
+    await assertSucceeds(setDoc(doc(db('bob'), 'providerVerifications/bob_plumber'), submission('bob')));
+    await assertSucceeds(getDoc(doc(db('bob'), 'providerVerifications/bob_plumber')));
+    await assertSucceeds(getDocs(query(collection(db('bob'), 'providerVerifications'), where('uid', '==', 'bob'))));
+    await assertSucceeds(getDocs(collection(admin(), 'providerVerifications')));
+    await assertFails(getDoc(doc(db('alice'), 'providerVerifications/bob_plumber')));
+    await assertFails(getDoc(doc(db(), 'providerVerifications/bob_plumber')));
+    await assertFails(getDocs(collection(db('carol'), 'providerVerifications')));
+  });
+
+  test('only an admin can approve', async () => {
+    await assertSucceeds(setDoc(doc(db('bob'), 'providerVerifications/bob_plumber'), submission('bob')));
+    await assertFails(updateDoc(doc(db('bob'), 'providerVerifications/bob_plumber'), { status: 'verified' }));
+    await assertSucceeds(updateDoc(doc(admin(), 'providerVerifications/bob_plumber'), { status: 'verified', reviewedAt: 'now', reviewedBy: 'admin' }));
+  });
+});
+
+describe('public provider profiles', () => {
+  const profile = (uid: string, overrides: Record<string, any> = {}) => ({
+    uid, name: uid, photo: '', services: ['Plumbing & Water'], isOnline: true, updatedAt: serverTimestamp(), ...overrides,
+  });
+
+  test('anyone can read them', async () => {
+    await assertSucceeds(setDoc(doc(db('bob'), 'providerProfiles/bob'), profile('bob')));
+    await assertSucceeds(getDocs(query(collection(db(), 'providerProfiles'), where('isOnline', '==', true))));
+  });
+
+  test('a provider can publish their own, with only the categories they were granted', async () => {
+    await assertSucceeds(setDoc(doc(db('bob'), 'providerProfiles/bob'), profile('bob')));
+    await assertFails(setDoc(doc(db('bob'), 'providerProfiles/bob'), profile('bob', { services: ['Plumbing & Water', 'Electrical & Solar'] })));
+  });
+
+  test('no private fields, and not for someone else or a client', async () => {
+    await assertFails(setDoc(doc(db('bob'), 'providerProfiles/bob'), profile('bob', { phone: '0700' })));
+    await assertFails(setDoc(doc(db('bob'), 'providerProfiles/carol'), profile('carol', { services: ['Cleaning & Domestic'] })));
+    await assertFails(setDoc(doc(db('alice'), 'providerProfiles/alice'), profile('alice', { services: [] })));
+  });
+});

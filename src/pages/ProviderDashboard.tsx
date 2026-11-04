@@ -11,6 +11,7 @@ import {
   Sparkles
 } from 'lucide-react';
 import { auth, db } from '../firebase';
+import { syncProviderProfile } from '../lib/providerProfile';
 import { signOut } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
@@ -55,6 +56,7 @@ export default function ProviderDashboard({ user }: ProviderDashboardProps) {
       if (user.uid) {
         const userRef = doc(db, 'users', user.uid);
         await updateDoc(userRef, { isOnline: newStatus });
+        await syncProviderProfile(user.uid);
       }
     } catch (err) {
       console.warn("Could not sync online status to Firestore (local session active):", err);
@@ -66,6 +68,7 @@ export default function ProviderDashboard({ user }: ProviderDashboardProps) {
     try {
       const userRef = doc(db, 'users', user.uid);
       await updateDoc(userRef, { isOnline: false });
+      await syncProviderProfile(user.uid);
     } catch (e) {}
     
     try {

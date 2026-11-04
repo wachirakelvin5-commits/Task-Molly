@@ -4,7 +4,7 @@ import { ArrowLeft, Download, Inbox, Sparkles } from 'lucide-react';
 import { db } from '../firebase';
 import { useNavigate } from 'react-router-dom';
 import { toast } from 'sonner';
-import { collection, query, where, onSnapshot, doc, updateDoc } from 'firebase/firestore';
+import { collection, query, where, onSnapshot, doc } from 'firebase/firestore';
 import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import RequestCard, { CardButton } from '../components/RequestCard';
@@ -52,18 +52,12 @@ export default function ProviderServices({ user }: ProviderServicesProps) {
     return () => clearInterval(interval);
   }, []);
 
-  // Follow the saved profile (the user prop can be stale after edits).
-  // Older profiles stored individual service names; save them as categories so matching works.
+  // Follow the saved profile (the user prop can be stale after edits, or after an admin
+  // approves a verification). Categories are granted by an admin, so only read them here.
   useEffect(() => {
     if (!user.uid) return;
     return onSnapshot(doc(db, 'users', user.uid), (snapshot) => {
-      const stored: string[] = snapshot.data()?.services || [];
-      const normalized = normalizeProviderCategories(stored);
-      setCategories(normalized);
-      if (stored.length && JSON.stringify(stored) !== JSON.stringify(normalized)) {
-        updateDoc(doc(db, 'users', user.uid), { services: normalized })
-          .catch(err => console.warn('Could not migrate provider categories:', err));
-      }
+      setCategories(normalizeProviderCategories(snapshot.data()?.services || []));
     }, (err) => console.warn('Could not load provider profile:', err));
   }, [user.uid]);
 
