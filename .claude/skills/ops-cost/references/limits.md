@@ -10,7 +10,7 @@ Hitting a limit = that feature stops until the reset. No bill. Reset: midnight U
 | Item | Free limit | Notes for Task Molly |
 |---|---|---|
 | Firestore document reads | **50,000 / day** | The tightest limit. Live listeners (`onSnapshot`) count every document on first load and every changed document after. |
-| Firestore writes | **20,000 / day** | Every page view writes one `analytics` doc (`src/lib/analytics.ts`). |
+| Firestore writes | **20,000 / day** | Every page viewed writes about two `analytics` docs (`page_view` + `page_exit`, `src/lib/analytics.ts`), plus one per blog article opened. Signed-out visitors can write these. |
 | Firestore deletes | 20,000 / day | |
 | Firestore stored data | 1 GiB | `analytics` grows forever — nothing deletes old events. |
 | Firestore network out | 10 GiB / month | |
@@ -18,6 +18,11 @@ Hitting a limit = that feature stops until the reset. No bill. Reset: midnight U
 | Cloud Messaging (push) | Free, no limit | |
 
 Source: firebase.google.com/pricing
+
+After moving to the pay-as-you-go (Blaze) plan, the same daily allowance stays free, then
+approximately: writes US$0.18, reads US$0.06, deletes US$0.02 per 100,000 (prices vary a
+little by database location; check cloud.google.com/firestore/pricing for the `task-molly`
+location).
 
 ## Cloud Run (the AI Studio project)
 
