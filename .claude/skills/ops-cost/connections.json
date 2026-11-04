@@ -99,6 +99,21 @@
       "costs": "free",
       "files": [
         "admin/public/_headers"
+      ],
+      "hosts": [
+        "dash.cloudflare.com"
+      ]
+    },
+    {
+      "id": "cloudflare-web-analytics",
+      "name": "Cloudflare Web Analytics (visit counting for task-molly.com)",
+      "costs": "free",
+      "hosts": [
+        "static.cloudflareinsights.com",
+        "cloudflareinsights.com"
+      ],
+      "files": [
+        "src/lib/webAnalytics.ts"
       ]
     },
     {

@@ -336,29 +336,11 @@ service cloud.firestore {
       allow update: if isAdmin();
     }
 
-    // Visit events from src/lib/analytics.ts. Anyone may send them (visitors aren't signed in),
-    // so each one must be exactly the shape the app sends, at the sizes it sends.
-    // KEEP IN SYNC with src/lib/analytics.ts: a field added there without adding it here is
-    // rejected silently (the app hides analytics errors). tests/firestore.rules.test.ts sends a
-    // real event to catch that. See .claude/skills/ops-cost/references/code-rules.md.
+    // Old visit events (until 2026-11). Visits are now counted by Cloudflare Web Analytics
+    // (src/lib/webAnalytics.ts), so nothing writes here any more; the admin site's visit history
+    // reads what was recorded.
     match /analytics/{eventId} {
-      function isValidEvent(d) {
-        return d.keys().hasAll(['type', 'page', 'sessionId', 'visitorId', 'device', 'signedIn', 'timestamp']) &&
-          d.keys().hasOnly(['type', 'page', 'sessionId', 'visitorId', 'device', 'signedIn', 'timestamp',
-                            'newSession', 'referrer', 'title', 'durationMs']) &&
-          d.type in ['page_view', 'page_exit', 'blog_view'] &&
-          d.page is string && d.page.size() <= 200 &&
-          d.sessionId is string && d.sessionId.size() <= 32 &&
-          d.visitorId is string && d.visitorId.size() <= 32 &&
-          d.device in ['mobile', 'tablet', 'desktop'] &&
-          d.signedIn is bool &&
-          d.timestamp == request.time &&
-          (!('newSession' in d) || d.newSession == true) &&
-          (!('referrer' in d) || (d.referrer is string && d.referrer.size() <= 253)) &&
-          (!('title' in d) || (d.title is string && d.title.size() <= 200)) &&
-          (!('durationMs' in d) || (d.durationMs is number && d.durationMs >= 0 && d.durationMs <= 1800000));
-      }
-      allow create: if isValidEvent(incoming());
+      allow create, update, delete: if false;
       allow read: if isAdmin();
     }
 

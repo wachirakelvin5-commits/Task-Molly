@@ -16,10 +16,10 @@ new code from breaking it.
   (midnight US Pacific ≈ 10:00–11:00 Nairobi time). Out of writes: browsing still works but
   nobody can sign up, post or accept a job. Out of reads: the whole app stops loading data.
   On Spark the risk is an *outage*, not a bill.
-- **Anyone can write `analytics` events without signing in**, so analytics is both the
-  biggest legitimate write cost and the easiest way to flood the write limit. Any change to
-  what analytics records goes through the checklist in `references/code-rules.md`
-  ("Changing what analytics records").
+- **Visits are counted by Cloudflare Web Analytics** (`src/lib/webAnalytics.ts`), not
+  Firestore, so they cost no database writes, and signed-out visitors can't write to the
+  database at all. Keep it that way: never add a Firestore write that signed-out visitors can
+  make. Changes to tracking follow "Tracking visits and events" in `references/code-rules.md`.
 - **`server.ts` runs on Cloud Run**, deployed from Google AI Studio. Cloud Run needs a billing
   account, so it lives in a *different* Google Cloud project from `task-molly`. That project is
   where a real bill can appear.
@@ -64,7 +64,7 @@ Tools reach Task Molly two ways, and both must end up in `references/inventory.m
 | Monthly cost review | Follow `references/monthly-review.md` step by step and update the inventory's "Last review" table. |
 | Anything about M-Pesa / Daraja money | Use `references/daraja-fees.md`. Never invent a tariff — use the table there, or ask the user for the current rate card. |
 | Code change touching Firestore, analytics, Cloud Run, sockets, or a new external service | Check it against `references/code-rules.md` **before** writing the code, and estimate the daily reads/writes it adds. |
-| Adding, removing or changing an analytics field or event type | Follow "Changing what analytics records" in `references/code-rules.md`: builder, rule and test change together, and report the cost change. |
+| Adding, removing or changing what's tracked (visits, events, analytics fields) | Follow "Tracking visits and events" in `references/code-rules.md`, and report the cost change. |
 | Sentry usage | If the Sentry tools are connected, use `find_dropped_events` (org `task-molly`, datasets `errors` and `spans`, 30d) — any `rate_limited` drop for quota means the plan limit is being hit. |
 | "Check for new tools / connections" | Run the scan (above), and use the GitHub tools to look at the latest pull request checks for "New outside connection" warnings. |
 | User reports a tool set up outside the repo | Follow "Tools set up outside the repo" above. |

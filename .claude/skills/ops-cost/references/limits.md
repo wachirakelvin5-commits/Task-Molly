@@ -10,9 +10,9 @@ Hitting a limit = that feature stops until the reset. No bill. Reset: midnight U
 | Item | Free limit | Notes for Task Molly |
 |---|---|---|
 | Firestore document reads | **50,000 / day** | The tightest limit. Live listeners (`onSnapshot`) count every document on first load and every changed document after. |
-| Firestore writes | **20,000 / day** | Every page viewed writes about two `analytics` docs (`page_view` + `page_exit`, `src/lib/analytics.ts`), plus one per blog article opened. Signed-out visitors can write these. |
+| Firestore writes | **20,000 / day** | Visits no longer write here (moved to Cloudflare Web Analytics, 2026-11). Signed-out visitors can't write anything. Writes now come from signed-in actions: sign-ups, requests, job updates, chat, forum, complaints. |
 | Firestore deletes | 20,000 / day | |
-| Firestore stored data | 1 GiB | `analytics` grows forever — nothing deletes old events. |
+| Firestore stored data | 1 GiB | `analytics` no longer grows (old events kept as read-only history). |
 | Firestore network out | 10 GiB / month | |
 | Authentication (Google sign-in) | 50,000 monthly active users | |
 | Cloud Messaging (push) | Free, no limit | |
@@ -50,5 +50,6 @@ Source: cloud.google.com/run/pricing
 | GitHub Actions | Unlimited for public repos; 2,000 minutes/month for private (Free plan) | Workflows stop until next month |
 | GitHub Pages | 100 GB bandwidth/month (soft) | Warning email |
 | Cloudflare Pages | 500 builds/month, unlimited bandwidth | Builds queue/stop |
+| Cloudflare Web Analytics | Free, no visit limit published. History kept about 6 months; large traffic may be sampled (check developers.cloudflare.com/web-analytics) | Older history drops off; no bill |
 | Sentry (Developer plan) | Check sentry.io → Usage stats for the current quota | Extra events are dropped (no bill unless pay-as-you-go is turned on) |
 | Gemini API (Free tier) | Rate limits per minute/day; no bill | Requests rejected |

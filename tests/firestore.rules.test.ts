@@ -27,7 +27,6 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
-import { buildAnalyticsEvent, EventContext } from '../src/lib/analyticsEvent';
 
 let env: RulesTestEnvironment;
 const REQ = 'serviceRequests/req1';
@@ -540,40 +539,26 @@ describe('public provider profiles', () => {
   });
 });
 
-describe('analytics events (signed-out writes)', () => {
-  const ctx = (overrides: Partial<EventContext> = {}): EventContext => ({
-    sessionId: 'a1b2c3d4e5f6a7b8',
-    isNewSession: false,
-    visitorId: '0123456789abcdef',
-    device: 'mobile',
-    signedIn: false,
-    referrer: '',
-    ...overrides,
-  });
-  const send = (event: Record<string, unknown>, uid?: string) => addDoc(collection(db(uid), 'analytics'), event);
+describe('old analytics events (visits now counted by Cloudflare)', () => {
+  const admin = () => env.authenticatedContext('admin1', { email: 'wachirakelvin5@gmail.com', email_verified: true }).firestore();
+  const event = {
+    type: 'page_view', page: '/', sessionId: 'a1b2c3d4e5f6a7b8', visitorId: '0123456789abcdef',
+    device: 'mobile', signedIn: false, timestamp: serverTimestamp(),
+  };
 
-  // These use the same builder as the app (src/lib/analytics.ts). If this fails after changing
-  // analyticsEvent.ts, update the analytics rule in firestore.rules to match.
-  test('every kind of event the app sends is accepted', async () => {
-    await assertSucceeds(send(buildAnalyticsEvent('page_view', { page: '/' }, ctx({ isNewSession: true, referrer: 'google.com' }))));
-    await assertSucceeds(send(buildAnalyticsEvent('page_view', { page: '/dashboard' }, ctx({ signedIn: true })), 'alice'));
-    await assertSucceeds(send(buildAnalyticsEvent('page_exit', { page: '/blog', durationMs: 45_000 }, ctx({ device: 'desktop' }))));
-    await assertSucceeds(send(buildAnalyticsEvent('page_exit', { page: '/x', durationMs: 99 * 3_600_000 }, ctx())));
-    await assertSucceeds(send(buildAnalyticsEvent('blog_view', { page: '/blog/1', title: 'T'.repeat(500) }, ctx({ device: 'tablet' }))));
-    await assertSucceeds(send(buildAnalyticsEvent('page_view', { page: '/'.repeat(500) }, ctx())));
+  test('nobody can write them any more, signed in or not, not even admins', async () => {
+    await assertFails(addDoc(collection(db(), 'analytics'), event));
+    await assertFails(addDoc(collection(db('alice'), 'analytics'), event));
+    await assertFails(addDoc(collection(admin(), 'analytics'), event));
   });
 
-  test('extra fields, wrong types, oversized values and backdating are refused', async () => {
-    const ok = () => buildAnalyticsEvent('page_view', { page: '/' }, ctx());
-    await assertFails(send({ ...ok(), junk: 'x' }));
-    await assertFails(send({ ...ok(), page: 'p'.repeat(201) }));
-    await assertFails(send({ ...ok(), type: 'purchase' }));
-    await assertFails(send({ ...ok(), device: 'toaster' }));
-    await assertFails(send({ ...ok(), visitorId: 'v'.repeat(33) }));
-    await assertFails(send({ ...ok(), timestamp: Timestamp.fromDate(new Date('2020-01-01')) }));
-    await assertFails(send({ ...ok(), durationMs: -5 }));
-    const { page, ...missingPage } = ok();
-    await assertFails(send(missingPage));
+  test('admins can still read the history; nobody else can', async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'analytics/e1'), { ...event, timestamp: Timestamp.now() });
+    });
+    await assertSucceeds(getDocs(collection(admin(), 'analytics')));
+    await assertFails(getDocs(collection(db('alice'), 'analytics')));
+    await assertFails(getDocs(collection(db(), 'analytics')));
   });
 });
 

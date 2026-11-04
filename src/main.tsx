@@ -4,6 +4,7 @@ import * as Sentry from '@sentry/react';
 import App from './App.tsx';
 import './index.css';
 import { registerSW } from 'virtual:pwa-register';
+import { startWebAnalytics } from './lib/webAnalytics';
 
 // Error monitoring. Only the production build reports, so local testing doesn't use up the quota.
 Sentry.init({
@@ -16,6 +17,9 @@ Sentry.init({
   // Client names, phones and addresses pass through the app: don't attach user IPs or request data.
   sendDefaultPii: false,
 });
+
+// Visit counting (Cloudflare Web Analytics; see src/lib/webAnalytics.ts).
+startWebAnalytics();
 
 // Register the service worker and keep the installed app up to date.
 // The browser only looks for a new version when a page is opened, so an app left open

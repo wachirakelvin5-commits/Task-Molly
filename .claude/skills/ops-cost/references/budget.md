@@ -18,7 +18,7 @@ caught before it gets expensive.
 | Firebase (Spark) | KES 0 | KES 0 | Free plan can't bill. |
 | Firebase Blaze reserve | KES 0 | KES 500 | If Spark limits start being hit, moving to Blaze at ~2× today's usage costs roughly KES 200–300/month. Reserve so that move isn't blocked. |
 | Domain task-molly.com (GoDaddy) | ~KES 250 | KES 250 | Paid ~US$10 the first time, but GoDaddy's standard .com renewal is ~US$23/yr (≈ KES 3,000). Budgeted at the renewal price until GoDaddy's account page confirms it. |
-| Sentry, GitHub, Cloudflare Pages, Google Sheets, Photon, images | KES 0 | KES 0 | Free plans. |
+| Sentry, GitHub, Cloudflare Pages + Web Analytics, Google Sheets, Photon, images | KES 0 | KES 0 | Free plans. |
 | Buffer | — | KES 750 | Anything not listed yet. |
 | **Total** | **KES 250–700** | **KES 2,500** | |
 

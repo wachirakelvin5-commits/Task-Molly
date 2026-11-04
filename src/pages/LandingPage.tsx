@@ -9,7 +9,6 @@ import AboutView from '../components/AboutView';
 import ContactView from '../components/ContactView';
 import TermsView from '../components/TermsView';
 import PrivacyView from '../components/PrivacyView';
-import { trackPage } from '../lib/analytics';
 
 import { useDeviceType } from '../hooks/useDeviceType';
 import { useSwipe } from '../hooks/useSwipe';
@@ -22,10 +21,6 @@ export default function LandingPage({ setHideNavbar }: LandingPageProps) {
   const { isPhone, isTablet, isLaptop } = useDeviceType();
   const [selectedCard, setSelectedCard] = useState<{ title: string; content: string } | null>(null);
   const [isTaskModalOpen, setIsTaskModalOpen] = useState(false);
-  // Count the home page's pop-up sections (Blog, About, ...) as their own pages.
-  useEffect(() => {
-    trackPage(selectedCard ? `/#${selectedCard.title}` : '/');
-  }, [selectedCard]);
   const isAnyModalOpen = isTaskModalOpen;
   // x is the raw, unbounded offset; displayX wraps it so the tripled card list loops seamlessly.
   const x = useMotionValue(0);
