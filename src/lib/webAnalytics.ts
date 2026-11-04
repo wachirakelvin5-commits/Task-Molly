@@ -6,9 +6,9 @@
  * numbers are in the Cloudflare dashboard → Analytics & Logs → Web Analytics.
  *
  * The site token is public by design (it only lets a page send visits), so it lives here.
- * Leave it empty and nothing is loaded.
+ * (Cloudflare dashboard → Web Analytics → task-molly.com → Manage site shows it.) Empty = nothing loads.
  */
-export const CLOUDFLARE_WEB_ANALYTICS_TOKEN = '';
+export const CLOUDFLARE_WEB_ANALYTICS_TOKEN = '38c2bb21a77643f58d7c06fd5fb06387';
 
 export const CLOUDFLARE_BEACON_URL = 'https://static.cloudflareinsights.com/beacon.min.js';
 
