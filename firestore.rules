@@ -266,13 +266,11 @@ service cloud.firestore {
       }
     }
 
+    // Written only by server.ts with the Admin SDK (which skips these rules); no screen in
+    // the app writes here, so the open door for signed-out scripts is closed.
     match /unlistedServiceRequests/{requestId} {
-      function isValidUnlisted(data) {
-        return data.email is string && data.email.size() <= 200 &&
-               data.serviceType is string && data.serviceType.size() <= 200;
-      }
       allow read: if isAdmin();
-      allow create: if isValidUnlisted(incoming()); 
+      allow create: if false;
     }
 
     // ===============================================================
@@ -294,11 +292,25 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
+    // Posts: exactly what src/components/ForumSidebar.tsx sends, with size limits.
     match /forum/{postId} {
+      function isValidPost(d) {
+        return d.keys().hasOnly(['userId', 'userName', 'naverId', 'userAvatar', 'content', 'topic',
+                                 'mentions', 'likes', 'replyToId', 'replyToUser', 'timestamp']) &&
+          d.userId == request.auth.uid &&
+          d.content is string && d.content.size() > 0 && d.content.size() <= 1000 &&
+          d.get('userName', '') is string && d.get('userName', '').size() <= 100 &&
+          d.get('naverId', '') is string && d.get('naverId', '').size() <= 20 &&
+          d.get('userAvatar', '') is string && d.get('userAvatar', '').size() <= 1000 &&
+          d.get('topic', '') is string && d.get('topic', '').size() <= 100 &&
+          d.get('mentions', []) is list && d.get('mentions', []).size() <= 20 &&
+          d.get('likes', 0) == 0 &&
+          (d.get('replyToId', null) == null || (d.replyToId is string && d.replyToId.size() <= 128)) &&
+          (d.get('replyToUser', null) == null || (d.replyToUser is string && d.replyToUser.size() <= 100)) &&
+          d.timestamp == request.time;
+      }
       allow read: if true;
-      allow create: if isSignedIn() && 
-        incoming().content is string && incoming().content.size() <= 1000 &&
-        incoming().userId == request.auth.uid;
+      allow create: if isSignedIn() && isValidPost(incoming());
       // Likes: signed-in users may move the like count by one, and change nothing else.
       allow update: if isSignedIn() &&
         incoming().diff(existing()).affectedKeys().hasOnly(['likes']) &&
@@ -306,14 +318,47 @@ service cloud.firestore {
         incoming().likes - existing().get('likes', 0) in [-1, 1];
     }
 
+    // Complaints: exactly what src/components/ComplaintModal.tsx sends, filed by the reporter.
     match /complaints/{complaintId} {
-      allow create: if isSignedIn() && incoming().timestamp == request.time;
+      function isValidComplaint(d) {
+        return d.keys().hasOnly(['taskId', 'reporterId', 'reporterRole', 'targetId', 'reason', 'comment', 'status', 'timestamp']) &&
+          d.reporterId == request.auth.uid &&
+          d.reporterRole in ['client', 'tasker'] &&
+          d.taskId is string && d.taskId.size() <= 128 &&
+          d.targetId is string && d.targetId.size() <= 128 &&
+          d.reason is string && d.reason.size() <= 100 &&
+          d.comment is string && d.comment.size() > 0 && d.comment.size() <= 1000 &&
+          d.status == 'new' &&
+          d.timestamp == request.time;
+      }
+      allow create: if isSignedIn() && isValidComplaint(incoming());
       allow read: if isSignedIn() && (resource.data.reporterId == request.auth.uid || resource.data.targetId == request.auth.uid || isAdmin());
       allow update: if isAdmin();
     }
 
+    // Visit events from src/lib/analytics.ts. Anyone may send them (visitors aren't signed in),
+    // so each one must be exactly the shape the app sends, at the sizes it sends.
+    // KEEP IN SYNC with src/lib/analytics.ts: a field added there without adding it here is
+    // rejected silently (the app hides analytics errors). tests/firestore.rules.test.ts sends a
+    // real event to catch that. See .claude/skills/ops-cost/references/code-rules.md.
     match /analytics/{eventId} {
-      allow create: if true;
+      function isValidEvent(d) {
+        return d.keys().hasAll(['type', 'page', 'sessionId', 'visitorId', 'device', 'signedIn', 'timestamp']) &&
+          d.keys().hasOnly(['type', 'page', 'sessionId', 'visitorId', 'device', 'signedIn', 'timestamp',
+                            'newSession', 'referrer', 'title', 'durationMs']) &&
+          d.type in ['page_view', 'page_exit', 'blog_view'] &&
+          d.page is string && d.page.size() <= 200 &&
+          d.sessionId is string && d.sessionId.size() <= 32 &&
+          d.visitorId is string && d.visitorId.size() <= 32 &&
+          d.device in ['mobile', 'tablet', 'desktop'] &&
+          d.signedIn is bool &&
+          d.timestamp == request.time &&
+          (!('newSession' in d) || d.newSession == true) &&
+          (!('referrer' in d) || (d.referrer is string && d.referrer.size() <= 253)) &&
+          (!('title' in d) || (d.title is string && d.title.size() <= 200)) &&
+          (!('durationMs' in d) || (d.durationMs is number && d.durationMs >= 0 && d.durationMs <= 1800000));
+      }
+      allow create: if isValidEvent(incoming());
       allow read: if isAdmin();
     }
 

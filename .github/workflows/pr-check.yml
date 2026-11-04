@@ -38,6 +38,12 @@ jobs:
       - name: Admin metrics unit tests
         run: npm run test:metrics
 
+      # Firestore security rules, against the emulator (needs Java, which the runner has).
+      # Also catches app data that the rules would reject, e.g. a new analytics field
+      # (src/lib/analyticsEvent.ts) not added to the analytics rule.
+      - name: Firestore rules tests
+        run: npm run test:rules
+
       - name: Type-check admin dashboard files
         # The whole project has older type errors, so only fail on errors in the admin dashboard files.
         run: |

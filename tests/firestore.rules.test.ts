@@ -27,6 +27,7 @@ import {
   updateDoc,
   where,
 } from 'firebase/firestore';
+import { buildAnalyticsEvent, EventContext } from '../src/lib/analyticsEvent';
 
 let env: RulesTestEnvironment;
 const REQ = 'serviceRequests/req1';
@@ -536,5 +537,112 @@ describe('public provider profiles', () => {
     await assertFails(setDoc(doc(db('bob'), 'providerProfiles/bob'), profile('bob', { phone: '0700' })));
     await assertFails(setDoc(doc(db('bob'), 'providerProfiles/carol'), profile('carol', { services: ['Cleaning & Domestic'] })));
     await assertFails(setDoc(doc(db('alice'), 'providerProfiles/alice'), profile('alice', { services: [] })));
+  });
+});
+
+describe('analytics events (signed-out writes)', () => {
+  const ctx = (overrides: Partial<EventContext> = {}): EventContext => ({
+    sessionId: 'a1b2c3d4e5f6a7b8',
+    isNewSession: false,
+    visitorId: '0123456789abcdef',
+    device: 'mobile',
+    signedIn: false,
+    referrer: '',
+    ...overrides,
+  });
+  const send = (event: Record<string, unknown>, uid?: string) => addDoc(collection(db(uid), 'analytics'), event);
+
+  // These use the same builder as the app (src/lib/analytics.ts). If this fails after changing
+  // analyticsEvent.ts, update the analytics rule in firestore.rules to match.
+  test('every kind of event the app sends is accepted', async () => {
+    await assertSucceeds(send(buildAnalyticsEvent('page_view', { page: '/' }, ctx({ isNewSession: true, referrer: 'google.com' }))));
+    await assertSucceeds(send(buildAnalyticsEvent('page_view', { page: '/dashboard' }, ctx({ signedIn: true })), 'alice'));
+    await assertSucceeds(send(buildAnalyticsEvent('page_exit', { page: '/blog', durationMs: 45_000 }, ctx({ device: 'desktop' }))));
+    await assertSucceeds(send(buildAnalyticsEvent('page_exit', { page: '/x', durationMs: 99 * 3_600_000 }, ctx())));
+    await assertSucceeds(send(buildAnalyticsEvent('blog_view', { page: '/blog/1', title: 'T'.repeat(500) }, ctx({ device: 'tablet' }))));
+    await assertSucceeds(send(buildAnalyticsEvent('page_view', { page: '/'.repeat(500) }, ctx())));
+  });
+
+  test('extra fields, wrong types, oversized values and backdating are refused', async () => {
+    const ok = () => buildAnalyticsEvent('page_view', { page: '/' }, ctx());
+    await assertFails(send({ ...ok(), junk: 'x' }));
+    await assertFails(send({ ...ok(), page: 'p'.repeat(201) }));
+    await assertFails(send({ ...ok(), type: 'purchase' }));
+    await assertFails(send({ ...ok(), device: 'toaster' }));
+    await assertFails(send({ ...ok(), visitorId: 'v'.repeat(33) }));
+    await assertFails(send({ ...ok(), timestamp: Timestamp.fromDate(new Date('2020-01-01')) }));
+    await assertFails(send({ ...ok(), durationMs: -5 }));
+    const { page, ...missingPage } = ok();
+    await assertFails(send(missingPage));
+  });
+});
+
+describe('unlisted service requests', () => {
+  test('nobody can write them from the app (server.ts writes them with admin access)', async () => {
+    const req = { email: 'a@x.com', serviceType: 'Dog walking' };
+    await assertFails(addDoc(collection(db(), 'unlistedServiceRequests'), req));
+    await assertFails(addDoc(collection(db('alice'), 'unlistedServiceRequests'), req));
+  });
+});
+
+describe('complaints', () => {
+  // Same shape as src/components/ComplaintModal.tsx sends.
+  const complaint = (overrides: Record<string, any> = {}) => ({
+    taskId: 'req1',
+    reporterId: 'alice',
+    reporterRole: 'client',
+    targetId: 'bob',
+    reason: 'Unsatisfactory Service',
+    comment: 'c'.repeat(350),
+    status: 'new',
+    timestamp: serverTimestamp(),
+    ...overrides,
+  });
+  const file = (uid: string | undefined, data: Record<string, any>) => addDoc(collection(db(uid), 'complaints'), data);
+
+  test('a signed-in user can file one as themselves', async () => {
+    await assertSucceeds(file('alice', complaint()));
+    await assertSucceeds(file('bob', complaint({ reporterId: 'bob', reporterRole: 'tasker', targetId: 'alice', reason: 'Abusive Customer' })));
+  });
+
+  test('not signed out, not as someone else, and no extra or oversized fields', async () => {
+    await assertFails(file(undefined, complaint()));
+    await assertFails(file('eve', complaint()));
+    await assertFails(file('alice', complaint({ comment: 'c'.repeat(1001) })));
+    await assertFails(file('alice', complaint({ status: 'completed' })));
+    await assertFails(file('alice', complaint({ attachment: 'x' })));
+  });
+});
+
+describe('forum posts', () => {
+  // Same shape as src/components/ForumSidebar.tsx sends.
+  const post = (overrides: Record<string, any> = {}) => ({
+    userId: 'alice',
+    userName: 'Alice',
+    naverId: 'NAVER-A12345',
+    userAvatar: 'https://example.com/a.jpg',
+    content: 'Great service!',
+    topic: 'Share Your Thoughts',
+    mentions: [],
+    likes: 0,
+    replyToId: null,
+    replyToUser: null,
+    timestamp: serverTimestamp(),
+    ...overrides,
+  });
+  const postAs = (uid: string | undefined, data: Record<string, any>) => addDoc(collection(db(uid), 'forum'), data);
+
+  test('a signed-in user can post and reply', async () => {
+    await assertSucceeds(postAs('alice', post()));
+    await assertSucceeds(postAs('alice', post({ content: '@Bob thanks', mentions: ['Bob'], replyToId: 'p1', replyToUser: 'Bob', userAvatar: '' })));
+  });
+
+  test('not signed out, not as someone else, and no extra, oversized or pre-liked posts', async () => {
+    await assertFails(postAs(undefined, post({ userId: 'guest-x' })));
+    await assertFails(postAs('eve', post()));
+    await assertFails(postAs('alice', post({ content: 'x'.repeat(1001) })));
+    await assertFails(postAs('alice', post({ likes: 500 })));
+    await assertFails(postAs('alice', post({ mentions: Array(21).fill('a') })));
+    await assertFails(postAs('alice', post({ spam: true })));
   });
 });
