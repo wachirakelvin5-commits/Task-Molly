@@ -631,3 +631,38 @@ describe('forum posts', () => {
     await assertFails(postAs('alice', post({ spam: true })));
   });
 });
+
+describe('old jobs collection (not used by the app)', () => {
+  const admin = () => env.authenticatedContext('admin1', { email: 'wachirakelvin5@gmail.com', email_verified: true }).firestore();
+  const job = { clientId: 'alice', taskerId: 'bob', status: 'assigned' };
+
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'jobs/job1'), job);
+      await setDoc(doc(ctx.firestore(), 'jobs/job1/messages/m1'), { senderId: 'alice', text: 'hi' });
+    });
+  });
+
+  test('nobody can create, change or delete jobs from the app, not even admins', async () => {
+    await assertFails(setDoc(doc(db('alice'), 'jobs/new1'), job));
+    await assertFails(setDoc(doc(db(), 'jobs/new2'), job));
+    await assertFails(updateDoc(doc(db('alice'), 'jobs/job1'), { status: 'completed' }));
+    await assertFails(updateDoc(doc(db('bob'), 'jobs/job1'), { status: 'completed' }));
+    await assertFails(deleteDoc(doc(db('alice'), 'jobs/job1')));
+    await assertFails(setDoc(doc(admin(), 'jobs/new3'), job));
+  });
+
+  test('nobody can add messages to a job', async () => {
+    await assertFails(setDoc(doc(db('alice'), 'jobs/job1/messages/m2'), { senderId: 'alice', text: 'x' }));
+    await assertFails(setDoc(doc(db('bob'), 'jobs/job1/messages/m3'), { senderId: 'bob', text: 'x' }));
+  });
+
+  test('only admins can read what is already there', async () => {
+    await assertSucceeds(getDoc(doc(admin(), 'jobs/job1')));
+    await assertSucceeds(getDoc(doc(admin(), 'jobs/job1/messages/m1')));
+    await assertFails(getDoc(doc(db('alice'), 'jobs/job1')));
+    await assertFails(getDoc(doc(db('bob'), 'jobs/job1')));
+    await assertFails(getDoc(doc(db('alice'), 'jobs/job1/messages/m1')));
+    await assertFails(getDoc(doc(db(), 'jobs/job1')));
+  });
+});
