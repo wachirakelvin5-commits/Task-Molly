@@ -255,14 +255,15 @@ service cloud.firestore {
     // Collection: Jobs
     // ===============================================================
     match /jobs/{jobId} {
-      allow read: if isSignedIn() && (resource.data.clientId == request.auth.uid || resource.data.taskerId == request.auth.uid || isAdmin());
-      allow create: if isSignedIn() || isAdmin();
-      allow update: if isSignedIn() && (resource.data.clientId == request.auth.uid || resource.data.taskerId == request.auth.uid || isAdmin());
-      allow delete: if isAdmin() || (isSignedIn() && resource.data.clientId == request.auth.uid);
-      
+      // Left over from an older version: the app no longer uses it (tasks live in serviceRequests).
+      // Only the old server.ts writes here, with admin access that ignores these rules.
+      // Admins can read what is already there; nobody can write from the app.
+      allow read: if isAdmin();
+      allow write: if false;
+
       match /messages/{messageId} {
-        allow read: if isSignedIn() && (get(/databases/$(database)/documents/jobs/$(jobId)).data.clientId == request.auth.uid || get(/databases/$(database)/documents/jobs/$(jobId)).data.taskerId == request.auth.uid);
-        allow create: if isSignedIn() && incoming().senderId == request.auth.uid;
+        allow read: if isAdmin();
+        allow write: if false;
       }
     }
 
