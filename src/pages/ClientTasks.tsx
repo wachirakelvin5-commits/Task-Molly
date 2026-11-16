@@ -197,7 +197,7 @@ export default function ClientTasks({ user }: ClientTasksProps) {
       case 'accepted':
         return (
           <RequestCard key={request.id} request={request} priceField="clientPrice"
-            note={<><b>{pro}</b> accepted your request. Confirm them to get started, or choose another pro.</>}>
+            note={<><b>{pro}</b> offered to do this job{request.clientPrice ? <> for <b>KES {Number(request.clientPrice).toLocaleString()}</b></> : null}, paid to them directly. Task Molly's service charge is billed after the job. Confirm them to get started, or choose another pro.</>}>
             <CardButton variant="primary" disabled={busy} onClick={() => runAction(request.id, () => confirmProvider(request.id), `${pro} confirmed – moved to Ongoing`)}>
               Confirm {pro}
             </CardButton>

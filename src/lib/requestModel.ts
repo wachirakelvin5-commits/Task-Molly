@@ -100,3 +100,37 @@ export function isRequestExpired(request: { status?: string; postedAt?: any; cre
   if (!posted) return false;
   return now - posted.getTime() > REQUEST_EXPIRY_MS;
 }
+
+// ---- Prices ----
+// The provider sets the job price when they accept a request (stored as clientPrice: what the
+// client pays the provider). Task Molly's platform fee is a share of that price, paid by the provider.
+
+/** Task Molly's platform fee: this share of the job price, paid by the provider (VAT on top). */
+export const PROVIDER_FEE_RATE = 0.15;
+/** Highest price a provider can quote for one job. */
+export const MAX_QUOTE_KES = 1_000_000;
+
+/** True for a whole-shilling price a provider is allowed to quote. */
+export function isValidQuote(value: number): boolean {
+  return Number.isInteger(value) && value > 0 && value <= MAX_QUOTE_KES;
+}
+
+/** The price the provider quoted, once a provider has taken the request; null while it is open. */
+export function quotedPrice(request: { providerId?: string; clientPrice?: unknown }): number | null {
+  const price = Number(request.clientPrice);
+  return request.providerId && price > 0 ? price : null;
+}
+
+/** What the provider keeps from a job price after Task Molly's platform fee. */
+export function takeHomeFor(price: number): number {
+  return Math.round(price * (1 - PROVIDER_FEE_RATE));
+}
+
+/** What the provider keeps from this request, or null while it has no quoted price. */
+export function providerTakeHome(request: { providerId?: string; clientPrice?: unknown; providerPrice?: unknown }): number | null {
+  const price = quotedPrice(request);
+  if (price === null) return null;
+  // Requests accepted before providers set their own price stored the payout explicitly.
+  const explicit = Number(request.providerPrice);
+  return explicit > 0 ? explicit : takeHomeFor(price);
+}

@@ -9,9 +9,14 @@ import { jsPDF } from 'jspdf';
 import 'jspdf-autotable';
 import RequestCard, { CardButton } from '../components/RequestCard';
 import {
+  MAX_QUOTE_KES,
+  PROVIDER_FEE_RATE,
   ServiceCategory,
   acceptRequest,
   isRequestExpired,
+  isValidQuote,
+  providerTakeHome,
+  takeHomeFor,
   markJobComplete,
   normalizeProviderCategories,
   startJob,
@@ -103,7 +108,7 @@ export default function ProviderServices({ user }: ProviderServicesProps) {
   const activeJobs = myJobs.filter(j => ACTIVE_STATUSES.includes(j.status));
   const historyJobs = myJobs.filter(j => HISTORY_STATUSES.includes(j.status));
   const completedJobs = historyJobs.filter(j => j.status === 'completed');
-  const totalEarnings = completedJobs.reduce((sum, j) => sum + Number(j.providerPrice ?? j.budget ?? 0), 0);
+  const totalEarnings = completedJobs.reduce((sum, j) => sum + (providerTakeHome(j) ?? 0), 0);
 
   const runAction = async (requestId: string, action: () => Promise<void>, successMessage: string, nextTab?: ProviderTab) => {
     setBusyId(requestId);
@@ -144,7 +149,7 @@ export default function ProviderServices({ user }: ProviderServicesProps) {
           j.serviceType,
           j.clientName || 'Client',
           j.location || '',
-          j.status === 'completed' ? Number(j.providerPrice ?? j.budget ?? 0).toLocaleString() : '—',
+          j.status === 'completed' ? (providerTakeHome(j) ?? 0).toLocaleString() : '—',
           j.status === 'completed' ? 'Completed' : 'Cancelled',
         ]),
         headStyles: { fillColor: [26, 29, 32] },
@@ -278,12 +283,13 @@ export default function ProviderServices({ user }: ProviderServicesProps) {
                   <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
                     {availableTasks.map(task => (
                       <RequestCard key={task.id} request={task} priceField="providerPrice" badge="Open request"
-                        note={<>Posted by <b>{task.clientName || 'a client'}</b>. If you accept, they confirm you before the job is yours.</>}>
-                        <CardButton variant="primary" disabled={busyId === task.id}
-                          onClick={() => runAction(task.id, () => acceptRequest(task.id, { uid: user.uid, displayName: user.displayName }), 'Accepted – waiting for the client to confirm you', 'active')}>
-                          Accept
-                        </CardButton>
-                        <CardButton disabled={busyId === task.id} onClick={() => hideRequest(task.id)}>Not for me</CardButton>
+                        note={<>Posted by <b>{task.clientName || 'a client'}</b>. Set your price and accept; the client then confirms you before the job is yours.</>}>
+                        <QuoteAndAccept
+                          defaultPrice={Number(task.budget) > 0 ? Math.round(Number(task.budget)) : undefined}
+                          busy={busyId === task.id}
+                          onAccept={(price) => runAction(task.id, () => acceptRequest(task.id, { uid: user.uid, displayName: user.displayName }, price), 'Accepted – waiting for the client to confirm you', 'active')}
+                          onSkip={() => hideRequest(task.id)}
+                        />
                       </RequestCard>
                     ))}
                   </div>
@@ -341,6 +347,49 @@ export default function ProviderServices({ user }: ProviderServicesProps) {
             </button>
           )}
         </div>
+      </div>
+    </div>
+  );
+}
+
+/** Price box and Accept button on an open request: the provider sets their own price for the job. */
+function QuoteAndAccept({ defaultPrice, busy, onAccept, onSkip }: {
+  defaultPrice?: number;
+  busy: boolean;
+  onAccept: (price: number) => void;
+  onSkip: () => void;
+}) {
+  const [value, setValue] = useState(defaultPrice ? String(defaultPrice) : '');
+  const price = Number(value);
+  const valid = isValidQuote(price);
+  const feePercent = Math.round(PROVIDER_FEE_RATE * 100);
+
+  return (
+    <div className="w-full flex flex-col gap-2">
+      <label className="flex flex-col gap-1 text-[11px] font-semibold text-rich-black/70">
+        Your price for this job (KES)
+        <input
+          type="number"
+          inputMode="numeric"
+          min={1}
+          max={MAX_QUOTE_KES}
+          step={1}
+          value={value}
+          onChange={(e) => setValue(e.target.value)}
+          placeholder="e.g. 2000"
+          className="w-full px-3 py-2 rounded-xl border border-warm-gray focus:border-accent-gold outline-none text-sm font-bold text-rich-black bg-white"
+        />
+      </label>
+      <p className="text-[11px] text-rich-black/60">
+        {valid
+          ? <>You keep <b>KES {takeHomeFor(price).toLocaleString()}</b> after Task Molly's {feePercent}% platform fee (plus VAT on the fee).</>
+          : 'Enter a price in whole shillings.'}
+      </p>
+      <div className="flex flex-wrap gap-2">
+        <CardButton variant="primary" disabled={busy || !valid} onClick={() => onAccept(price)}>
+          {valid ? `Accept at KES ${price.toLocaleString()}` : 'Accept'}
+        </CardButton>
+        <CardButton disabled={busy} onClick={onSkip}>Not for me</CardButton>
       </div>
     </div>
   );

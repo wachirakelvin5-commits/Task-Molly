@@ -52,8 +52,12 @@ const newRequest = (clientId = 'alice', overrides: Record<string, any> = {}) => 
 
 const stamp = (fields: Record<string, any>) => ({ ...fields, updatedAt: serverTimestamp() });
 
-const accept = (uid: string) =>
-  updateDoc(doc(db(uid), REQ), stamp({ status: 'accepted', providerId: uid, providerName: uid, acceptedAt: serverTimestamp() }));
+/** The provider takes the request at their own price; any old payout figure is cleared. */
+const accept = (uid: string, price: any = 2500) =>
+  updateDoc(doc(db(uid), REQ), stamp({
+    status: 'accepted', providerId: uid, providerName: uid, acceptedAt: serverTimestamp(),
+    clientPrice: price, providerPrice: deleteField(),
+  }));
 
 /** Seeds REQ directly (bypassing rules) in the given state. */
 async function seed(fields: Record<string, any>) {
@@ -191,6 +195,34 @@ describe('provider acceptance', () => {
     await assertSucceeds(accept('bob'));
   });
 
+  test('the provider must set a whole-shilling price when accepting', async () => {
+    await assertFails(accept('bob', 0));
+    await assertFails(accept('bob', -500));
+    await assertFails(accept('bob', 2500.5));
+    await assertFails(accept('bob', 2_000_000));
+    await assertFails(accept('bob', '2500'));
+    await assertSucceeds(accept('bob', 3200));
+  });
+
+  test('the provider cannot set their own payout when accepting', async () => {
+    await assertFails(updateDoc(doc(db('bob'), REQ), stamp({
+      status: 'accepted', providerId: 'bob', providerName: 'bob', acceptedAt: serverTimestamp(),
+      clientPrice: 2500, providerPrice: 2500,
+    })));
+  });
+
+  test("withdrawing clears the provider's price", async () => {
+    await assertSucceeds(accept('bob'));
+    await assertFails(updateDoc(doc(db('bob'), REQ), stamp({
+      status: 'pending', providerId: deleteField(), providerName: deleteField(), acceptedAt: deleteField(),
+      clientPrice: 1,
+    })));
+    await assertSucceeds(updateDoc(doc(db('bob'), REQ), stamp({
+      status: 'pending', providerId: deleteField(), providerName: deleteField(), acceptedAt: deleteField(),
+      clientPrice: deleteField(), providerPrice: deleteField(),
+    })));
+  });
+
   test('the provider can withdraw before the client confirms', async () => {
     await assertSucceeds(accept('bob'));
     await assertSucceeds(updateDoc(doc(db('bob'), REQ), stamp({
@@ -218,6 +250,17 @@ describe('client confirmation of the provider', () => {
     })));
     await assertFails(accept('bob'));
     await assertSucceeds(accept('dave'));
+  });
+
+  test("the client cannot change the provider's price when confirming", async () => {
+    await assertFails(updateDoc(doc(db('alice'), REQ), stamp({ status: 'assigned', confirmedAt: serverTimestamp(), clientPrice: 100 })));
+  });
+
+  test("rejecting can clear the rejected provider's price", async () => {
+    await assertSucceeds(updateDoc(doc(db('alice'), REQ), stamp({
+      status: 'pending', providerId: deleteField(), providerName: deleteField(), acceptedAt: deleteField(),
+      clientPrice: deleteField(), providerPrice: deleteField(), rejectedProviderIds: arrayUnion('bob'),
+    })));
   });
 
   test('rejecting must record the rejected provider', async () => {
@@ -261,6 +304,12 @@ describe('editing and cancelling', () => {
     await seed({});
     await assertSucceeds(updateDoc(doc(db('alice'), REQ), stamp({ description: 'Bathroom sink too', budget: 3000 })));
     await assertSucceeds(updateDoc(doc(db('alice'), REQ), stamp({ status: 'cancelled', cancelledAt: serverTimestamp() })));
+  });
+
+  test('the client cannot set the price: the provider does', async () => {
+    await seed({});
+    await assertFails(updateDoc(doc(db('alice'), REQ), stamp({ clientPrice: 100 })));
+    await assertFails(updateDoc(doc(db('alice'), REQ), stamp({ providerPrice: 100 })));
   });
 
   test('the client can cancel after confirming, before work starts', async () => {

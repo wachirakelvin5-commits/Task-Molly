@@ -15,7 +15,7 @@ ALERT_AT_PERCENT:   50, 90, 100
 | Service | Used for | Plan | Cost now | Where to see usage / bill | Owner (account) | Renews | Found by |
 |---|---|---|---|---|---|---|---|
 | Firebase `task-molly` — Firestore, Auth, Cloud Messaging | All app data, Google sign-in, push notifications | **Spark (free)** | KES 0 | console.firebase.google.com → task-molly → Usage and billing | TBD | — | repo |
-| Cloud Run service `task-molly` (`server.ts`), project `gen-lang-client-0157826223`, region europe-west3 (Frankfurt), deployed from source 2026-10-12, public access | `/api/*` routes (assign/cancel task, live providers, M-Pesa in `server/paymentRoutes.ts`), Socket.IO chat — **but the live site doesn't reach it** (see below) | Postpay, free tier | **US$0** (Oct 2026 invoice); 0 requests/sec on 2026-11-02 | console.cloud.google.com → (AI Studio's project) → Billing → Reports | TBD | monthly | repo |
+| Cloud Run service `task-molly` (`server.ts`), project `gen-lang-client-0157826223`, region europe-west3 (Frankfurt), deployed from source 2026-10-12, public access | `/api/*` routes (cancel task, M-Pesa in `server/paymentRoutes.ts`), Socket.IO chat — **but the live site doesn't reach it** (see below) | Postpay, free tier | **US$0** (Oct 2026 invoice); 0 requests/sec on 2026-11-02 | console.cloud.google.com → (AI Studio's project) → Billing → Reports | TBD | monthly | repo |
 | Artifact Registry / Cloud Build (same project as Cloud Run) | Stores and builds the Cloud Run container images | Pay-as-you-go with free tier | TBD | same Billing → Reports, group by Service | TBD | monthly | repo |
 | AI Studio Build chat (the assistant used to edit the app) | Making code changes that get pushed to GitHub | **Free tier requests** (seen in Chat settings → Usage, 2026-11-02) | KES 0 | aistudio.google.com → the app → Chat settings → Usage | TBD | — | manual |
 | Gemini API keys `...BX0Q` (created 2026-10-05) and `...ivl4` (2026-03-13), project `gen-lang-client-0157826223` | **Nothing** — Molly concierge was removed; no code calls them | **Tier 1 (paid)**, billed to "My Billing Account". Monthly spend cap US$100 (AI Studio → Spend) | **US$0.00** (6 Oct – 2 Nov 2026) | aistudio.google.com/apikey (see "Checking the Gemini key" below) | TBD | — | repo |
@@ -31,8 +31,7 @@ ALERT_AT_PERCENT:   50, 90, 100
 ## Cloud Run: is it used?
 
 The live site (task-molly.com on GitHub Pages) calls the API with relative addresses such as
-`fetch('/api/assign-task')` (`src/components/TaskerAssignmentModal.tsx`,
-`src/pages/Dashboard.tsx`). On GitHub Pages those go to task-molly.com/api/…, which doesn't
+`fetch('/api/cancel-service-request')` (`src/pages/Dashboard.tsx`). On GitHub Pages those go to task-molly.com/api/…, which doesn't
 exist — they never reach Cloud Run. Same for Socket.IO chat (`src/pages/ChatPage.tsx`
 connects to the page's own address). Cloud Run is only reached by opening its own
 `*.run.app` address (e.g. the AI Studio preview). That's why it showed 0 requests/sec.
@@ -44,9 +43,9 @@ from the chat page also use Firestore (`cancelRequest`).
 
 **Still pointing at Cloud Run (likely broken on the live site):**
 - `src/pages/Dashboard.tsx` — Cancel button on the client dashboard's ongoing-job card
-  (`/api/cancel-service-request`), and assigning a provider (`/api/assign-task`).
-- `src/components/TaskerAssignmentModal.tsx` — picking a specific tasker
-  (`/api/live-providers`, `/api/assign-task`).
+  (`/api/cancel-service-request`).
+- Assigning a provider (`/api/assign-task`, `/api/live-providers`) was removed on 2026-11-16:
+  providers choose their own tasks (accept in `ProviderServices.tsx`, client confirms).
 - `src/pages/ChatPage.tsx` (`/chat/:jobId`) — Socket.IO chat; messages aren't saved anywhere.
 
 Moving these to the Firestore helpers in `src/lib/serviceRequests.ts` (e.g. `cancelRequest`)
@@ -56,7 +55,7 @@ pay-per-use service from the Google bill.
 Consequences:
 - Cost: it costs nothing now, but it's a public URL with open CORS — anyone who finds it can
   make it work (and bill). Keep min instances 0 and a low max instances.
-- Function: on the live site, assign task / cancel request / live providers / Socket.IO chat
+- Function: on the live site, cancel request (client dashboard) / Socket.IO chat
   likely fail. Decision for the user: point the live site at Cloud Run (API base URL), move
   those features to Firestore, or turn Cloud Run off.
 

@@ -28,7 +28,7 @@ export default function TermsView() {
           Terms of <span className="text-accent-gold font-medium">Service</span>
         </h1>
         <p className="text-sm text-rich-black/60 max-w-xl leading-relaxed">
-          Last Updated: April 2026. Please read these terms carefully before using the TaskMolly platform.
+          Last Updated: November 2026. Please read these terms carefully before using the TaskMolly platform.
         </p>
       </section>
 
@@ -124,14 +124,38 @@ export default function TermsView() {
             </div>
             <div className={`space-y-4 ${isPhone ? 'pl-4' : 'pl-8 md:pl-14'}`}>
               <div className="p-5 bg-rich-black text-white rounded-3xl">
-                <h4 className="text-xs font-bold uppercase tracking-widest text-accent-gold mb-2">Pricing & Service Charge</h4>
+                <h4 className="text-xs font-bold uppercase tracking-widest text-accent-gold mb-2">The Tasker Sets the Price</h4>
                 <p className="text-sm text-white/70 leading-relaxed">
-                  The Tasker sets their own price. The Client agrees to pay this price plus a TaskMolly service charge, which will be clearly displayed before booking confirmation.
+                  Taskers choose which requests to accept and set their own price for each job when they accept it. The Client sees that price and decides whether to confirm the Tasker. TaskMolly does not set, change or guarantee a Tasker's price. A budget entered by the Client is a guide only.
                 </p>
               </div>
-              <p className="text-sm text-rich-black/70 leading-relaxed">
-                All payments are processed securely through third-party payment gateways, including M-Pesa. By providing payment information, you authorize TaskMolly to charge the full amount.
-              </p>
+              {[
+                {
+                  title: 'Paying the Tasker',
+                  text: "The Client pays the Tasker's price directly to the Tasker, as agreed between them under the Service Contract. TaskMolly does not collect or hold this payment.",
+                },
+                {
+                  title: 'TaskMolly service charge (Clients)',
+                  text: "After the Client confirms that a job is complete, TaskMolly sends an M-Pesa payment request for its service charge. The receipt shows what the charge covers (running the Platform, finding and vetting Taskers, payment processing and dispute protection) and the VAT on it. TaskMolly may review the charge from time to time; the charge in force when the Tasker is confirmed applies to that job.",
+                },
+                {
+                  title: 'TaskMolly platform fee (Taskers)',
+                  text: "After each completed job, TaskMolly sends the Tasker an M-Pesa payment request for its platform fee: 15% of the job price, plus VAT on the fee.",
+                },
+                {
+                  title: 'Taxes',
+                  text: "TaskMolly charges VAT on its own service charge and platform fee. Taskers are independent contractors and are responsible for the tax on their own earnings. TaskMolly may ask Taskers for a valid KRA PIN and, with their consent, issue electronic tax invoices (eTIMS) to Clients on their behalf.",
+                },
+                {
+                  title: 'Unpaid charges',
+                  text: 'Payment requests are sent through third-party payment services, including M-Pesa. TaskMolly may suspend an account until any unpaid TaskMolly charge is settled.',
+                },
+              ].map((item) => (
+                <div key={item.title}>
+                  <h4 className="text-sm font-bold text-rich-black mb-1">{item.title}</h4>
+                  <p className="text-sm text-rich-black/70 leading-relaxed">{item.text}</p>
+                </div>
+              ))}
             </div>
           </section>
 
@@ -150,7 +174,7 @@ export default function TermsView() {
                   'Provide false information',
                   'Interfere with Platform operation',
                   'Harass or harm another User',
-                  'Circumvent the payment system',
+                  'Avoid TaskMolly charges on jobs found through the Platform',
                   'Use the Platform for illegal purposes'
                 ].map((item, i) => (
                   <div key={i} className="flex items-center gap-3 p-3 bg-red-50 text-red-700 rounded-xl text-xs font-medium">
