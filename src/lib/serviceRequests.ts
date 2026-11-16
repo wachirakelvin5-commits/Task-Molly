@@ -8,7 +8,7 @@ import {
   updateDoc,
 } from 'firebase/firestore';
 import { db } from '../firebase';
-import { SERVICE_CATEGORIES, getServiceCategory } from './requestModel';
+import { SERVICE_CATEGORIES, getServiceCategory, isValidQuote } from './requestModel';
 
 export * from './requestModel';
 
@@ -54,9 +54,8 @@ export async function createServiceRequest(clientId: string, request: NewService
       : getServiceCategory(request.serviceType),
     description: (description || '').slice(0, 2000),
     location: (location || 'Nairobi').slice(0, 200),
+    // The client's budget is a guide only: the provider who accepts sets the price.
     budget: budgetNum,
-    clientPrice: budgetNum,
-    providerPrice: toNumber(providerPrice) || Math.round(budgetNum * 0.85),
     status: 'pending',
     createdAt: serverTimestamp(),
     postedAt: serverTimestamp(),
@@ -71,12 +70,17 @@ function update(requestId: string, fields: Record<string, any>) {
 
 // ---- Provider actions ----
 
-export function acceptRequest(requestId: string, provider: { uid: string; displayName?: string }) {
+/** The provider takes an open request at their own price (whole shillings); the client then confirms them. */
+export function acceptRequest(requestId: string, provider: { uid: string; displayName?: string }, priceKes: number) {
+  if (!isValidQuote(priceKes)) return Promise.reject(new Error('Enter a price in whole shillings'));
   return update(requestId, {
     status: 'accepted',
     providerId: provider.uid,
     providerName: (provider.displayName || 'Service Provider').slice(0, 100),
     acceptedAt: serverTimestamp(),
+    clientPrice: priceKes,
+    // The provider's take-home is worked out from the price (see providerTakeHome).
+    providerPrice: deleteField(),
   });
 }
 
@@ -86,6 +90,8 @@ export function withdrawAcceptance(requestId: string) {
     providerId: deleteField(),
     providerName: deleteField(),
     acceptedAt: deleteField(),
+    clientPrice: deleteField(),
+    providerPrice: deleteField(),
   });
 }
 
@@ -109,6 +115,8 @@ export function rejectProvider(requestId: string, providerId: string) {
     providerId: deleteField(),
     providerName: deleteField(),
     acceptedAt: deleteField(),
+    clientPrice: deleteField(),
+    providerPrice: deleteField(),
     rejectedProviderIds: arrayUnion(providerId),
   });
 }

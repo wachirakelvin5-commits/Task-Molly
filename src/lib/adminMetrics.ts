@@ -17,6 +17,7 @@ import {
   toDate,
 } from './requestModel';
 import { taskRef } from './taskRef';
+import { PROVIDER_FEE_RATE } from './requestModel';
 
 // Small date helpers (local time). Kept dependency-free so this module runs anywhere.
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -56,7 +57,7 @@ export const formatDateTime = (d: Date) =>
 export const EXPIRING_SOON_MS = 30 * 60 * 1000;
 
 /** Task Molly's share of the agreed price when a request has no explicit providerPrice. */
-export const COMMISSION_RATE = 0.15;
+export const COMMISSION_RATE = PROVIDER_FEE_RATE;
 /** Target: M-Pesa fees on a job should be at most this share of its commission (ops-cost budget.md). */
 export const FEE_TARGET_SHARE = 0.1;
 

@@ -8,8 +8,6 @@ import { useNavigate } from 'react-router-dom';
 import ServiceTrackingDetail from '../components/ServiceTrackingDetail';
 import ForumSidebar from '../components/ForumSidebar';
 import ComplaintModal from '../components/ComplaintModal';
-import TaskerAssignmentModal from '../components/TaskerAssignmentModal';
-import ManageRequestModal from '../components/ManageRequestModal';
 import CreateRequestModal from '../components/CreateRequestModal';
 import EditProfileModal from '../components/EditProfileModal';
 import { collection, query, where, onSnapshot, orderBy } from 'firebase/firestore';
@@ -42,7 +40,6 @@ export default function Dashboard({ user }: DashboardProps) {
   const [activeJob, setActiveJob] = useState<any>(null);
   const [showForum, setShowForum] = useState(false);
   const [complaintJob, setComplaintJob] = useState<any>(null);
-  const [assigningTask, setAssigningTask] = useState<any>(null);
   const [realJobs, setRealJobs] = useState<any[]>([]);
   const [loading, setLoading] = useState(true);
   const [isSyncing, setIsSyncing] = useState(false);
@@ -73,7 +70,6 @@ export default function Dashboard({ user }: DashboardProps) {
     return <Briefcase size={size} />;
   };
 
-  const [pastProviders, setPastProviders] = useState<any[]>([]);
   const [debugForceShow, setDebugForceShow] = useState(false);
   const isDevUser = user?.uid?.startsWith('dev_');
 
@@ -137,42 +133,6 @@ export default function Dashboard({ user }: DashboardProps) {
     const interval = setInterval(checkAndSync, 8000);
     return () => clearInterval(interval);
   }, [user.uid, realJobs.length, isSyncing, syncStatus]);
-
-  useEffect(() => {
-    if (!user.uid) {
-      setLoading(false);
-      return;
-    }
-
-    // For real users, we wait for auth. For dev users, we proceed (though Firestore may fail perms)
-    if (!auth.currentUser && !user.uid.startsWith('dev_')) return;
-
-    // Fetch past providers from completed jobs
-    const qCompleted = query(
-      collection(db, 'serviceRequests'),
-      where('clientId', '==', user.uid),
-      where('status', '==', 'completed')
-    );
-
-    const unsubscribePast = onSnapshot(qCompleted, (snapshot) => {
-      const providersMap = new Map();
-      snapshot.docs.forEach(doc => {
-        const data = doc.data();
-        if (data.providerId && data.providerName) {
-          providersMap.set(data.providerId, {
-            id: data.providerId,
-            name: data.providerName,
-            photo: data.providerPhoto || `https://picsum.photos/seed/${data.providerId}/200`
-          });
-        }
-      });
-      setPastProviders(Array.from(providersMap.values()));
-    }, (err) => {
-      handleFirestoreError(err, OperationType.GET, 'serviceRequests/completed');
-    });
-
-    return () => unsubscribePast();
-  }, [user.uid]);
 
   useEffect(() => {
     if (!user.uid) {
@@ -306,26 +266,6 @@ export default function Dashboard({ user }: DashboardProps) {
       }
     } catch (err) {
       console.error("[Dashboard] ❌ Cancel error caught:", err);
-      toast.error("An error occurred");
-    }
-  };
-
-  const handleAssignProvider = async (taskId: string, providerId: string) => {
-    try {
-      const res = await fetch('/api/assign-task', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ taskId, providerId })
-      });
-
-      if (res.ok) {
-        toast.success("Provider assigned successfully!");
-        setActiveJob(null);
-      } else {
-        toast.error("Failed to assign provider");
-      }
-    } catch (err) {
-      console.error("Assignment error:", err);
       toast.error("An error occurred");
     }
   };
@@ -505,24 +445,6 @@ export default function Dashboard({ user }: DashboardProps) {
                     )}
                   </div>
 
-                  {pastProviders.length > 0 && job.status === 'pending' && (
-                    <div>
-                      <p className="text-[10px] uppercase tracking-widest text-rich-black/40 font-bold mb-3">Quick Assign</p>
-                      <div className="flex flex-wrap gap-2">
-                        {pastProviders.slice(0, 3).map(pro => (
-                          <button 
-                            key={pro.id}
-                            onClick={() => handleAssignProvider(job.id, pro.id)}
-                            className="flex items-center gap-2 p-2 pr-4 bg-white border border-warm-gray rounded-full hover:border-accent-gold transition-all group shadow-sm"
-                          >
-                            <img src={pro.photo} alt={pro.name} className="w-8 h-8 rounded-full object-cover" />
-                            <span className="text-[10px] font-extrabold text-rich-black uppercase tracking-tight">{pro.name.split(' ')[0]}</span>
-                            <Plus size={14} className="text-accent-gold" />
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  )}
                 </div>
 
                 <div className="pt-4 border-t border-warm-gray/20">

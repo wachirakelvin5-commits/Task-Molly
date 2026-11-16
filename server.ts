@@ -246,8 +246,6 @@ async function startServer() {
       const budgetNum = parseNum(budget);
       const initialQuoteNum = parseNum(initialQuote);
 
-      const clientPrice = budgetNum || (initialQuoteNum ? initialQuoteNum * 1.25 : 0);
-      const providerPrice = initialQuoteNum ? initialQuoteNum * 1.08 : (budgetNum ? budgetNum / 1.15 : 0);
 
       const requestData = {
         clientId,
@@ -257,9 +255,8 @@ async function startServer() {
         location: location || "Nairobi, KE",
         deadline: deadline || "flexible",
         initialQuote: initialQuoteNum,
-        budget: budgetNum || clientPrice,
-        clientPrice: Number(clientPrice.toFixed(2)),
-        providerPrice: Number(providerPrice.toFixed(2)),
+        // A guide only: the provider who accepts sets the price (clientPrice).
+        budget: budgetNum || initialQuoteNum,
         status: 'pending',
         syncId: syncId || null,
         createdAt: FieldValue.serverTimestamp(),
@@ -363,55 +360,6 @@ async function startServer() {
     } catch (error: any) {
       console.error("[API] ❌ CRITICAL FAIL during cancellation:", error);
       res.status(500).json({ error: error.message || "Interal Server Error" });
-    }
-  });
-
-  app.get("/api/live-providers", async (req, res) => {
-    try {
-      const snapshot = await db.collection('users').where('role', '==', 'tasker').limit(10).get();
-      const providers = snapshot.docs.map(doc => ({
-        uid: doc.id,
-        ...doc.data()
-      }));
-      res.json(providers);
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
-    }
-  });
-
-  app.post("/api/assign-task", async (req, res) => {
-    const { taskId, providerId } = req.body;
-    if (!taskId || !providerId) return res.status(400).json({ error: "Missing fields" });
-
-    try {
-      const taskRef = db.collection('serviceRequests').doc(taskId);
-      const providerDoc = await db.collection('users').doc(providerId).get();
-      const provider = providerDoc.data();
-
-      if (!provider) return res.status(404).json({ error: "Provider not found" });
-
-      await taskRef.update({
-        status: 'assigned',
-        providerId: providerId,
-        providerName: provider.displayName || "Pro",
-        providerPhoto: provider.photoURL || `https://picsum.photos/seed/${providerId}/200`,
-        updatedAt: admin.firestore.FieldValue.serverTimestamp()
-      });
-
-      // Also create a record in 'jobs' if needed by the tracking system
-      const taskData = (await taskRef.get()).data();
-      if (taskData) {
-        await db.collection('jobs').doc(taskId).set({
-          ...taskData,
-          status: 'assigned',
-          providerId,
-          updatedAt: admin.firestore.FieldValue.serverTimestamp()
-        });
-      }
-
-      res.json({ success: true });
-    } catch (error: any) {
-      res.status(500).json({ error: error.message });
     }
   });
 

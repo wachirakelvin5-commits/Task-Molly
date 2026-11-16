@@ -1,7 +1,7 @@
 import { ReactNode, useState } from 'react';
 import { Briefcase, Clock, Droplet, Hammer, MapPin, MessageSquare, Sparkles, Truck, Zap } from 'lucide-react';
 import { auth } from '../firebase';
-import { RequestStatus, STATUS_LABELS, getServiceCategory, toDate } from '../lib/serviceRequests';
+import { RequestStatus, STATUS_LABELS, getServiceCategory, providerTakeHome, quotedPrice, toDate } from '../lib/serviceRequests';
 import { chatRole } from '../lib/taskChat';
 import { taskRef } from '../lib/taskRef';
 import { TaskChatModal } from './TaskChat';
@@ -26,7 +26,7 @@ const STATUS_STYLES: Record<RequestStatus, string> = {
 
 interface RequestCardProps {
   request: any;
-  /** Which price to show: what the client pays or what the provider earns. */
+  /** Whose view this is: the client sees the job price, the provider also sees what they keep. */
   priceField: 'clientPrice' | 'providerPrice';
   /** Overrides the status badge text, e.g. "Expired". */
   badge?: string;
@@ -40,7 +40,18 @@ export default function RequestCard({ request, priceField, badge, note, children
   const Icon = CATEGORY_ICONS[category] || Briefcase;
   const status = (request.status || 'pending') as RequestStatus;
   const posted = toDate(request.createdAt);
-  const price = request[priceField] ?? request.budget;
+  // Open requests show the client's budget as a guide; once a provider accepts, their price.
+  const quoted = quotedPrice(request);
+  const budget = Number(request.budget) > 0 ? Number(request.budget) : null;
+  const kes = (n: number) => `KES ${n.toLocaleString()}`;
+  const priceText =
+    quoted !== null
+      ? priceField === 'providerPrice'
+        ? `${kes(quoted)} · you keep ${kes(providerTakeHome(request) ?? quoted)}`
+        : kes(quoted)
+      : budget !== null
+        ? `${priceField === 'providerPrice' ? 'Client budget' : 'Your budget'} ${kes(budget)}`
+        : 'No budget given';
   const ref = taskRef(request);
 
   // Chat between the client and the provider, once a provider has taken the task.
@@ -86,7 +97,7 @@ export default function RequestCard({ request, priceField, badge, note, children
           <Clock size={12} className="text-accent-gold shrink-0" />
           <span className="truncate">{request.scheduledTime || request.urgency || 'ASAP'}</span>
         </div>
-        <div className="font-black text-rich-black">{price ? `KES ${Number(price).toLocaleString()}` : 'Price TBC'}</div>
+        <div className={quoted !== null ? 'font-black text-rich-black' : 'font-semibold text-rich-black/70'}>{priceText}</div>
         <div className="text-right text-rich-black/40">{posted ? `Posted ${posted.toLocaleDateString()}` : 'Posting…'}</div>
       </div>
 

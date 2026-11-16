@@ -107,7 +107,7 @@ service cloud.firestore {
     // ===============================================================
     // Collection: Service Requests
     // Lifecycle (see src/lib/serviceRequests.ts):
-    //   pending -> accepted (provider) -> assigned (client confirms)
+    //   pending -> accepted (provider, at their own price) -> assigned (client confirms)
     //   accepted -> pending (client rejects / provider withdraws)
     //   assigned -> in-progress -> awaiting-confirmation (provider)
     //   awaiting-confirmation -> completed (client signs off)
@@ -142,6 +142,13 @@ service cloud.firestore {
       function fromTo(from, to) { return existing().status == from && incoming().status == to; }
       function stampedNow(field) { return incoming()[field] == request.time; }
       function isAssignedProvider() { return existing().get('providerId', '') == request.auth.uid; }
+      // The provider sets the job price when they accept: whole shillings, at most KES 1,000,000.
+      function isValidQuote(data) { return data.clientPrice is int && data.clientPrice > 0 && data.clientPrice <= 1000000; }
+      // Sending a request back to providers drops the departing provider's price, if it touches it at all.
+      function dropsPriceIfChanged() {
+        return (!changed().hasAny(['clientPrice']) || !('clientPrice' in incoming())) &&
+               (!changed().hasAny(['providerPrice']) || !('providerPrice' in incoming()));
+      }
 
       // Open = pending and posted (or reposted) within the last 3 hours.
       function isOpen(data) {
@@ -154,7 +161,7 @@ service cloud.firestore {
         return existing().clientId == request.auth.uid && (
           // Edit or repost while still waiting for a pro
           (fromTo('pending', 'pending') &&
-            changed().hasOnly(['description', 'budget', 'clientPrice', 'providerPrice', 'postedAt', 'updatedAt']) &&
+            changed().hasOnly(['description', 'budget', 'postedAt', 'updatedAt']) &&
             (!changed().hasAny(['postedAt']) || stampedNow('postedAt')) &&
             isValidRequest(incoming())) ||
           // Cancel before work starts
@@ -165,8 +172,8 @@ service cloud.firestore {
             changed().hasOnly(['status', 'confirmedAt', 'updatedAt']) && stampedNow('confirmedAt')) ||
           // Reject the pro who accepted: reopen and never offer it to them again
           (fromTo('accepted', 'pending') &&
-            changed().hasOnly(['status', 'providerId', 'providerName', 'acceptedAt', 'rejectedProviderIds', 'updatedAt']) &&
-            !('providerId' in incoming()) &&
+            changed().hasOnly(['status', 'providerId', 'providerName', 'acceptedAt', 'clientPrice', 'providerPrice', 'rejectedProviderIds', 'updatedAt']) &&
+            !('providerId' in incoming()) && dropsPriceIfChanged() &&
             incoming().rejectedProviderIds.hasAll(previouslyRejected) &&
             incoming().rejectedProviderIds.size() == previouslyRejected.size() + 1 &&
             existing().providerId in incoming().rejectedProviderIds) ||
@@ -188,12 +195,13 @@ service cloud.firestore {
             existing().get('serviceCategory', '') in callerProfile().get('services', []) &&
             incoming().providerId == request.auth.uid &&
             incoming().providerName is string && incoming().providerName.size() <= 100 &&
-            changed().hasOnly(['status', 'providerId', 'providerName', 'acceptedAt', 'updatedAt']) &&
+            changed().hasOnly(['status', 'providerId', 'providerName', 'acceptedAt', 'clientPrice', 'providerPrice', 'updatedAt']) &&
+            isValidQuote(incoming()) && !('providerPrice' in incoming()) &&
             stampedNow('acceptedAt')) ||
           // Withdraw before the client confirms
           (fromTo('accepted', 'pending') && isAssignedProvider() &&
-            changed().hasOnly(['status', 'providerId', 'providerName', 'acceptedAt', 'updatedAt']) &&
-            !('providerId' in incoming())) ||
+            changed().hasOnly(['status', 'providerId', 'providerName', 'acceptedAt', 'clientPrice', 'providerPrice', 'updatedAt']) &&
+            !('providerId' in incoming()) && dropsPriceIfChanged()) ||
           // Start the job
           (fromTo('assigned', 'in-progress') && isAssignedProvider() &&
             changed().hasOnly(['status', 'startedAt', 'updatedAt']) && stampedNow('startedAt')) ||

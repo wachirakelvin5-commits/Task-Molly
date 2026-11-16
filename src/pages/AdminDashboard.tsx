@@ -296,6 +296,9 @@ export default function AdminDashboard() {
               providerName: deleteField(),
               acceptedAt: deleteField(),
               confirmedAt: deleteField(),
+              // The removed provider's price goes too: the next provider sets their own.
+              clientPrice: deleteField(),
+              providerPrice: deleteField(),
               postedAt: serverTimestamp(),
             }
           : { status: 'cancelled', cancelledAt: serverTimestamp(), cancelledBy: 'admin' };
