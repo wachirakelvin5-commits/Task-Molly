@@ -139,10 +139,6 @@ export default function TermsView() {
                   text: "After the Client confirms that a job is complete, TaskMolly sends an M-Pesa payment request for its service charge. The receipt shows what the charge covers (running the Platform, finding and vetting Taskers, payment processing and dispute protection) and the VAT on it. TaskMolly may review the charge from time to time; the charge in force when the Tasker is confirmed applies to that job.",
                 },
                 {
-                  title: 'TaskMolly platform fee (Taskers)',
-                  text: "After each completed job, TaskMolly sends the Tasker an M-Pesa payment request for its platform fee: 15% of the job price, plus VAT on the fee.",
-                },
-                {
                   title: 'Taxes',
                   text: "TaskMolly charges VAT on its own service charge and platform fee. Taskers are independent contractors and are responsible for the tax on their own earnings. TaskMolly may ask Taskers for a valid KRA PIN and, with their consent, issue electronic tax invoices (eTIMS) to Clients on their behalf.",
                 },
