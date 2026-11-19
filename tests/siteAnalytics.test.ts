@@ -97,14 +97,17 @@ test('pageLabel', () => {
 
 test('communitySummary', () => {
   const posts = [
-    normalizeForumPost('p1', { userId: 'u1', content: 'Hi', likes: 3, timestamp: at(HOUR) }),
-    normalizeForumPost('p2', { userId: 'u2', content: 'Reply', likes: 0, replyToId: 'p1', timestamp: at(2 * HOUR) }),
-    normalizeForumPost('p3', { userId: 'u1', content: 'Old', likes: 9, timestamp: at(3 * DAY) }),
+    normalizeForumPost('xyd4954y', { randomId: 'xyd4954y', content: 'Hi', likes: 3, hates: 1, commentCount: 2, timestamp: at(HOUR) }),
+    // A post from before Randoms: old shape, shown by its document id.
+    normalizeForumPost('OldDocId12345', { userId: 'u2', content: 'Reply', likes: 0, replyToId: 'p1', timestamp: at(2 * HOUR) }),
+    normalizeForumPost('p3', { content: 'Old', likes: 9, timestamp: at(3 * DAY) }),
   ];
   const c = communitySummary(posts, makePeriod('today', NOW));
   assert.equal(c.posts, 2);
   assert.equal(c.replies, 1);
-  assert.equal(c.participants, 2);
   assert.equal(c.likes, 3);
-  assert.deepEqual(c.mostLiked.map((p) => p.id), ['p1']);
+  assert.equal(c.hates, 1);
+  assert.equal(c.comments, 2);
+  assert.deepEqual(c.mostLiked.map((p) => p.randomId), ['xyd4954y']);
+  assert.equal(posts[1].randomId, 'olddocid');
 });

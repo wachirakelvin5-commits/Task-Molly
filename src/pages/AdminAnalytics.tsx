@@ -200,7 +200,7 @@ export default function AdminAnalytics() {
           {/* Community: live from the forum */}
           <Card>
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <Title icon={MessageSquare} title="Community" subtitle="Forum comments in this period" />
+              <Title icon={MessageSquare} title="Community" subtitle="Randoms posted in this period" />
               <select
                 value={range}
                 onChange={(e) => setRange(e.target.value as RangeKey)}
@@ -215,11 +215,12 @@ export default function AdminAnalytics() {
               </select>
             </div>
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-              <div className="grid grid-cols-3 gap-2 content-start">
+              <div className="grid grid-cols-2 gap-2 content-start">
                 {[
-                  { label: 'Comments', value: community.posts },
-                  { label: 'People', value: community.participants },
+                  { label: 'Randoms', value: community.posts },
+                  { label: 'Comments', value: community.comments },
                   { label: 'Likes', value: community.likes },
+                  { label: 'Hates', value: community.hates },
                 ].map((s) => (
                   <div key={s.label} className="bg-primary-bg rounded-xl p-3 text-center">
                     <p className="text-lg font-black text-rich-black tabular-nums">{s.value}</p>
@@ -235,13 +236,13 @@ export default function AdminAnalytics() {
                       <li key={p.id} className="text-xs">
                         <p className="text-rich-black/80 line-clamp-2">"{p.content}"</p>
                         <p className="text-rich-black/45 mt-0.5 flex items-center gap-1">
-                          {p.userName} · <Heart size={11} className="text-red-500" /> {p.likes}
+                          Random {p.randomId} · <Heart size={11} className="text-red-500" /> {p.likes}
                         </p>
                       </li>
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-xs text-rich-black/45">No liked comments in this period.</p>
+                  <p className="text-xs text-rich-black/45">No liked Randoms in this period.</p>
                 )}
               </div>
             </div>

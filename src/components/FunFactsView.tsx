@@ -29,11 +29,12 @@ import {
   Wind,
   FileCheck,
   Map,
-  Activity,
-  Trophy
+  Activity
 } from 'lucide-react';
-import { FUN_FACTS, FunFact } from '../constants/funFactsData';
+import { FUN_FACTS } from '../constants/funFactsData';
+import { BlogPost } from '../constants/blogData';
 import { Link } from 'react-router-dom';
+import PriorityIntelligence, { PriorityArticle } from './PriorityIntelligence';
 
 const ICON_MAP: Record<string, any> = {
   Droplets, Zap, Sparkles, Shirt, Flame, CheckCircle2, AlertTriangle, ArrowRight,
@@ -54,10 +55,13 @@ export default function FunFactsView() {
   const [activeCategory, setActiveCategory] = useState('all');
   const [searchQuery, setSearchQuery] = useState('');
   const [viewedFacts, setViewedFacts] = useState<number[]>([]);
+  const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
 
   useEffect(() => {
     const saved = localStorage.getItem('taskMolly_viewedFacts');
-    if (saved) setViewedFacts(JSON.parse(saved));
+    if (saved) {
+      try { setViewedFacts(JSON.parse(saved)); } catch { /* ignore a broken saved list */ }
+    }
   }, []);
 
   const markAsViewed = (id: number) => {
@@ -77,36 +81,22 @@ export default function FunFactsView() {
     });
   }, [activeCategory, searchQuery]);
 
-  const progress = (viewedFacts.length / FUN_FACTS.length) * 100;
+  if (selectedPost) {
+    return (
+      <div className="h-full">
+        <PriorityArticle post={selectedPost} onBack={() => setSelectedPost(null)} />
+      </div>
+    );
+  }
 
   return (
-    <div className="h-full flex flex-col bg-primary-bg/30">
-      {/* Header & Progress */}
-      <div className="p-4 md:p-6 bg-white border-b border-warm-gray sticky top-0 z-20">
-        <div className="flex items-center justify-between gap-4 mb-4">
-          <div className="flex-1">
-            <div className="flex items-center gap-2 text-accent-gold mb-0.5">
-              <Trophy size={14} />
-              <span className="text-[10px] font-bold uppercase tracking-widest">Fact Master</span>
-            </div>
-            <h1 className="text-xl font-light text-rich-black leading-tight">Industry Insights</h1>
-          </div>
-          
-          <div className="flex flex-col items-end shrink-0">
-            <div className="text-[10px] font-bold text-rich-black/40 uppercase mb-1">
-              Progress: <span className="text-accent-gold">{viewedFacts.length}/{FUN_FACTS.length}</span>
-            </div>
-            <div className="w-24 h-1.5 bg-warm-gray/30 rounded-full overflow-hidden">
-              <motion.div 
-                className="h-full bg-accent-gold"
-                initial={{ width: 0 }}
-                animate={{ width: `${progress}%` }}
-                transition={{ duration: 1, ease: "easeOut" }}
-              />
-            </div>
-          </div>
-        </div>
+    <div className="h-full overflow-y-auto no-scrollbar bg-primary-bg/30">
+      {/* Priority Intelligence (published articles), in place of the old Fact Master header */}
+      <div className="border-b border-warm-gray">
+        <PriorityIntelligence onSelect={setSelectedPost} />
+      </div>
 
+      <div className="p-4 md:p-6 bg-white border-b border-warm-gray sticky top-0 z-20">
         {/* Search & Filters */}
         <div className="space-y-3">
           <div className="relative">
@@ -140,7 +130,7 @@ export default function FunFactsView() {
       </div>
 
       {/* Facts Grid */}
-      <div className="flex-1 overflow-y-auto p-4 md:p-6 no-scrollbar">
+      <div className="p-4 md:p-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <AnimatePresence mode="popLayout">
             {filteredFacts.map((fact) => {

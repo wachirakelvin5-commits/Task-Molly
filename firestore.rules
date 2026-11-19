@@ -301,30 +301,44 @@ service cloud.firestore {
       allow write: if isAdmin();
     }
 
-    // Posts: exactly what src/components/ForumSidebar.tsx sends, with size limits.
+    // Randoms: exactly what src/lib/randomPosts.ts builds (used by src/components/RandomFeed.tsx).
+    // Anonymous: no user id, name or photo is stored. The document id is the Random's own
+    // 8-character ID, and an existing Random can't be overwritten, so every ID is unique.
+    // Posting, reacting and commenting still need sign-in, so signed-out visitors can't write.
     match /forum/{postId} {
-      function isValidPost(d) {
-        return d.keys().hasOnly(['userId', 'userName', 'naverId', 'userAvatar', 'content', 'topic',
-                                 'mentions', 'likes', 'replyToId', 'replyToUser', 'timestamp']) &&
-          d.userId == request.auth.uid &&
+      function isValidRandom(d) {
+        return d.keys().hasOnly(['randomId', 'content', 'likes', 'hates', 'commentCount', 'timestamp']) &&
+          d.keys().hasAll(['randomId', 'content', 'likes', 'hates', 'commentCount', 'timestamp']) &&
+          postId.matches('^[a-z0-9]{8}$') && d.randomId == postId &&
           d.content is string && d.content.size() > 0 && d.content.size() <= 1000 &&
-          d.get('userName', '') is string && d.get('userName', '').size() <= 100 &&
-          d.get('naverId', '') is string && d.get('naverId', '').size() <= 20 &&
-          d.get('userAvatar', '') is string && d.get('userAvatar', '').size() <= 1000 &&
-          d.get('topic', '') is string && d.get('topic', '').size() <= 100 &&
-          d.get('mentions', []) is list && d.get('mentions', []).size() <= 20 &&
-          d.get('likes', 0) == 0 &&
-          (d.get('replyToId', null) == null || (d.replyToId is string && d.replyToId.size() <= 128)) &&
-          (d.get('replyToUser', null) == null || (d.replyToUser is string && d.replyToUser.size() <= 100)) &&
+          d.likes == 0 && d.hates == 0 && d.commentCount == 0 &&
           d.timestamp == request.time;
       }
+      // A count may only be a whole number of zero or more, moved by one of the allowed steps.
+      function countStep(field, steps) {
+        return incoming().get(field, 0) is int && incoming().get(field, 0) >= 0 &&
+          incoming().get(field, 0) - existing().get(field, 0) in steps;
+      }
       allow read: if true;
-      allow create: if isSignedIn() && isValidPost(incoming());
-      // Likes: signed-in users may move the like count by one, and change nothing else.
+      allow create: if isSignedIn() && isValidRandom(incoming());
+      // Likes and hates move by one (switching from like to hate moves both);
+      // the comment count only goes up by one, alongside a new comment. Nothing else changes.
       allow update: if isSignedIn() &&
-        incoming().diff(existing()).affectedKeys().hasOnly(['likes']) &&
-        incoming().likes is int && incoming().likes >= 0 &&
-        incoming().likes - existing().get('likes', 0) in [-1, 1];
+        incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'hates', 'commentCount']) &&
+        countStep('likes', [-1, 0, 1]) &&
+        countStep('hates', [-1, 0, 1]) &&
+        countStep('commentCount', [0, 1]);
+
+      // Comments on a Random: just the text and the server time, nothing about the person.
+      match /comments/{commentId} {
+        allow read: if true;
+        allow create: if isSignedIn() &&
+          exists(/databases/$(database)/documents/forum/$(postId)) &&
+          incoming().keys().hasOnly(['content', 'timestamp']) &&
+          incoming().keys().hasAll(['content', 'timestamp']) &&
+          incoming().content is string && incoming().content.size() > 0 && incoming().content.size() <= 500 &&
+          incoming().timestamp == request.time;
+      }
     }
 
     // Complaints: exactly what src/components/ComplaintModal.tsx sends, filed by the reporter.
