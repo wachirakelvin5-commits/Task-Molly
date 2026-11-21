@@ -304,7 +304,10 @@ service cloud.firestore {
     // Randoms: exactly what src/lib/randomPosts.ts builds (used by src/components/RandomFeed.tsx).
     // Anonymous: no user id, name or photo is stored. The document id is the Random's own
     // 8-character ID, and an existing Random can't be overwritten, so every ID is unique.
-    // Posting, reacting and commenting still need sign-in, so signed-out visitors can't write.
+    // Random is the ONLY place signed-out visitors may write (owner's decision, 2026-11-21):
+    // posting, reacting and commenting need no account. Everything else in this file still
+    // requires sign-in. Writes here are held to the exact shapes below; see the ops-cost
+    // skill for the daily-write risk this carries on the Spark plan.
     match /forum/{postId} {
       function isValidRandom(d) {
         return d.keys().hasOnly(['randomId', 'content', 'likes', 'hates', 'commentCount', 'timestamp']) &&
@@ -320,10 +323,10 @@ service cloud.firestore {
           incoming().get(field, 0) - existing().get(field, 0) in steps;
       }
       allow read: if true;
-      allow create: if isSignedIn() && isValidRandom(incoming());
+      allow create: if isValidRandom(incoming());
       // Likes and hates move by one (switching from like to hate moves both);
       // the comment count only goes up by one, alongside a new comment. Nothing else changes.
-      allow update: if isSignedIn() &&
+      allow update: if
         incoming().diff(existing()).affectedKeys().hasOnly(['likes', 'hates', 'commentCount']) &&
         countStep('likes', [-1, 0, 1]) &&
         countStep('hates', [-1, 0, 1]) &&
@@ -332,7 +335,7 @@ service cloud.firestore {
       // Comments on a Random: just the text and the server time, nothing about the person.
       match /comments/{commentId} {
         allow read: if true;
-        allow create: if isSignedIn() &&
+        allow create: if
           exists(/databases/$(database)/documents/forum/$(postId)) &&
           incoming().keys().hasOnly(['content', 'timestamp']) &&
           incoming().keys().hasAll(['content', 'timestamp']) &&

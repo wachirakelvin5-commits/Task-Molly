@@ -31,7 +31,8 @@ separately. To count them, give them their own address (a route), not a Firestor
 
 1. **Prefer Cloudflare** (or another outside tool with a free tier) over Firestore. Never add
    a Firestore write that signed-out visitors can make: it reopens the hole where a script can
-   use up the 20,000 writes/day for everyone.
+   use up the 20,000 writes/day for everyone. (Random is the single, owner-approved exception;
+   see "Random is open to signed-out visitors" below.)
 2. **If something must be stored in Firestore** (e.g. a business event for signed-in users,
    such as "request posted"), account for the cost and write it in the PR description:
    - **New event type, or an event sent more often:** adds **writes**. Estimate
@@ -88,3 +89,24 @@ too. Those show an error to the user rather than failing silently.
 
 Before adding any SDK or API that can bill: add it to `inventory.md`, note its free limit in
 `limits.md`, and tell the user what it will cost at today's traffic and at 10× traffic.
+
+## Random is open to signed-out visitors
+
+Since 2026-11-21, by the owner's decision, Random (the home page's anonymous posts, in the
+`forum` collection) can be posted to, reacted to and commented on **without an account**. It
+is the only signed-out write in `firestore.rules`; a rules test checks that every other
+collection still refuses signed-out writes. Keep it that way.
+
+What limits the damage: each write is held to an exact shape and size (1,000 characters a
+Random, 500 a comment), Randoms can't be edited or deleted, and counts move by one per write.
+What it does **not** stop: a script posting or reacting thousands of times. On Spark that
+uses up the 20,000 writes/day, and then sign-ups, requests and job updates fail for everyone
+until the reset (≈ 10:00–11:00 Nairobi time).
+
+Watch Firestore → Usage for unusual write spikes. If it is abused, in order of effort:
+1. Turn on **Firebase App Check** (with reCAPTCHA; check its current free limits) and enforce it for
+   Firestore, so only the real site can write.
+2. Use silent **Anonymous sign-in** for Random and rate-limit per anonymous account in the
+   rules (needs a small per-visitor counter document).
+3. Put the sign-in requirement back on Random (`isSignedIn()` in the `forum` rules).
+

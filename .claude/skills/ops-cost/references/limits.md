@@ -10,7 +10,7 @@ Hitting a limit = that feature stops until the reset. No bill. Reset: midnight U
 | Item | Free limit | Notes for Task Molly |
 |---|---|---|
 | Firestore document reads | **50,000 / day** | The tightest limit. Live listeners (`onSnapshot`) count every document on first load and every changed document after. |
-| Firestore writes | **20,000 / day** | Visits no longer write here (moved to Cloudflare Web Analytics, 2026-11). Signed-out visitors can't write anything. Writes now come from signed-in actions: sign-ups, requests, job updates, chat, forum, complaints. |
+| Firestore writes | **20,000 / day** | Visits no longer write here (moved to Cloudflare Web Analytics, 2026-11). Signed-out visitors can only write to Random (posts, likes/hates, comments; owner's decision 2026-11-21, see code-rules.md). All other writes come from signed-in actions: sign-ups, requests, job updates, chat, complaints. |
 | Firestore deletes | 20,000 / day | |
 | Firestore stored data | 1 GiB | `analytics` no longer grows (old events kept as read-only history). |
 | Firestore network out | 10 GiB / month | |

@@ -650,13 +650,13 @@ describe('randoms (forum)', () => {
     });
   });
 
-  test('a signed-in user can post a Random, and anyone can read it', async () => {
-    await assertSucceeds(post('alice', 'xyd4954y'));
+  test('anyone can post a Random, with or without an account, and anyone can read it', async () => {
+    await assertSucceeds(post(undefined, 'xyd4954y'));
+    await assertSucceeds(post('alice', 'abc12345'));
     await assertSucceeds(getDoc(doc(db(), 'forum/xyd4954y')));
   });
 
   test('a Random stores nothing about the person, and its ID is unique', async () => {
-    await assertFails(post(undefined));
     await assertFails(post('alice', generateRandomId(), { userId: 'alice' }));
     await assertFails(post('alice', generateRandomId(), { userName: 'Alice' }));
     await assertFails(post('alice', 'XYD4954Y', { randomId: 'XYD4954Y' }));
@@ -682,30 +682,59 @@ describe('randoms (forum)', () => {
     await assertSucceeds(updateDoc(doc(db('eve'), R), { hates: increment(-1) }));
     await assertSucceeds(updateDoc(doc(db('eve'), OLD), { hates: increment(1) }));
     await assertSucceeds(updateDoc(doc(db('eve'), OLD), { likes: increment(-1) }));
+    // No account needed to react.
+    await assertSucceeds(updateDoc(doc(db(), R), { likes: increment(1) }));
+    await assertSucceeds(updateDoc(doc(db(), R), { likes: increment(-1), hates: increment(1) }));
   });
 
-  test('counts cannot jump, go negative, come with other edits, or come from signed-out visitors', async () => {
+  test('counts cannot jump, go negative or come with other edits, and Randoms cannot be deleted', async () => {
     const R = 'forum/abcd1234';
     await assertFails(updateDoc(doc(db('eve'), R), { likes: increment(5) }));
     await assertFails(updateDoc(doc(db('eve'), R), { hates: -1 }));
     await assertFails(updateDoc(doc(db('eve'), R), { commentCount: increment(-1) }));
     await assertFails(updateDoc(doc(db('eve'), R), { likes: increment(1), content: 'edited' }));
-    await assertFails(updateDoc(doc(db(), R), { likes: increment(1) }));
+    await assertFails(updateDoc(doc(db(), R), { likes: increment(3) }));
+    await assertFails(updateDoc(doc(db(), R), { content: 'edited' }));
     await assertFails(deleteDoc(doc(db('alice'), R)));
+    await assertFails(deleteDoc(doc(db(), R)));
   });
 
-  test('signed-in users can comment, and anyone can read comments', async () => {
+  test('anyone can comment, with or without an account, and anyone can read comments', async () => {
+    await assertSucceeds(comment(undefined, 'abcd1234'));
     await assertSucceeds(comment('eve', 'abcd1234'));
     await assertSucceeds(comment('eve', 'oldpost1'));
     await assertSucceeds(getDocs(collection(db(), 'forum', 'abcd1234', 'comments')));
   });
 
-  test('comments: not signed out, not on missing Randoms, nothing about the person', async () => {
-    await assertFails(comment(undefined, 'abcd1234'));
+  test('comments: not on missing Randoms, nothing about the person, no edits or deletes', async () => {
+    await assertFails(comment(undefined, 'nopost99'));
     await assertFails(comment('eve', 'nopost99'));
+    await assertFails(comment(undefined, 'abcd1234', { userId: 'anon' }));
     await assertFails(comment('eve', 'abcd1234', { userId: 'eve' }));
     await assertFails(comment('eve', 'abcd1234', { content: 'x'.repeat(501) }));
     await assertFails(comment('eve', 'abcd1234', { content: '' }));
+  });
+});
+
+describe('Random is the only place that works without an account', () => {
+  test('signed-out visitors still cannot write anywhere else', async () => {
+    const anon = db();
+    await assertFails(setDoc(doc(anon, 'users/anon'), { name: 'x' }));
+    await assertFails(addDoc(collection(anon, 'serviceRequests'), { title: 'x' }));
+    await assertFails(addDoc(collection(anon, 'complaints'), { text: 'x' }));
+    await assertFails(addDoc(collection(anon, 'unlistedServiceRequests'), { text: 'x' }));
+    await assertFails(addDoc(collection(anon, 'analytics'), { path: '/' }));
+    await assertFails(setDoc(doc(anon, 'providerProfiles/anon'), { name: 'x' }));
+    await assertFails(setDoc(doc(anon, 'jobs/anon'), { title: 'x' }));
+    await assertFails(setDoc(doc(anon, 'taskerProfiles/anon'), { name: 'x' }));
+    await assertFails(addDoc(collection(anon, 'providerVerifications'), { a: 1 }));
+    await assertFails(addDoc(collection(anon, 'payments'), { a: 1 }));
+    await assertFails(addDoc(collection(anon, 'payouts'), { a: 1 }));
+    await assertFails(addDoc(collection(anon, 'notifications'), { a: 1 }));
+    await assertFails(addDoc(collection(anon, 'serviceRequests', 'req1', 'messages'), { text: 'x' }));
+    await assertFails(addDoc(collection(anon, 'somethingNew'), { a: 1 }));
+    // Only `comments` is open under a Random, nothing else.
+    await assertFails(addDoc(collection(anon, 'forum', 'abcd1234', 'other'), { content: 'x' }));
   });
 });
 

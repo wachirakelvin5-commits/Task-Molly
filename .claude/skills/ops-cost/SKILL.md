@@ -17,9 +17,13 @@ new code from breaking it.
   nobody can sign up, post or accept a job. Out of reads: the whole app stops loading data.
   On Spark the risk is an *outage*, not a bill.
 - **Visits are counted by Cloudflare Web Analytics** (`src/lib/webAnalytics.ts`), not
-  Firestore, so they cost no database writes, and signed-out visitors can't write to the
-  database at all. Keep it that way: never add a Firestore write that signed-out visitors can
-  make. Changes to tracking follow "Tracking visits and events" in `references/code-rules.md`.
+  Firestore, so they cost no database writes. Signed-out visitors can't write to the
+  database, with **one exception the owner chose (2026-11-21): Random** (`forum` posts,
+  likes/hates and comments) needs no account. A script could use that to burn the
+  20,000 writes/day and stop sign-ups and jobs until the reset; if that happens, see
+  "Random is open to signed-out visitors" in `references/code-rules.md`. Never add any
+  other Firestore write that signed-out visitors can make. Changes to tracking follow
+  "Tracking visits and events" in `references/code-rules.md`.
 - **`server.ts` runs on Cloud Run**, deployed from Google AI Studio. Cloud Run needs a billing
   account, so it lives in a *different* Google Cloud project from `task-molly`. That project is
   where a real bill can appear.
