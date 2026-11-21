@@ -5,19 +5,27 @@ admin site on Cloudflare Pages).
 
 ## How updates are made
 
-The app is edited from two places, and both push to this GitHub repo:
+`main` is protected (GitHub ruleset "Protect main", since 2026-11-21): every change arrives
+through a pull request, the `check` job in `pr-check.yml` must pass before it can merge (tests,
+rules tests, the cost-connection scan and both builds), and `main` can't be force-pushed or
+deleted. Nobody is on the bypass list. Merging into `main` deploys the site to GitHub Pages
+(`deploy.yml`).
+
+The app is edited from two places:
 
 - **Claude:** works on a `claude/...` branch and opens a pull request into `main`.
-  `pr-check.yml` runs the tests, the cost-connection scan and both builds on the PR.
-- **Google AI Studio:** pushes edits straight to `main`.
-
-Merging or pushing to `main` deploys the site to GitHub Pages (`deploy.yml`).
+- **Google AI Studio:** can no longer push straight to `main`; GitHub refuses it. Bring an AI
+  Studio edit in on its own branch with a pull request, or make the change through Claude
+  instead. Don't add anyone to the ruleset's bypass list to let AI Studio through.
 
 To keep the two from overwriting each other:
 
-- Start each Claude change from the latest `main` (fetch first). AI Studio may have pushed since.
-- After a Claude PR is merged, sync the AI Studio project from GitHub before editing there.
-  Otherwise its next push can undo the Claude change.
+- Start each Claude change from the latest `main` (fetch first).
+- After a PR is merged, pull the AI Studio project from GitHub (GitHub tab → Pull changes to
+  Google AI Studio) before editing there. Otherwise its next push can undo the merged change.
+- Two AI Studio apps exist: `680a72ae-…` is linked to GitHub; `b797b3b4-…` owns
+  `task-molly.ai.studio` but isn't linked and holds old code. See
+  `.claude/skills/ops-cost/references/inventory.md` → "Accounts, projects and apps".
 - Keep AI Studio's files: `metadata.json`, `firebase-applet-config.json`, `@google/genai` in
   `package.json` and `GEMINI_API_KEY` in `.env.example`.
 - AI Studio may overwrite `firebase-applet-config.json` or drop `CNAME`. The deploy restores both
