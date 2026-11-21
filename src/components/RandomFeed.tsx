@@ -5,7 +5,7 @@ import {
   collection, query, orderBy, limit, onSnapshot, getDocs, doc, setDoc, updateDoc,
   writeBatch, increment, serverTimestamp,
 } from 'firebase/firestore';
-import { db, auth, handleFirestoreError, OperationType } from '../firebase';
+import { db, handleFirestoreError, OperationType } from '../firebase';
 import { toDate } from '../lib/requestModel';
 import { timeAgo } from '../../admin/src/timeAgo';
 import {
@@ -14,6 +14,8 @@ import {
 } from '../lib/randomPosts';
 
 // The "Random" tab: anonymous posts. Nothing about the person posting is stored or shown.
+// Open to everyone: no sign-in or sign-up needed to read, post, react or comment.
+// This is the only part of the app that works without an account.
 
 interface RandomPost {
   id: string;
@@ -49,12 +51,6 @@ function saveReactions(r: Record<string, Reaction>) {
   } catch {
     /* storage unavailable: reactions still count, they just aren't remembered */
   }
-}
-
-function requireSignIn(action: string): boolean {
-  if (auth.currentUser) return true;
-  toast.error(`Sign in to ${action}. Your name is never shown on Randoms.`);
-  return false;
 }
 
 export default function RandomFeed() {
@@ -96,7 +92,7 @@ export default function RandomFeed() {
   const handlePost = async (e: FormEvent) => {
     e.preventDefault();
     const text = draft.trim();
-    if (!text || posting || !requireSignIn('post a Random')) return;
+    if (!text || posting) return;
 
     setPosting(true);
     // The Random's ID is its document id. The rules refuse to overwrite an existing
@@ -120,7 +116,6 @@ export default function RandomFeed() {
   };
 
   const handleReact = async (post: RandomPost, tapped: Reaction) => {
-    if (!requireSignIn('react')) return;
     const previous = reactions[post.id] || null;
     const change = reactionChange(previous, tapped);
 
@@ -281,7 +276,7 @@ function RandomComments({ postId }: { postId: string }) {
   const handleSend = async (e: FormEvent) => {
     e.preventDefault();
     const text = draft.trim();
-    if (!text || sending || !requireSignIn('comment')) return;
+    if (!text || sending) return;
 
     setSending(true);
     const commentRef = doc(collection(db, 'forum', postId, 'comments'));
