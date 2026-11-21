@@ -4,6 +4,7 @@
  */
 import { Period, inPeriod } from './adminMetrics';
 import { toDate } from './requestModel';
+import { countOf, randomIdFor } from './randomPosts';
 
 export type DeviceType = 'mobile' | 'tablet' | 'desktop';
 
@@ -190,15 +191,16 @@ export function activeNow(events: SiteEvent[], now = Date.now()): number {
 }
 
 // ---------------------------------------------------------------------------
-// Community (forum comments)
+// Community (Randoms: anonymous posts in the `forum` collection)
 // ---------------------------------------------------------------------------
 
 export interface ForumPost {
   id: string;
-  userId: string;
-  userName: string;
+  randomId: string;
   content: string;
   likes: number;
+  hates: number;
+  comments: number;
   isReply: boolean;
   timestamp: Date | null;
 }
@@ -206,10 +208,11 @@ export interface ForumPost {
 export function normalizeForumPost(id: string, data: Record<string, any>): ForumPost {
   return {
     id,
-    userId: String(data.userId || ''),
-    userName: String(data.userName || 'Guest'),
+    randomId: randomIdFor(id, data),
     content: String(data.content || ''),
-    likes: typeof data.likes === 'number' && data.likes > 0 ? data.likes : 0,
+    likes: countOf(data.likes),
+    hates: countOf(data.hates),
+    comments: countOf(data.commentCount),
     isReply: !!data.replyToId,
     timestamp: toDate(data.timestamp),
   };
@@ -218,8 +221,9 @@ export function normalizeForumPost(id: string, data: Record<string, any>): Forum
 export interface CommunitySummary {
   posts: number;
   replies: number;
-  participants: number;
   likes: number;
+  hates: number;
+  comments: number;
   mostLiked: ForumPost[];
 }
 
@@ -228,8 +232,9 @@ export function communitySummary(all: ForumPost[], p: Period): CommunitySummary 
   return {
     posts: posts.length,
     replies: posts.filter((x) => x.isReply).length,
-    participants: new Set(posts.map((x) => x.userId)).size,
     likes: posts.reduce((t, x) => t + x.likes, 0),
+    hates: posts.reduce((t, x) => t + x.hates, 0),
+    comments: posts.reduce((t, x) => t + x.comments, 0),
     mostLiked: [...posts].filter((x) => x.likes > 0).sort((a, b) => b.likes - a.likes).slice(0, 3),
   };
 }

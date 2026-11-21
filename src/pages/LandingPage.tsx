@@ -3,7 +3,7 @@ import { motion, AnimatePresence, useMotionValue, useAnimationFrame, useTransfor
 import { Search, MessageCircle, ChevronLeft, ChevronRight } from 'lucide-react';
 import TaskRequestModal from '../components/TaskRequestModal';
 import HeroVideo from '../components/HeroVideo';
-import BlogView from '../components/BlogView';
+import RandomFeed from '../components/RandomFeed';
 import FunFactsView from '../components/FunFactsView';
 import AboutView from '../components/AboutView';
 import ContactView from '../components/ContactView';
@@ -287,8 +287,8 @@ Email: privacy.taskmolly254@gmail.com
 We may update this Privacy Policy from time to time. We will notify you of any material changes by posting the new policy on our platform and updating the "Last Updated" date. Your continued use of the Services after such changes constitutes your acceptance of the revised policy.` 
     },
     { 
-      title: 'Blog', 
-      content: 'Stay updated with the latest tips on home maintenance, lifestyle hacks, and company news. Our blog features expert advice on everything from deep cleaning techniques to managing your household staff effectively.' 
+      title: 'Random', 
+      content: 'Share anything on your mind. Every Random gets its own ID, so your name is never shown. Like it, hate it, or leave a comment.' 
     },
     { 
       title: 'Fun Facts', 
@@ -428,7 +428,7 @@ We may update this Privacy Policy from time to time. We will notify you of any m
                 exit={{ opacity: 0, scale: 0.9, y: 20 }}
                 className={`relative rounded-[2.5rem] shadow-2xl overflow-hidden transition-all duration-300 ${
                   selectedCard.title === 'Get to Know Us' ? 'bg-[#D1C7BD]' : 
-                  selectedCard.title === 'Blog' ? 'bg-[#0d0d0d]' :
+                  selectedCard.title === 'Random' ? 'bg-[#0d0d0d]' :
                   'bg-white'
                 } ${
                   isPhone ? 'w-full h-[90dvh] p-6' : 
@@ -439,7 +439,7 @@ We may update this Privacy Policy from time to time. We will notify you of any m
               <button 
                 onClick={() => setSelectedCard(null)}
                 className={`absolute top-4 right-4 md:top-8 md:right-8 transition-colors z-[110] ${
-                  selectedCard.title === 'Get to Know Us' || selectedCard.title === 'Blog' ? 'text-white/60 hover:text-white' : 'text-rich-black/20 hover:text-rich-black'
+                  selectedCard.title === 'Get to Know Us' || selectedCard.title === 'Random' ? 'text-white/60 hover:text-white' : 'text-rich-black/20 hover:text-rich-black'
                 }`}
               >
                 <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -448,15 +448,15 @@ We may update this Privacy Policy from time to time. We will notify you of any m
               </button>
               <h2 className={`${
                 selectedCard.title === 'Get to Know Us' ? 'font-bold text-white' : 
-                selectedCard.title === 'Blog' ? 'font-light text-accent-gold' :
+                selectedCard.title === 'Random' ? 'font-light text-accent-gold' :
                 'font-light text-[#FF991C]'
               } ${
                 isPhone ? 'text-2xl mb-4' : 'text-4xl mb-8'
               }`}>{selectedCard.title}</h2>
 
-              {selectedCard.title === 'Blog' ? (
-                <div className={`${isPhone ? 'h-[70dvh]' : 'h-[75dvh]'} -mx-6 md:-mx-12`}>
-                  <BlogView />
+              {selectedCard.title === 'Random' ? (
+                <div className={`${isPhone ? 'h-[calc(90dvh-4.5rem)] -mb-6' : 'h-[75dvh]'} -mx-6 md:-mx-12`}>
+                  <RandomFeed />
                 </div>
               ) : selectedCard.title === 'Fun Facts' ? (
                 <div className={`${isPhone ? 'h-[70dvh]' : 'h-[75dvh]'} -mx-6 md:-mx-12`}>

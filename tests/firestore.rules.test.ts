@@ -26,7 +26,9 @@ import {
   Timestamp,
   updateDoc,
   where,
+  writeBatch,
 } from 'firebase/firestore';
+import { buildRandomComment, buildRandomPost, generateRandomId } from '../src/lib/randomPosts';
 
 let env: RulesTestEnvironment;
 const REQ = 'serviceRequests/req1';
@@ -352,27 +354,6 @@ describe('admin access and roles', () => {
   });
 });
 
-describe('forum likes', () => {
-  const POST = 'forum/post1';
-  beforeEach(async () => {
-    await env.withSecurityRulesDisabled(async (ctx) => {
-      await setDoc(doc(ctx.firestore(), POST), { userId: 'alice', content: 'Hello', likes: 3 });
-    });
-  });
-
-  test('a signed-in user can like and unlike a post', async () => {
-    await assertSucceeds(updateDoc(doc(db('eve'), POST), { likes: increment(1) }));
-    await assertSucceeds(updateDoc(doc(db('eve'), POST), { likes: increment(-1) }));
-  });
-
-  test('likes cannot jump, go negative, or come with other edits', async () => {
-    await assertFails(updateDoc(doc(db('eve'), POST), { likes: increment(5) }));
-    await assertFails(updateDoc(doc(db('eve'), POST), { likes: -1 }));
-    await assertFails(updateDoc(doc(db('eve'), POST), { likes: increment(1), content: 'edited' }));
-    await assertFails(updateDoc(doc(db(), POST), { likes: increment(1) }));
-  });
-});
-
 describe('task chat', () => {
   const MSGS = `${REQ}/messages`;
   const msg = (uid: string, senderRole: string, extra: Record<string, any> = {}) => ({
@@ -648,36 +629,83 @@ describe('complaints', () => {
   });
 });
 
-describe('forum posts', () => {
-  // Same shape as src/components/ForumSidebar.tsx sends.
-  const post = (overrides: Record<string, any> = {}) => ({
-    userId: 'alice',
-    userName: 'Alice',
-    naverId: 'NAVER-A12345',
-    userAvatar: 'https://example.com/a.jpg',
-    content: 'Great service!',
-    topic: 'Share Your Thoughts',
-    mentions: [],
-    likes: 0,
-    replyToId: null,
-    replyToUser: null,
-    timestamp: serverTimestamp(),
-    ...overrides,
-  });
-  const postAs = (uid: string | undefined, data: Record<string, any>) => addDoc(collection(db(uid), 'forum'), data);
+describe('randoms (forum)', () => {
+  // The same records src/components/RandomFeed.tsx sends, built by the same code.
+  const post = (uid: string | undefined, id = generateRandomId(), overrides: Record<string, any> = {}) =>
+    setDoc(doc(db(uid), 'forum', id), { ...buildRandomPost(id, 'Anyone else love rainy Sundays?', serverTimestamp()), ...overrides });
+  const comment = (uid: string | undefined, postId: string, overrides: Record<string, any> = {}) => {
+    const d = db(uid);
+    const batch = writeBatch(d);
+    batch.set(doc(collection(d, 'forum', postId, 'comments')), { ...buildRandomComment('Same here!', serverTimestamp()), ...overrides });
+    batch.update(doc(d, 'forum', postId), { commentCount: increment(1) });
+    return batch.commit();
+  };
+  const OLD = 'forum/oldpost1';
 
-  test('a signed-in user can post and reply', async () => {
-    await assertSucceeds(postAs('alice', post()));
-    await assertSucceeds(postAs('alice', post({ content: '@Bob thanks', mentions: ['Bob'], replyToId: 'p1', replyToUser: 'Bob', userAvatar: '' })));
+  beforeEach(async () => {
+    await env.withSecurityRulesDisabled(async (ctx) => {
+      await setDoc(doc(ctx.firestore(), 'forum/abcd1234'), buildRandomPost('abcd1234', 'Hello', Timestamp.now()));
+      // A post from before Randoms (old shape, no hates or comment count).
+      await setDoc(doc(ctx.firestore(), OLD), { userId: 'alice', content: 'Hello', likes: 3 });
+    });
   });
 
-  test('not signed out, not as someone else, and no extra, oversized or pre-liked posts', async () => {
-    await assertFails(postAs(undefined, post({ userId: 'guest-x' })));
-    await assertFails(postAs('eve', post()));
-    await assertFails(postAs('alice', post({ content: 'x'.repeat(1001) })));
-    await assertFails(postAs('alice', post({ likes: 500 })));
-    await assertFails(postAs('alice', post({ mentions: Array(21).fill('a') })));
-    await assertFails(postAs('alice', post({ spam: true })));
+  test('a signed-in user can post a Random, and anyone can read it', async () => {
+    await assertSucceeds(post('alice', 'xyd4954y'));
+    await assertSucceeds(getDoc(doc(db(), 'forum/xyd4954y')));
+  });
+
+  test('a Random stores nothing about the person, and its ID is unique', async () => {
+    await assertFails(post(undefined));
+    await assertFails(post('alice', generateRandomId(), { userId: 'alice' }));
+    await assertFails(post('alice', generateRandomId(), { userName: 'Alice' }));
+    await assertFails(post('alice', 'XYD4954Y', { randomId: 'XYD4954Y' }));
+    await assertFails(post('alice', 'short1', { randomId: 'short1' }));
+    await assertFails(post('alice', 'aaaa1111', { randomId: 'bbbb2222' }));
+    // Taking an existing ID would overwrite that Random: refused.
+    await assertFails(post('bob', 'abcd1234'));
+  });
+
+  test('no oversized, empty, pre-liked or back-dated Randoms', async () => {
+    await assertFails(post('alice', generateRandomId(), { content: 'x'.repeat(1001) }));
+    await assertFails(post('alice', generateRandomId(), { content: '' }));
+    await assertFails(post('alice', generateRandomId(), { likes: 500 }));
+    await assertFails(post('alice', generateRandomId(), { hates: 1 }));
+    await assertFails(post('alice', generateRandomId(), { commentCount: 9 }));
+    await assertFails(post('alice', generateRandomId(), { timestamp: Timestamp.fromMillis(0) }));
+  });
+
+  test('likes and hates move by one, including switching between them', async () => {
+    const R = 'forum/abcd1234';
+    await assertSucceeds(updateDoc(doc(db('eve'), R), { likes: increment(1) }));
+    await assertSucceeds(updateDoc(doc(db('eve'), R), { likes: increment(-1), hates: increment(1) }));
+    await assertSucceeds(updateDoc(doc(db('eve'), R), { hates: increment(-1) }));
+    await assertSucceeds(updateDoc(doc(db('eve'), OLD), { hates: increment(1) }));
+    await assertSucceeds(updateDoc(doc(db('eve'), OLD), { likes: increment(-1) }));
+  });
+
+  test('counts cannot jump, go negative, come with other edits, or come from signed-out visitors', async () => {
+    const R = 'forum/abcd1234';
+    await assertFails(updateDoc(doc(db('eve'), R), { likes: increment(5) }));
+    await assertFails(updateDoc(doc(db('eve'), R), { hates: -1 }));
+    await assertFails(updateDoc(doc(db('eve'), R), { commentCount: increment(-1) }));
+    await assertFails(updateDoc(doc(db('eve'), R), { likes: increment(1), content: 'edited' }));
+    await assertFails(updateDoc(doc(db(), R), { likes: increment(1) }));
+    await assertFails(deleteDoc(doc(db('alice'), R)));
+  });
+
+  test('signed-in users can comment, and anyone can read comments', async () => {
+    await assertSucceeds(comment('eve', 'abcd1234'));
+    await assertSucceeds(comment('eve', 'oldpost1'));
+    await assertSucceeds(getDocs(collection(db(), 'forum', 'abcd1234', 'comments')));
+  });
+
+  test('comments: not signed out, not on missing Randoms, nothing about the person', async () => {
+    await assertFails(comment(undefined, 'abcd1234'));
+    await assertFails(comment('eve', 'nopost99'));
+    await assertFails(comment('eve', 'abcd1234', { userId: 'eve' }));
+    await assertFails(comment('eve', 'abcd1234', { content: 'x'.repeat(501) }));
+    await assertFails(comment('eve', 'abcd1234', { content: '' }));
   });
 });
 

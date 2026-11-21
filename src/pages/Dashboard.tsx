@@ -6,7 +6,6 @@ import { auth, db, handleFirestoreError, OperationType } from '../firebase';
 import { signOut } from 'firebase/auth';
 import { useNavigate } from 'react-router-dom';
 import ServiceTrackingDetail from '../components/ServiceTrackingDetail';
-import ForumSidebar from '../components/ForumSidebar';
 import ComplaintModal from '../components/ComplaintModal';
 import CreateRequestModal from '../components/CreateRequestModal';
 import EditProfileModal from '../components/EditProfileModal';

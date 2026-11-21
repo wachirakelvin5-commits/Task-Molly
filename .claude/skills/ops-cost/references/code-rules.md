@@ -59,7 +59,8 @@ separately. To count them, give them their own address (a route), not a Firestor
    merge first, then publish.
 6. **Update this file** (hot spots below) and `references/limits.md`.
 
-The same exact-shape pattern covers forum posts (`src/components/ForumSidebar.tsx`) and
+The same exact-shape pattern covers Randoms, the anonymous posts in `forum` (`src/lib/randomPosts.ts`,
+shown by `src/components/RandomFeed.tsx`; comments load once when opened, not live), and
 complaints (`src/components/ComplaintModal.tsx`): a new field there needs the rule updated
 too. Those show an error to the user rather than failing silently.
 
