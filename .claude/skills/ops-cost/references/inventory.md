@@ -14,11 +14,11 @@ ALERT_AT_PERCENT:   50, 90, 100
 
 | Service | Used for | Plan | Cost now | Where to see usage / bill | Owner (account) | Renews | Found by |
 |---|---|---|---|---|---|---|---|
-| Firebase `task-molly` — Firestore, Auth, Cloud Messaging | All app data, Google sign-in, push notifications | **Spark (free)** | KES 0 | console.firebase.google.com → task-molly → Usage and billing | TBD | — | repo |
-| Cloud Run service `task-molly` (`server.ts`), project `gen-lang-client-0157826223`, region europe-west3 (Frankfurt), deployed from source 2026-10-12, public access | `/api/*` routes (cancel task, M-Pesa in `server/paymentRoutes.ts`), Socket.IO chat — **but the live site doesn't reach it** (see below) | Postpay, free tier | **US$0** (Oct 2026 invoice); 0 requests/sec on 2026-11-02 | console.cloud.google.com → (AI Studio's project) → Billing → Reports | TBD | monthly | repo |
+| Firebase `task-molly` — Firestore, Auth, Cloud Messaging | All app data, Google sign-in, push notifications | **Spark (free)** | KES 0 | console.firebase.google.com → task-molly → Usage and billing | taskmolly254@gmail.com (confirmed 2026-11-16) | — | repo |
+| Cloud Run service `task-molly` (`server.ts`), project `gen-lang-client-0157826223`, region europe-west3 (Frankfurt), deployed from source 2026-10-12, public access | `/api/*` routes (cancel task, M-Pesa in `server/paymentRoutes.ts`), Socket.IO chat — **but the live site doesn't reach it** (see below) | Postpay, free tier | **US$0** (Oct 2026 invoice); 0 requests/sec on 2026-11-02 | console.cloud.google.com → (AI Studio's project) → Billing → Reports | wachirakelvin5@gmail.com (published it 2026-11-02, per the Cloud Run log) | monthly | repo |
 | Artifact Registry / Cloud Build (same project as Cloud Run) | Stores and builds the Cloud Run container images | Pay-as-you-go with free tier | TBD | same Billing → Reports, group by Service | TBD | monthly | repo |
 | AI Studio Build chat (the assistant used to edit the app) | Making code changes that get pushed to GitHub | **Free tier requests** (seen in Chat settings → Usage, 2026-11-02) | KES 0 | aistudio.google.com → the app → Chat settings → Usage | TBD | — | manual |
-| Gemini API keys `...BX0Q` (created 2026-10-05) and `...ivl4` (2026-03-13), project `gen-lang-client-0157826223` | **Nothing** — Molly concierge was removed; no code calls them | **Tier 1 (paid)**, billed to "My Billing Account". Monthly spend cap US$100 (AI Studio → Spend) | **US$0.00** (6 Oct – 2 Nov 2026) | aistudio.google.com/apikey (see "Checking the Gemini key" below) | TBD | — | repo |
+| Gemini API keys `...BX0Q` (created 2026-10-05) and `...ivl4` (2026-03-13), project `gen-lang-client-0157826223` | **Nothing** — Molly concierge was removed; no code calls them | **Tier 1 (paid)**, billed to "My Billing Account". Monthly spend cap US$100 (AI Studio → Spend) | **US$0.00** (6 Oct – 2 Nov 2026) | aistudio.google.com/apikey (see "Checking the Gemini key" below) | wachirakelvin5@gmail.com's project | — | repo |
 | M-Pesa via Daraja | Client payments (STK push) and provider payouts (B2C) — **code in `server/paymentRoutes.ts`, switched off until `MPESA_*` is set on Cloud Run** | Per-transaction fees | KES 0 (switched off) | M-PESA for Business portal (org.ke.m-pesa.com) | TBD | — | manual |
 | GitHub Pages + Actions | Hosts task-molly.com; builds PRs and deploys | Free | KES 0 | github.com → Settings → Billing and plans | wachirakelvin5-commits | — | repo |
 | Cloudflare Pages | Hosts the admin site | Free | KES 0 | dash.cloudflare.com → Workers & Pages | TBD | — | repo |
@@ -58,6 +58,43 @@ Consequences:
 - Function: on the live site, cancel request (client dashboard) / Socket.IO chat
   likely fail. Decision for the user: point the live site at Cloud Run (API base URL), move
   those features to Firestore, or turn Cloud Run off.
+
+## Accounts, projects and apps (checked 2026-11-16)
+
+Two Google accounts are involved. Use the right one, or the console shows "Start your free
+trial" / "no permission" instead of the real project.
+
+| Google account | What it holds |
+|---|---|
+| taskmolly254@gmail.com | Firebase project `task-molly` (database, sign-in, push, rules, the web API key). Also the AI Studio app `680a72ae-…`, which is linked to GitHub. Its publish step offers a "Default Gemini Project" with no billing (probably `gen-lang-client-0837059735`, seen 2026-11-02 with no billing and no Cloud Run access). |
+| wachirakelvin5@gmail.com | "My Billing Account" and project `gen-lang-client-0157826223` ("Default Gemini Project"): Cloud Run `task-molly` (https://task-molly.ai.studio), the two Gemini keys, and the AI Studio app `b797b3b4-…`, which publishes that server. |
+
+**The server runs old code from the wrong app.** AI Studio app `b797b3b4` owns
+`task-molly.ai.studio` but isn't linked to GitHub, so its copy of the code is old. Pulling
+GitHub into the linked app (`680a72ae`) and publishing on 2026-11-02 left the old code
+running: `/api/payment/lipa-na-mpesa` still answered "(Placeholder)" on 2026-11-03. The
+server also uses its own Firestore database (`ai-studio-b797b3b4-…` in
+`gen-lang-client-0157826223`), not the `task-molly` database the website uses. Plan: retire
+this server and move payments to Cloud Functions in `task-molly` (see the security review).
+Don't publish from the GitHub-linked app either: its project has no billing.
+
+**Firebase web API key** (`Browser key (auto created by Firebase)`, ends `…PqLh9o`, project
+`task-molly`), restricted 2026-11-16:
+- APIs: Identity Toolkit, Token Service, Cloud Firestore, Firebase Installations, FCM
+  Registration, Firebase App Check.
+- Websites: `https://task-molly.com/*`, `https://www.task-molly.com/*`,
+  `https://task-molly.firebaseapp.com/*`, `https://task-molly-admin.pages.dev/*`,
+  `https://*.task-molly-admin.pages.dev/*`.
+- A new site address (for example a custom domain for the admin site) must be added here
+  first, or sign-in fails there.
+- To check it: a sign-in API call (`identitytoolkit.googleapis.com/v1/projects?key=…`) with
+  no `Referer`, or one from another site, should get 403 "Requests from referer … are
+  blocked". Firestore calls ignore the key, so don't use them to test; Firestore is guarded
+  by the rules.
+
+**Gemini key use:** the API dashboard for `gen-lang-client-0157826223` showed one Gemini
+request on 2026-11-16, which failed (prepaid balance US$0). Nothing in the code calls
+Gemini, so delete the unused keys when cleaning up.
 
 ## Google billing account ("My Billing Account")
 
