@@ -165,7 +165,7 @@ export default function EditProfileModal({ isOpen, onClose, user }: EditProfileM
                   type="email"
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
-                  placeholder="e.g. customercare@taskmolly.com"
+                  placeholder="e.g. customercare@task-molly.com"
                   className="w-full pl-11 pr-4 py-3 bg-primary-bg/40 border border-warm-gray rounded-xl text-sm focus:outline-none focus:border-accent-gold transition-all font-medium text-rich-black"
                 />
               </div>

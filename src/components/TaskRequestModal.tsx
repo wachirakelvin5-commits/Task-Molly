@@ -1,23 +1,16 @@
 import React, { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
-import { 
-  X, 
-  ArrowLeft, 
-  Search, 
-  Calendar, 
-  Send, 
-  User, 
-  Phone, 
-  ArrowRight,
-  Clock
-} from 'lucide-react';
+import { X, ArrowLeft, Search, Send, ArrowRight } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { auth } from '../firebase';
 import { TIME_SLOTS, buildRequestPayload, localIsoDate, submitServiceRequest } from '../lib/requestForm';
 import { toast } from 'sonner';
 import { savePendingRequest } from '../lib/pendingRequestService';
-import { ALL_SERVICES_CATALOG, ServiceItem } from '../data/serviceCatalog';
+import { REQUEST_SERVICES, ServiceItem, findService } from '../data/serviceCatalog';
 import LocationAutocomplete, { LocationSelection } from './LocationAutocomplete';
+
+// One look for every box on the request form (same height; the description box is taller).
+const BOX = 'w-full px-3.5 py-3 bg-primary-bg/50 border border-warm-gray rounded-xl text-xs sm:text-sm text-rich-black placeholder:text-rich-black/40 focus:outline-none focus:border-accent-gold font-medium';
 
 interface TaskRequestModalProps {
   onClose: () => void;
@@ -28,8 +21,10 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
   const navigate = useNavigate();
 
   // Find initial service if provided
-  const initialMatch = initialService 
-    ? ALL_SERVICES_CATALOG.find(s => s.name.toLowerCase().includes(initialService.toLowerCase()) || s.id === initialService) || null
+  const initialMatch = initialService
+    ? findService(initialService)
+      || REQUEST_SERVICES.find(s => s.name.toLowerCase().includes(initialService.toLowerCase()))
+      || null
     : null;
 
   // Step state: 'selection' (options grid like image) | 'client-info' (client details form)
@@ -66,7 +61,10 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
     }
   }, []);
 
-  const filteredServices = ALL_SERVICES_CATALOG.filter(service => {
+  const descriptionPrompt = selectedService?.descriptionPrompt || 'Task description';
+  const isNotepad = !!selectedService?.notepad;
+
+  const filteredServices = REQUEST_SERVICES.filter(service => {
     if (!searchQuery.trim()) return true;
     return service.name.toLowerCase().includes(searchQuery.toLowerCase());
   });
@@ -88,23 +86,23 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
       return;
     }
 
+    if (!taskDescription.trim()) {
+      toast.error(isNotepad ? 'Please type your list' : `Please fill in: ${descriptionPrompt}`);
+      return;
+    }
+
     if (!clientName.trim()) {
-      toast.error('Please enter your full name');
+      toast.error('Please enter your name');
       return;
     }
 
     if (!clientPhone.trim()) {
-      toast.error('Please enter your M-Pesa phone number');
+      toast.error('Please enter your phone number');
       return;
     }
 
     if (!locationData.fullAddress.trim() && !locationData.specificAddress.trim()) {
       toast.error('Please search and select your location in Nairobi');
-      return;
-    }
-
-    if (!taskDescription.trim()) {
-      toast.error('Please provide task description details');
       return;
     }
 
@@ -296,173 +294,117 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
                   </button>
                 </div>
 
-                {/* Form without amount */}
-                <form onSubmit={handleSubmitRequest} className="bg-white border border-warm-gray rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-md space-y-4">
-                  
-                  {/* Custom Title if Other is selected */}
-                  {selectedService.id === 'other' && (
-                    <div className="p-3 bg-accent-gold/10 border border-accent-gold/40 rounded-xl space-y-1">
-                      <label className="block text-[11px] font-black uppercase tracking-wider text-rich-black">
-                        Custom Task Name <span className="text-accent-gold">*</span>
-                      </label>
-                      <input
-                        type="text"
-                        required
-                        value={customTaskTitle}
-                        onChange={(e) => setCustomTaskTitle(e.target.value)}
-                        placeholder="e.g. Swimming Pool Cleaning, Generator Fix..."
-                        className="w-full p-2 bg-white border border-warm-gray rounded-lg text-xs text-rich-black focus:outline-none focus:border-accent-gold"
-                      />
-                    </div>
-                  )}
+                {/* Request form: each box says what it is inside the box (no titles above) */}
+                <form onSubmit={handleSubmitRequest} className="bg-white border border-warm-gray rounded-2xl sm:rounded-3xl p-4 sm:p-6 shadow-md space-y-3">
 
-                  {/* 1. Name */}
-                  <div>
-                    <label className="block text-[11px] font-black uppercase tracking-wider text-rich-black/80 mb-1 flex items-center gap-1">
-                      <User size={12} className="text-accent-gold" />
-                      <span>Client Full Name</span>
-                      <span className="text-accent-gold">*</span>
-                    </label>
+                  {/* "Other": name the task first */}
+                  {selectedService.id === 'other' && (
                     <input
                       type="text"
                       required
-                      value={clientName}
-                      onChange={(e) => setClientName(e.target.value)}
-                      placeholder="e.g. Kelvin Wachira"
-                      className="w-full p-2.5 bg-primary-bg/50 border border-warm-gray rounded-xl text-xs sm:text-sm text-rich-black focus:outline-none focus:border-accent-gold font-medium"
+                      value={customTaskTitle}
+                      onChange={(e) => setCustomTaskTitle(e.target.value)}
+                      placeholder="Task name (e.g. Swimming pool cleaning)"
+                      aria-label="Task name"
+                      className={BOX}
                     />
-                  </div>
+                  )}
 
-                  {/* 2. Mpesa Phone Number */}
-                  <div>
-                    <label className="block text-[11px] font-black uppercase tracking-wider text-rich-black/80 mb-1 flex items-center justify-between">
-                      <span className="flex items-center gap-1">
-                        <Phone size={12} className="text-accent-gold" />
-                        <span>M-Pesa Phone Number</span>
-                        <span className="text-accent-gold">*</span>
-                      </span>
+                  {/* 1. Task description (or the list, for shopping and errands) */}
+                  <textarea
+                    rows={isNotepad ? 9 : 6}
+                    required
+                    value={taskDescription}
+                    onChange={(e) => setTaskDescription(e.target.value)}
+                    placeholder={descriptionPrompt}
+                    aria-label={descriptionPrompt}
+                    className={isNotepad
+                      ? 'w-full px-4 pt-[7px] pb-2 bg-[#FFFBEB] border border-accent-gold/40 rounded-xl text-sm text-rich-black placeholder:text-rich-black/40 focus:outline-none focus:border-accent-gold transition-all resize-y font-medium'
+                      : `${BOX} resize-y leading-relaxed min-h-[9rem]`}
+                    style={isNotepad ? {
+                      lineHeight: '28px',
+                      backgroundImage: 'repeating-linear-gradient(to bottom, transparent 0, transparent 27px, rgba(174,149,115,0.35) 27px, rgba(174,149,115,0.35) 28px)',
+                      backgroundAttachment: 'local',
+                      backgroundPosition: '0 7px',
+                    } : undefined}
+                  />
+
+                  {/* 2. Name */}
+                  <input
+                    type="text"
+                    required
+                    value={clientName}
+                    onChange={(e) => setClientName(e.target.value)}
+                    placeholder="Name"
+                    aria-label="Name"
+                    autoComplete="name"
+                    className={BOX}
+                  />
+
+                  {/* 3. Phone number */}
+                  <input
+                    type="tel"
+                    required
+                    value={clientPhone}
+                    onChange={(e) => setClientPhone(e.target.value)}
+                    placeholder="Phone number"
+                    aria-label="Phone number"
+                    autoComplete="tel"
+                    className={BOX}
+                  />
+
+                  {/* 4. Location, then 5. Apartment & house number */}
+                  <LocationAutocomplete
+                    compact
+                    value={locationData.fullAddress}
+                    onChange={(selection) => setLocationData(selection)}
+                    unitOrApartment={unitOrApartment}
+                    onUnitChange={(unit) => setUnitOrApartment(unit)}
+                    placeholder="Location"
+                  />
+
+                  {/* 6 & 7. Date and time, side by side */}
+                  <div className="grid grid-cols-2 gap-3">
+                    <label className={`${BOX} !py-2 sm:!py-3 flex flex-col items-start sm:flex-row sm:items-center gap-0 sm:gap-2 cursor-pointer text-left`}>
+                      <span className="text-[10px] sm:text-[inherit] text-rich-black/40 shrink-0 leading-tight">Date</span>
+                      <input
+                        type="date"
+                        required
+                        min={localIsoDate()}
+                        value={scheduledDate}
+                        onChange={(e) => setScheduledDate(e.target.value)}
+                        aria-label="Date"
+                        className="w-full min-w-0 bg-transparent text-rich-black focus:outline-none cursor-pointer"
+                      />
                     </label>
-                    <input
-                      type="tel"
-                      required
-                      value={clientPhone}
-                      onChange={(e) => setClientPhone(e.target.value)}
-                      placeholder="0712 345 678"
-                      className="w-full p-2.5 bg-primary-bg/50 border border-warm-gray rounded-xl text-xs sm:text-sm text-rich-black font-mono focus:outline-none focus:border-accent-gold font-medium"
-                    />
-                  </div>
-
-                  {/* 3. Location - Uber-like Autocomplete */}
-                  <div>
-                    <label className="block text-[11px] font-black uppercase tracking-wider text-rich-black/80 mb-1">
-                      Client Location in Nairobi <span className="text-accent-gold">*</span>
+                    <label className={`${BOX} !py-2 sm:!py-3 flex flex-col items-start sm:flex-row sm:items-center gap-0 sm:gap-2 cursor-pointer text-left`}>
+                      <span className="text-[10px] sm:text-[inherit] text-rich-black/40 shrink-0 leading-tight">Time</span>
+                      <select
+                        value={scheduledTimeSlot}
+                        onChange={(e) => setScheduledTimeSlot(e.target.value)}
+                        aria-label="Time"
+                        className="w-full min-w-0 bg-transparent text-rich-black focus:outline-none cursor-pointer font-medium truncate"
+                      >
+                        {TIME_SLOTS.map(slot => (
+                          <option key={slot} value={slot}>{slot}</option>
+                        ))}
+                      </select>
                     </label>
-                    <LocationAutocomplete
-                      value={locationData.fullAddress}
-                      onChange={(selection) => setLocationData(selection)}
-                      unitOrApartment={unitOrApartment}
-                      onUnitChange={(unit) => setUnitOrApartment(unit)}
-                      placeholder="Search estate, building, or road (e.g. Sarit Centre, Kilimani, Karen...)"
-                    />
                   </div>
 
-                  {/* 4. Description Box */}
-                  <div>
-                    <label className="block text-[11px] font-black uppercase tracking-wider text-rich-black/80 mb-1 flex items-center justify-between">
-                      <span>Task Description & Requirements</span>
-                      <span className="text-accent-gold">*</span>
-                    </label>
-                    <textarea
-                      rows={3}
-                      required
-                      value={taskDescription}
-                      onChange={(e) => setTaskDescription(e.target.value)}
-                      placeholder="Describe what you need done..."
-                      className="w-full p-2.5 bg-primary-bg/50 border border-warm-gray rounded-xl text-xs text-rich-black placeholder:text-rich-black/40 focus:outline-none focus:border-accent-gold transition-all resize-none leading-relaxed"
-                    />
-                  </div>
-
-                  {/* 5. Schedule Date & Time (ASAP removed, schedule date kept) */}
-                  <div className="space-y-2">
-                    <label className="block text-[11px] font-black uppercase tracking-wider text-rich-black/80 flex items-center gap-1.5">
-                      <Calendar size={13} className="text-accent-gold" />
-                      <span>Schedule Date & Preferred Time</span>
-                      <span className="text-accent-gold">*</span>
-                    </label>
-
-                    {/* Quick date chips */}
-                    <div className="flex items-center gap-2">
-                      {[
-                        { label: 'Today', daysAhead: 0 },
-                        { label: 'Tomorrow', daysAhead: 1 },
-                        { label: 'In 2 Days', daysAhead: 2 }
-                      ].map((chip) => {
-                        const iso = localIsoDate(chip.daysAhead);
-                        const isSelected = scheduledDate === iso;
-
-                        return (
-                          <button
-                            key={chip.label}
-                            type="button"
-                            onClick={() => setScheduledDate(iso)}
-                            className={`px-3 py-1.5 rounded-xl text-[11px] font-bold transition-all cursor-pointer ${
-                              isSelected
-                                ? 'bg-accent-gold text-white shadow-xs'
-                                : 'bg-neutral-100 hover:bg-neutral-200 text-rich-black/70'
-                            }`}
-                          >
-                            {chip.label}
-                          </button>
-                        );
-                      })}
-                    </div>
-
-                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-2.5 pt-1">
-                      <div>
-                        <label className="block text-[9px] font-bold text-rich-black/60 uppercase mb-0.5">
-                          Date
-                        </label>
-                        <input
-                          type="date"
-                          required
-                          min={localIsoDate()}
-                          value={scheduledDate}
-                          onChange={(e) => setScheduledDate(e.target.value)}
-                          className="w-full p-2 bg-white border border-warm-gray rounded-xl text-xs text-rich-black focus:outline-none focus:border-accent-gold"
-                        />
-                      </div>
-
-                      <div>
-                        <label className="block text-[9px] font-bold text-rich-black/60 uppercase mb-0.5 flex items-center gap-1">
-                          <Clock size={10} className="text-accent-gold" />
-                          <span>Arrival Time Slot</span>
-                        </label>
-                        <select
-                          value={scheduledTimeSlot}
-                          onChange={(e) => setScheduledTimeSlot(e.target.value)}
-                          className="w-full p-2 bg-white border border-warm-gray rounded-xl text-xs text-rich-black focus:outline-none focus:border-accent-gold cursor-pointer font-medium"
-                        >
-                          {TIME_SLOTS.map(slot => (
-                            <option key={slot} value={slot}>{slot}</option>
-                          ))}
-                        </select>
-                      </div>
-                    </div>
-                  </div>
-
-                  {/* Submit CTA */}
+                  {/* Submit */}
                   <div className="pt-2">
                     <button
                       type="submit"
                       disabled={isSubmitting}
-                      className="w-full py-3.5 px-4 rounded-xl bg-rich-black hover:bg-black text-white text-xs font-black uppercase tracking-wider transition-all shadow-md hover:shadow-lg active:scale-98 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
+                      className="w-full py-3.5 px-4 rounded-xl bg-rich-black hover:bg-black text-white text-sm font-black tracking-wide transition-all shadow-md hover:shadow-lg active:scale-98 flex items-center justify-center gap-2 cursor-pointer disabled:opacity-50"
                     >
                       {isSubmitting ? (
                         <div className="w-4 h-4 border-2 border-white border-t-transparent rounded-full animate-spin" />
                       ) : (
                         <>
                           <Send size={14} className="text-accent-gold" />
-                          <span>Find Service Provider Now</span>
+                          <span>Ask Molly</span>
                           <ArrowRight size={14} className="text-accent-gold" />
                         </>
                       )}

@@ -14,6 +14,8 @@ interface LocationAutocompleteProps {
   onUnitChange: (unit: string) => void;
   placeholder?: string;
   error?: string;
+  /** Request-popup style: no titles, the apartment box says what it is inside the box. */
+  compact?: boolean;
 }
 
 interface PlaceSuggestion {
@@ -60,7 +62,8 @@ export default function LocationAutocomplete({
   unitOrApartment,
   onUnitChange,
   placeholder = 'Search address, estate, building, or road in Nairobi...',
-  error
+  error,
+  compact = false
 }: LocationAutocompleteProps) {
   const [inputValue, setInputValue] = useState(value || '');
   const [isOpen, setIsOpen] = useState(false);
@@ -244,7 +247,7 @@ export default function LocationAutocomplete({
   };
 
   return (
-    <div ref={wrapperRef} className="relative w-full space-y-2">
+    <div ref={wrapperRef} className={`relative w-full ${compact ? 'space-y-3' : 'space-y-2'}`}>
       {/* Uber-like location search bar */}
       <div className="relative flex items-center">
         {/* Left pin / search indicator */}
@@ -268,7 +271,8 @@ export default function LocationAutocomplete({
           placeholder={placeholder}
           required
           autoComplete="off"
-          className="w-full pl-10 pr-20 py-3 bg-primary-bg/50 border border-warm-gray rounded-2xl text-xs sm:text-sm text-rich-black placeholder:text-rich-black/40 focus:outline-none focus:border-accent-gold focus:ring-2 focus:ring-accent-gold/20 transition-all font-medium shadow-2xs"
+          aria-label={compact ? 'Location' : undefined}
+          className={`w-full pl-10 pr-20 py-3 bg-primary-bg/50 border border-warm-gray ${compact ? 'rounded-xl' : 'rounded-2xl'} text-xs sm:text-sm text-rich-black placeholder:text-rich-black/40 focus:outline-none focus:border-accent-gold focus:ring-2 focus:ring-accent-gold/20 transition-all font-medium shadow-2xs`}
         />
 
         {/* Right action buttons: Clear or GPS */}
@@ -369,18 +373,29 @@ export default function LocationAutocomplete({
       )}
 
       {/* Apartment / House / Floor / Unit Number (Uber-style address completion) */}
-      <div className="pt-1">
-        <label className="block text-[10px] font-bold text-rich-black/60 uppercase mb-1">
-          Apartment, House No., Court, or Gate Details (Optional)
-        </label>
+      {compact ? (
         <input
           type="text"
           value={unitOrApartment}
           onChange={(e) => onUnitChange(e.target.value)}
-          placeholder="e.g. Block B, Apt 4B, Greenwood Court, Gate 3"
-          className="w-full p-2.5 bg-primary-bg/40 border border-warm-gray rounded-xl text-xs sm:text-sm text-rich-black placeholder:text-rich-black/40 focus:outline-none focus:border-accent-gold"
+          placeholder="Apartment & house number"
+          aria-label="Apartment & house number"
+          className="w-full px-3.5 py-3 bg-primary-bg/50 border border-warm-gray rounded-xl text-xs sm:text-sm text-rich-black placeholder:text-rich-black/40 focus:outline-none focus:border-accent-gold font-medium"
         />
-      </div>
+      ) : (
+        <div className="pt-1">
+          <label className="block text-[10px] font-bold text-rich-black/60 uppercase mb-1">
+            Apartment, House No., Court, or Gate Details (Optional)
+          </label>
+          <input
+            type="text"
+            value={unitOrApartment}
+            onChange={(e) => onUnitChange(e.target.value)}
+            placeholder="e.g. Block B, Apt 4B, Greenwood Court, Gate 3"
+            className="w-full p-2.5 bg-primary-bg/40 border border-warm-gray rounded-xl text-xs sm:text-sm text-rich-black placeholder:text-rich-black/40 focus:outline-none focus:border-accent-gold"
+          />
+        </div>
+      )}
 
       {error && (
         <p className="text-[11px] font-semibold text-red-500">{error}</p>

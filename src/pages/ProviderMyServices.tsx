@@ -8,7 +8,7 @@ import {
 } from 'lucide-react';
 import { useNavigate } from 'react-router-dom';
 import { UserProfile, ServiceVerification } from '../types';
-import { ALL_SERVICES_CATALOG, ServiceItem, getCatalogServiceCategory } from '../data/serviceCatalog';
+import { ALL_SERVICES_CATALOG, REQUEST_SERVICES, ServiceItem, getCatalogServiceCategory } from '../data/serviceCatalog';
 import { getProviderVerifications, subscribeProviderVerifications } from '../lib/verificationService';
 import ServiceActivationModal from '../components/ServiceActivationModal';
 
@@ -46,6 +46,12 @@ export default function ProviderMyServices({ user }: ProviderMyServicesProps) {
     return subscribeProviderVerifications(user.uid, setVerifications);
   }, [user.uid]);
 
+  // Current services in order, plus any retired service this provider already applied for.
+  const shownServices = [
+    ...REQUEST_SERVICES,
+    ...ALL_SERVICES_CATALOG.filter((s) => !REQUEST_SERVICES.includes(s) && verifications[s.id]),
+  ];
+
   return (
     <div className="min-h-[100dvh] bg-primary-bg flex flex-col justify-between pt-6 pb-8 px-3 sm:px-6 md:px-8">
       <div className="max-w-5xl mx-auto w-full space-y-6 flex-1">
@@ -59,7 +65,7 @@ export default function ProviderMyServices({ user }: ProviderMyServicesProps) {
 
         {/* SERVICES CATEGORIES PLACARDS */}
         <div className="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-4 gap-3 sm:gap-4">
-          {ALL_SERVICES_CATALOG.map((service, index) => {
+          {shownServices.map((service, index) => {
             const Icon = service.IconComponent;
             const verification = verifications[service.id];
             const isVerified = verification?.status === 'verified';

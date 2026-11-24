@@ -8,7 +8,7 @@ export default function TermsView() {
   const sections = [
     { id: 'acceptance', title: 'Acceptance of Terms', icon: UserCheck },
     { id: 'definitions', title: 'Definitions', icon: Info },
-    { id: 'platform', title: 'The TaskMolly Platform', icon: Shield },
+    { id: 'platform', title: 'The Task-Molly Platform', icon: Shield },
     { id: 'accounts', title: 'User Accounts & Eligibility', icon: Lock },
     { id: 'payment', title: 'Booking & Payment Terms', icon: FileText },
     { id: 'conduct', title: 'User Obligations & Conduct', icon: AlertCircle },
@@ -28,7 +28,7 @@ export default function TermsView() {
           Terms of <span className="text-accent-gold font-medium">Service</span>
         </h1>
         <p className="text-sm text-rich-black/60 max-w-xl leading-relaxed">
-          Last Updated: November 2026. Please read these terms carefully before using the TaskMolly platform.
+          Last Updated: November 2026. Please read these terms carefully before using the Task-Molly platform.
         </p>
       </section>
 
@@ -45,7 +45,7 @@ export default function TermsView() {
             </div>
             <div className={`prose prose-sm text-rich-black/70 leading-relaxed ${isPhone ? 'pl-4' : 'pl-8 md:pl-14'}`}>
               <p>
-                Welcome to TaskMolly, operated by TaskMolly Kenya Limited ("TaskMolly," "we," "us," or "our"). These Terms of Service ("Terms") constitute a legally binding agreement between you ("User," "you," or "your") and TaskMolly governing your access to and use of the TaskMolly website, mobile application, and related services (collectively, the "Platform").
+                Welcome to Task-Molly, operated by TaskMolly Kenya Limited ("Task-Molly," "we," "us," or "our"). These Terms of Service ("Terms") constitute a legally binding agreement between you ("User," "you," or "your") and Task-Molly governing your access to and use of the Task-Molly website, mobile application, and related services (collectively, the "Platform").
               </p>
               <p className="mt-4">
                 By registering for an account, clicking "I Agree," or using the Platform in any manner, you acknowledge that you have read, understood, and agree to be bound by these Terms and our Privacy Policy. If you do not agree to these Terms, you must not access or use the Platform.
@@ -82,11 +82,11 @@ export default function TermsView() {
               <div className="w-10 h-10 bg-accent-gold/10 rounded-xl flex items-center justify-center text-accent-gold">
                 <Shield size={20} />
               </div>
-              <h3 className="text-xl font-medium">3. The TaskMolly Platform</h3>
+              <h3 className="text-xl font-medium">3. The Task-Molly Platform</h3>
             </div>
             <div className={`prose prose-sm text-rich-black/70 leading-relaxed ${isPhone ? 'pl-4' : 'pl-8 md:pl-14'}`}>
               <p>
-                TaskMolly is a technology platform that facilitates connections between Clients and independent Taskers. TaskMolly is not an employer, agency, or insurer. We do not provide the Services, employ, recommend, endorse, or control the Taskers. Taskers are independent contractors solely responsible for the manner, means, and quality of the Services they provide.
+                Task-Molly is a technology platform that facilitates connections between Clients and independent Taskers. Task-Molly is not an employer, agency, or insurer. We do not provide the Services, employ, recommend, endorse, or control the Taskers. Taskers are independent contractors solely responsible for the manner, means, and quality of the Services they provide.
               </p>
             </div>
           </section>
@@ -126,29 +126,29 @@ export default function TermsView() {
               <div className="p-5 bg-rich-black text-white rounded-3xl">
                 <h4 className="text-xs font-bold uppercase tracking-widest text-accent-gold mb-2">The Tasker Sets the Price</h4>
                 <p className="text-sm text-white/70 leading-relaxed">
-                  Taskers choose which requests to accept and set their own price for each job when they accept it. The Client sees that price and decides whether to confirm the Tasker. TaskMolly does not set, change or guarantee a Tasker's price. A budget entered by the Client is a guide only.
+                  Taskers choose which requests to accept and set their own price for each job when they accept it. The Client sees that price and decides whether to confirm the Tasker. Task-Molly does not set, change or guarantee a Tasker's price. A budget entered by the Client is a guide only.
                 </p>
               </div>
               {[
                 {
                   title: 'Paying the Tasker',
-                  text: "The Client pays the Tasker's price directly to the Tasker, as agreed between them under the Service Contract. TaskMolly does not collect or hold this payment.",
+                  text: "The Client pays the Tasker's price directly to the Tasker, as agreed between them under the Service Contract. Task-Molly does not collect or hold this payment.",
                 },
                 {
-                  title: 'TaskMolly service charge (Clients)',
-                  text: "After the Client confirms that a job is complete, TaskMolly sends an M-Pesa payment request for its service charge. The receipt shows what the charge covers (running the Platform, finding and vetting Taskers, payment processing and dispute protection) and the VAT on it. TaskMolly may review the charge from time to time; the charge in force when the Tasker is confirmed applies to that job.",
+                  title: 'Task-Molly service charge (Clients)',
+                  text: "After the Client confirms that a job is complete, Task-Molly sends an M-Pesa payment request for its service charge. The receipt shows what the charge covers (running the Platform, finding and vetting Taskers, payment processing and dispute protection) and the VAT on it. Task-Molly may review the charge from time to time; the charge in force when the Tasker is confirmed applies to that job.",
                 },
                 {
-                  title: 'TaskMolly platform fee (Taskers)',
-                  text: "After each completed job, TaskMolly sends the Tasker an M-Pesa payment request for its platform fee: 15% of the job price, plus VAT on the fee.",
+                  title: 'Task-Molly platform fee (Taskers)',
+                  text: "After each completed job, Task-Molly sends the Tasker an M-Pesa payment request for its platform fee: 15% of the job price, plus VAT on the fee.",
                 },
                 {
                   title: 'Taxes',
-                  text: "TaskMolly charges VAT on its own service charge and platform fee. Taskers are independent contractors and are responsible for the tax on their own earnings. TaskMolly may ask Taskers for a valid KRA PIN and, with their consent, issue electronic tax invoices (eTIMS) to Clients on their behalf.",
+                  text: "Task-Molly charges VAT on its own service charge and platform fee. Taskers are independent contractors and are responsible for the tax on their own earnings. Task-Molly may ask Taskers for a valid KRA PIN and, with their consent, issue electronic tax invoices (eTIMS) to Clients on their behalf.",
                 },
                 {
                   title: 'Unpaid charges',
-                  text: 'Payment requests are sent through third-party payment services, including M-Pesa. TaskMolly may suspend an account until any unpaid TaskMolly charge is settled.',
+                  text: 'Payment requests are sent through third-party payment services, including M-Pesa. Task-Molly may suspend an account until any unpaid Task-Molly charge is settled.',
                 },
               ].map((item) => (
                 <div key={item.title}>
@@ -174,7 +174,7 @@ export default function TermsView() {
                   'Provide false information',
                   'Interfere with Platform operation',
                   'Harass or harm another User',
-                  'Avoid TaskMolly charges on jobs found through the Platform',
+                  'Avoid Task-Molly charges on jobs found through the Platform',
                   'Use the Platform for illegal purposes'
                 ].map((item, i) => (
                   <div key={i} className="flex items-center gap-3 p-3 bg-red-50 text-red-700 rounded-xl text-xs font-medium">
@@ -196,7 +196,7 @@ export default function TermsView() {
             </div>
             <div className={`prose prose-sm text-rich-black/70 leading-relaxed ${isPhone ? 'pl-4' : 'pl-8 md:pl-14'}`}>
               <p>
-                To the maximum extent permitted by Kenyan law, TaskMolly's total liability shall be limited to the greater of (a) the total Service Charges you paid in the 6 months prior, or (b) Five Thousand Kenya Shillings (KES 5,000).
+                To the maximum extent permitted by Kenyan law, Task-Molly's total liability shall be limited to the greater of (a) the total Service Charges you paid in the 6 months prior, or (b) Five Thousand Kenya Shillings (KES 5,000).
               </p>
             </div>
           </section>
@@ -211,7 +211,7 @@ export default function TermsView() {
             </div>
             <div className={`prose prose-sm text-rich-black/70 leading-relaxed ${isPhone ? 'pl-4' : 'pl-8 md:pl-14'}`}>
               <p>
-                TaskMolly encourages Clients and Taskers to resolve disputes directly and amicably. We may, at our sole discretion, attempt to facilitate a resolution but are under no obligation to do so.
+                Task-Molly encourages Clients and Taskers to resolve disputes directly and amicably. We may, at our sole discretion, attempt to facilitate a resolution but are under no obligation to do so.
               </p>
             </div>
           </section>

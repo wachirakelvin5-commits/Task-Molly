@@ -156,7 +156,7 @@ export default function ProviderServices({ user }: ProviderServicesProps) {
         styles: { fontSize: 8 },
       });
       pdf.text(`Total earnings: KES ${totalEarnings.toLocaleString()}`, 14, (pdf.lastAutoTable?.finalY || 40) + 10);
-      pdf.save('TaskMolly_Provider_History.pdf');
+      pdf.save('Task-Molly_Provider_History.pdf');
     } catch (err) {
       console.error('Statement PDF error:', err);
       toast.error('Could not download history PDF');

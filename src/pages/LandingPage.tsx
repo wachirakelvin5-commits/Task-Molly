@@ -117,7 +117,7 @@ export default function LandingPage({ setHideNavbar }: LandingPageProps) {
       content: `TASKMOLLY KENYA LIMITED – TERMS OF SERVICE
 
     Acceptance of Terms
-    Welcome to TaskMolly, operated by TaskMolly Kenya Limited ("TaskMolly," "we," "us," or "our"). These Terms of Service ("Terms") constitute a legally binding agreement between you ("User," "you," or "your") and TaskMolly governing your access to and use of the TaskMolly website, mobile application, and related services (collectively, the "Platform").
+    Welcome to Task-Molly, operated by TaskMolly Kenya Limited ("Task-Molly," "we," "us," or "our"). These Terms of Service ("Terms") constitute a legally binding agreement between you ("User," "you," or "your") and Task-Molly governing your access to and use of the Task-Molly website, mobile application, and related services (collectively, the "Platform").
     By registering for an account, clicking "I Agree," or using the Platform in any manner, you acknowledge that you have read, understood, and agree to be bound by these Terms and our Privacy Policy. If you do not agree to these Terms, you must not access or use the Platform.
 
     Definitions
@@ -126,8 +126,8 @@ export default function LandingPage({ setHideNavbar }: LandingPageProps) {
     "Services" means the domestic, professional, or other tasks offered by Taskers and requested by Clients through the Platform.
     "Service Contract" means the direct agreement between a Client and a Tasker for the provision of a specific Service, facilitated through the Platform.
 
-    The TaskMolly Platform
-    TaskMolly is a technology platform that facilitates connections between Clients and independent Taskers. TaskMolly is not an employer, agency, or insurer. We do not provide the Services, employ, recommend, endorse, or control the Taskers. Taskers are independent contractors solely responsible for the manner, means, and quality of the Services they provide. Clients are solely responsible for selecting a Tasker and determining the suitability of the Services.
+    The Task-Molly Platform
+    Task-Molly is a technology platform that facilitates connections between Clients and independent Taskers. Task-Molly is not an employer, agency, or insurer. We do not provide the Services, employ, recommend, endorse, or control the Taskers. Taskers are independent contractors solely responsible for the manner, means, and quality of the Services they provide. Clients are solely responsible for selecting a Tasker and determining the suitability of the Services.
 
     User Accounts and Eligibility
     4.1. You must be at least 18 years old and have the legal capacity to enter into a contract to use the Platform.
@@ -137,9 +137,9 @@ export default function LandingPage({ setHideNavbar }: LandingPageProps) {
 
     Booking and Payment Terms
     5.1. Service Requests: Clients post requests for Services. Taskers may submit offers or be invited. The Client selects a Tasker and agrees on a price, forming a Service Contract.
-    5.2. Pricing & Service Charge: The Tasker sets their own price for the Service. The Client agrees to pay this price plus a TaskMolly service charge (the "Service Charge"), which will be clearly displayed before booking confirmation. The Service Charge is non-refundable except as required by law or at TaskMolly's sole discretion.
-    5.3. Payment Processing: All payments are processed securely through third-party payment gateways, including M-Pesa. By providing payment information, you authorize TaskMolly to charge the full amount (Service price + Service Charge).
-    5.4. Tasker Payment: Upon successful completion of a Service and Client confirmation, TaskMolly will facilitate the release of the full agreed Service price to the Tasker, subject to the Tasker's compliance with their separate Contractor Agreement (including payment of any subscription fees).
+    5.2. Pricing & Service Charge: The Tasker sets their own price for the Service. The Client agrees to pay this price plus a Task-Molly service charge (the "Service Charge"), which will be clearly displayed before booking confirmation. The Service Charge is non-refundable except as required by law or at Task-Molly's sole discretion.
+    5.3. Payment Processing: All payments are processed securely through third-party payment gateways, including M-Pesa. By providing payment information, you authorize Task-Molly to charge the full amount (Service price + Service Charge).
+    5.4. Tasker Payment: Upon successful completion of a Service and Client confirmation, Task-Molly will facilitate the release of the full agreed Service price to the Tasker, subject to the Tasker's compliance with their separate Contractor Agreement (including payment of any subscription fees).
 
     User Obligations and Conduct
     6.1. General Conduct: You agree to use the Platform lawfully, ethically, and in good faith. You will not:
@@ -174,19 +174,19 @@ export default function LandingPage({ setHideNavbar }: LandingPageProps) {
 
     Disclaimers and Limitation of Liability
     7.1. Platform "As Is": The Platform is provided on an "as is" and "as available" basis. We disclaim all warranties, express or implied.
-    7.2. No Liability for Services: TaskMolly is not a party to the Service Contract. We expressly disclaim any liability for the acts, omissions, conduct, quality, or performance of any Tasker or Client, or for any personal injury, property damage, theft, or other loss arising from the Services or User interactions.
-    7.3. Limitation of TaskMolly's Liability: To the maximum extent permitted by Kenyan law, TaskMolly's total liability to you for any claim arising from these Terms or your use of the Platform shall be limited to the greater of (a) the total Service Charges you paid to TaskMolly in the 6 months prior to the event giving rise to liability, or (b) Five Thousand Kenya Shillings (KES 5,000).
+    7.2. No Liability for Services: Task-Molly is not a party to the Service Contract. We expressly disclaim any liability for the acts, omissions, conduct, quality, or performance of any Tasker or Client, or for any personal injury, property damage, theft, or other loss arising from the Services or User interactions.
+    7.3. Limitation of Task-Molly's Liability: To the maximum extent permitted by Kenyan law, Task-Molly's total liability to you for any claim arising from these Terms or your use of the Platform shall be limited to the greater of (a) the total Service Charges you paid to Task-Molly in the 6 months prior to the event giving rise to liability, or (b) Five Thousand Kenya Shillings (KES 5,000).
 
     Dispute Resolution Between Users
-    8.1. Direct Resolution: TaskMolly encourages Clients and Taskers to resolve disputes directly and amicably.
-    8.2. Platform Facilitation: TaskMolly may, at its sole and absolute discretion, attempt to facilitate a resolution or offer a refund/credit policy under specific circumstances. We are under no obligation to do so. Any decision we make is final.
-    8.3. Release: You hereby release TaskMolly, its directors, officers, and employees from any claims, demands, and damages arising out of disputes with other Users.
+    8.1. Direct Resolution: Task-Molly encourages Clients and Taskers to resolve disputes directly and amicably.
+    8.2. Platform Facilitation: Task-Molly may, at its sole and absolute discretion, attempt to facilitate a resolution or offer a refund/credit policy under specific circumstances. We are under no obligation to do so. Any decision we make is final.
+    8.3. Release: You hereby release Task-Molly, its directors, officers, and employees from any claims, demands, and damages arising out of disputes with other Users.
 
     Termination and Suspension
     We may, without prior notice, suspend or terminate your account and access to the Platform if we believe you have violated these Terms, engaged in fraudulent or illegal activity, or for any other reason at our discretion.
 
     Intellectual Property
-    All content, software, trademarks, logos, and other materials on the Platform ("TaskMolly IP") are owned by or licensed to TaskMolly. You are granted a limited, non-exclusive, non-transferable license to use the Platform for its intended purpose. You may not copy, modify, or distribute TaskMolly IP without our express written permission.
+    All content, software, trademarks, logos, and other materials on the Platform ("Task-Molly IP") are owned by or licensed to Task-Molly. You are granted a limited, non-exclusive, non-transferable license to use the Platform for its intended purpose. You may not copy, modify, or distribute Task-Molly IP without our express written permission.
 
     Privacy
     Your privacy is important to us. Our collection and use of your personal information is governed by our Privacy Policy, which is incorporated into these Terms by reference.
@@ -195,7 +195,7 @@ export default function LandingPage({ setHideNavbar }: LandingPageProps) {
     12.1. Governing Law & Jurisdiction: These Terms shall be governed by and construed in accordance with the laws of the Republic of Kenya. Any disputes shall be subject to the exclusive jurisdiction of the courts of Kenya.
     12.2. Amendments: We may modify these Terms at any time. We will notify you of material changes via the Platform or email. Your continued use constitutes acceptance of the revised Terms.
     12.3. Severability: If any provision of these Terms is held invalid or unenforceable, the remaining provisions will remain in full force.
-    12.4. Entire Agreement: These Terms, together with the Privacy Policy and the Contractor Agreement (for Taskers), constitute the entire agreement between you and TaskMolly regarding the Platform.
+    12.4. Entire Agreement: These Terms, together with the Privacy Policy and the Contractor Agreement (for Taskers), constitute the entire agreement between you and Task-Molly regarding the Platform.
 
     Contact Us
     For questions about these Terms, please contact us at:
@@ -203,11 +203,11 @@ export default function LandingPage({ setHideNavbar }: LandingPageProps) {
     },
     { 
       title: 'Privacy Policy', 
-      content: `TASKMOLLY PRIVACY POLICY
+      content: `TASK-MOLLY PRIVACY POLICY
 
 1. Introduction
-Welcome to TaskMolly. TaskMolly (“TaskMolly,” “we,” “our,” “us”) operates a digital marketplace platform that connects individuals seeking services (“Clients”) with independent service providers (“Taskers”) for domestic and professional services. This Privacy Policy explains how we, as the data controller, collect, use, disclose, retain, and protect your personal information when you access or use our website, mobile applications, and related services (collectively, the “Services”).
-By using TaskMolly, you acknowledge that you have read, understood, and agree to the practices described in this Policy. If you do not agree, please do not use our Services.
+Welcome to Task-Molly. Task-Molly (“Task-Molly,” “we,” “our,” “us”) operates a digital marketplace platform that connects individuals seeking services (“Clients”) with independent service providers (“Taskers”) for domestic and professional services. This Privacy Policy explains how we, as the data controller, collect, use, disclose, retain, and protect your personal information when you access or use our website, mobile applications, and related services (collectively, the “Services”).
+By using Task-Molly, you acknowledge that you have read, understood, and agree to the practices described in this Policy. If you do not agree, please do not use our Services.
 
 2. Information We Collect
 We collect information to provide and improve our Services. This includes:
@@ -215,7 +215,7 @@ Information You Provide Directly:
 Account Information: Full name, phone number, email address, profile details, and photographs.
 Verification Details: Identification documents (e.g., national ID, passport) where required for background checks or regulatory compliance.
 Transaction Information: Payment instructions and related details (processed via third parties like M-Pesa). We do not store full payment card or PIN details.
-Communications: Records of your communications with TaskMolly or other users through the platform.
+Communications: Records of your communications with Task-Molly or other users through the platform.
 Service Details: Information related to service requests, bids, reviews, and ratings.
 
 Information Collected Automatically:
@@ -229,7 +229,7 @@ We may receive information from payment processors (e.g., M-Pesa payment confirm
 
 3. How We Use Your Information
 We use the personal data we collect for the following purposes:
-To provide, operate, maintain, and secure the TaskMolly platform.
+To provide, operate, maintain, and secure the Task-Molly platform.
 To facilitate matches between Clients and Taskers and enable service transactions.
 To process payments and transactions through trusted third-party providers.
 To verify identities, conduct background checks (where applicable), and prevent fraud.
@@ -241,7 +241,7 @@ To comply with our legal and regulatory obligations under Kenyan law, including 
 We may share your information in the following limited circumstances:
 With Other Users: Necessary information (e.g., name, profile, service history) is shared between Clients and Taskers to facilitate a booking.
 With Service Providers (Data Processors): We engage trusted third-party vendors who act as data processors on our instructions to support our operations. This includes payment processors (M-Pesa), cloud hosting providers, analytics services, customer support tools, and marketing partners. These parties are contractually bound to protect your data.
-For Legal Reasons: We may disclose information if required by law, a valid legal request, or to protect the rights, property, and safety of TaskMolly, our users, or the public. This includes cooperation with regulatory authorities and law enforcement agencies in Kenya.
+For Legal Reasons: We may disclose information if required by law, a valid legal request, or to protect the rights, property, and safety of Task-Molly, our users, or the public. This includes cooperation with regulatory authorities and law enforcement agencies in Kenya.
 Business Transfers: In connection with a merger, acquisition, or sale of assets, your information may be transferred as a business asset.
 With Your Consent: We will share information with third parties when you direct us to do so.
 We do not sell your personal data to third parties.

@@ -26,7 +26,7 @@ export default function PrivacyView() {
           Privacy <span className="text-accent-gold font-medium">Policy</span>
         </h1>
         <p className="text-sm text-rich-black/60 max-w-xl leading-relaxed">
-          Your privacy is our priority. This policy explains how TaskMolly handles your personal data in accordance with the Kenya Data Protection Act, 2019.
+          Your privacy is our priority. This policy explains how Task-Molly handles your personal data in accordance with the Kenya Data Protection Act, 2019.
         </p>
       </section>
 
@@ -36,7 +36,7 @@ export default function PrivacyView() {
           {/* Intro */}
           <section>
             <p className="text-sm text-rich-black/70 leading-relaxed italic">
-              Welcome to TaskMolly. This Privacy Policy explains how we collect, use, disclose, retain, and protect your personal information when you access or use our Services.
+              Welcome to Task-Molly. This Privacy Policy explains how we collect, use, disclose, retain, and protect your personal information when you access or use our Services.
             </p>
           </section>
 
