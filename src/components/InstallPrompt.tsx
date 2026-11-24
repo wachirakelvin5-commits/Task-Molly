@@ -94,7 +94,7 @@ export function InstallPrompt() {
         exit={{ y: 100, opacity: 0 }}
         className="fixed bottom-6 left-4 right-4 z-[200] max-w-md mx-auto"
       >
-        <div className="bg-black border-2 border-[#E2BF36] rounded-3xl p-5 shadow-2xl overflow-hidden relative">
+        <div className="bg-black border-2 border-[#AE9573] rounded-3xl p-5 shadow-2xl overflow-hidden relative">
           <button 
             onClick={dismissPrompt}
             className="absolute top-3 right-3 text-white/50 hover:text-white transition-colors"
@@ -103,7 +103,7 @@ export function InstallPrompt() {
           </button>
 
           <div className="flex items-center gap-4">
-            <div className="w-12 h-12 bg-[#E2BF36] rounded-xl flex items-center justify-center text-black shrink-0 shadow-lg">
+            <div className="w-12 h-12 bg-[#AE9573] rounded-xl flex items-center justify-center text-black shrink-0 shadow-lg">
               <Download size={24} />
             </div>
             
@@ -119,18 +119,18 @@ export function InstallPrompt() {
             {isIOS ? (
               <div className="bg-white/5 rounded-2xl p-3 flex flex-col gap-2">
                 <div className="flex items-center gap-2 text-white text-xs">
-                  <span className="flex items-center justify-center w-5 h-5 bg-[#E2BF36] rounded-full text-black font-bold text-[10px]">1</span>
+                  <span className="flex items-center justify-center w-5 h-5 bg-[#AE9573] rounded-full text-black font-bold text-[10px]">1</span>
                   <span>Tap the <span className="inline-flex items-center bg-white/10 px-1 rounded mx-0.5"><Share size={12} className="text-blue-400" /></span> icon below</span>
                 </div>
                 <div className="flex items-center gap-2 text-white text-xs">
-                  <span className="flex items-center justify-center w-5 h-5 bg-[#E2BF36] rounded-full text-black font-bold text-[10px]">2</span>
+                  <span className="flex items-center justify-center w-5 h-5 bg-[#AE9573] rounded-full text-black font-bold text-[10px]">2</span>
                   <span>Scroll down and select <span className="font-bold flex items-center gap-1">Add to Home Screen <PlusSquare size={12} /></span></span>
                 </div>
               </div>
             ) : (
               <button
                 onClick={handleInstallClick}
-                className="w-full bg-[#E2BF36] text-black font-black py-3 rounded-2xl hover:scale-[1.02] active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2"
+                className="w-full bg-[#AE9573] text-black font-black py-3 rounded-2xl hover:scale-[1.02] active:scale-95 transition-all shadow-lg flex items-center justify-center gap-2"
               >
                 INSTALL APP
               </button>

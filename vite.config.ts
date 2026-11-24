@@ -20,8 +20,8 @@ export default defineConfig(({ mode }) => {
           name: 'Task Molly',
           short_name: 'Task Molly',
           description: 'Premium domestic services platform for Kenya',
-          theme_color: '#E2BF36',
-          background_color: '#E2BF36',
+          theme_color: '#AE9573',
+          background_color: '#AE9573',
           display: 'standalone',
           icons: [
             {

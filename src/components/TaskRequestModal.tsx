@@ -323,7 +323,7 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
                       : `${BOX} resize-y leading-relaxed min-h-[9rem]`}
                     style={isNotepad ? {
                       lineHeight: '28px',
-                      backgroundImage: 'repeating-linear-gradient(to bottom, transparent 0, transparent 27px, rgba(226,191,54,0.45) 27px, rgba(226,191,54,0.45) 28px)',
+                      backgroundImage: 'repeating-linear-gradient(to bottom, transparent 0, transparent 27px, rgba(174,149,115,0.35) 27px, rgba(174,149,115,0.35) 28px)',
                       backgroundAttachment: 'local',
                       backgroundPosition: '0 7px',
                     } : undefined}
