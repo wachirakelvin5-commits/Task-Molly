@@ -1,10 +1,5 @@
 /* Same look as the main app (colours, font), plus the shared admin screens for Tailwind to scan. */
 @import "../../src/index.css";
-
-/* The admin site keeps its own gold. The main site's gold (src/index.css) is #e2bf36. */
-@theme {
-  --color-accent-gold: #b59d7a;
-}
 @source "../../src/pages/Admin*.tsx";
 /* Shared components the admin screens use (task details panel, chat thread). */
 @source "../../src/components";
