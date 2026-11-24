@@ -108,7 +108,7 @@ export function stkPushBody(c: MpesaConfig, o: { amount: number; phone: string; 
     PartyB: c.partyB,
     PhoneNumber: o.phone,
     CallBackURL: `${c.callbackBaseUrl}/api/payment/stk-callback/${c.callbackToken}/${o.paymentId}`,
-    AccountReference: o.reference.replace(/[^A-Za-z0-9-]/g, '').slice(0, 12) || 'TaskMolly',
+    AccountReference: o.reference.replace(/[^A-Za-z0-9-]/g, '').slice(0, 12) || 'Task-Molly',
     TransactionDesc: 'Task Molly',
   };
 }

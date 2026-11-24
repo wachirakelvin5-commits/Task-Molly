@@ -1,35 +1,10 @@
-import { useState, useEffect, useMemo } from 'react';
+import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
 import { ChevronDown, PenLine, LogIn, LayoutDashboard } from 'lucide-react';
 import { UserProfile } from '../types';
+import { PROVIDER_LIST_SERVICES } from '../data/serviceCatalog';
 
-const DEFAULT_SERVICES = [
-  'Appliance Repair',
-  'Babysitting & Child Care',
-  'Car Wash (Home Service)',
-  'Carpenter',
-  'Cook / Meal Prep',
-  'Electrician',
-  'Errand Runner',
-  'Event Help',
-  'Fundi',
-  'Gardener',
-  'Gas Technician',
-  'Home Cleaning',
-  'Interior Stylist',
-  'Internet & TV Installation',
-  'Mama Fua',
-  'Movers',
-  'Painter',
-  'Personal Assistant',
-  'Pest Control',
-  'Phone & Laptop Repair',
-  'Plumber',
-  'Security Technician',
-  'Waste Collection',
-  'Water Tank Cleaning'
-];
 
 import { useDeviceType } from '../hooks/useDeviceType';
 
@@ -40,20 +15,7 @@ interface NavbarProps {
 export default function Navbar({ user }: NavbarProps) {
   const { isPhone, isTablet, isLaptop } = useDeviceType();
   const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const [serviceUsage, setServiceUsage] = useState<Record<string, number>>({});
   const navigate = useNavigate();
-
-  // Load service usage from localStorage on mount
-  useEffect(() => {
-    const savedUsage = localStorage.getItem('taskmolly_service_usage');
-    if (savedUsage) {
-      try {
-        setServiceUsage(JSON.parse(savedUsage));
-      } catch (e) {
-        console.error('Failed to parse service usage', e);
-      }
-    }
-  }, []);
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
@@ -67,30 +29,10 @@ export default function Navbar({ user }: NavbarProps) {
     return () => window.removeEventListener('keydown', handleEscape);
   }, [isDropdownOpen]);
 
-  // Sort services based on usage (descending) then alphabetically
-  const sortedServices = useMemo(() => {
-    return [...DEFAULT_SERVICES].sort((a, b) => {
-      const usageA = serviceUsage[a] || 0;
-      const usageB = serviceUsage[b] || 0;
-      
-      if (usageB !== usageA) {
-        return usageB - usageA;
-      }
-      return a.localeCompare(b);
-    });
-  }, [serviceUsage]);
-
-  const handleServiceClick = (service: string) => {
-    const newUsage = {
-      ...serviceUsage,
-      [service]: (serviceUsage[service] || 0) + 1
-    };
-    setServiceUsage(newUsage);
-    localStorage.setItem('taskmolly_service_usage', JSON.stringify(newUsage));
+  // The task-molly provider list: services in a fixed order, each opening its providers.
+  const handleServiceClick = (serviceId: string) => {
     setIsDropdownOpen(false);
-    
-    // Navigate to providers page with the selected service
-    navigate(`/providers?service=${encodeURIComponent(service)}`);
+    navigate(`/providers?service=${encodeURIComponent(serviceId)}`);
   };
 
   const dashboardPath = user?.role === 'tasker' ? '/provider-dashboard' : '/dashboard';
@@ -116,22 +58,16 @@ export default function Navbar({ user }: NavbarProps) {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
-                className="absolute top-full left-0 mt-2 w-64 bg-white border border-warm-gray rounded-2xl shadow-xl overflow-hidden py-2 max-h-[70vh] overflow-y-auto no-scrollbar"
+                className="absolute top-full left-0 mt-2 w-72 bg-white border border-warm-gray rounded-2xl shadow-xl overflow-hidden py-2 max-h-[70vh] overflow-y-auto no-scrollbar"
               >
-                {sortedServices.map((service) => (
+                <p className="px-6 pt-2 pb-1 text-[10px] uppercase tracking-[0.25em] font-bold text-accent-gold">task-molly providers</p>
+                {PROVIDER_LIST_SERVICES.map((service) => (
                   <button
-                    key={service}
+                    key={service.id}
                     className="w-full text-left px-6 py-3 text-sm hover:bg-warm-gray/10 transition-colors flex items-center justify-between group"
-                    onClick={() => handleServiceClick(service)}
+                    onClick={() => handleServiceClick(service.id)}
                   >
-                    <span className="flex items-center gap-2">
-                      {service}
-                      {serviceUsage[service] > 0 && (
-                        <span className="text-[10px] bg-accent-gold/10 text-accent-gold px-1.5 py-0.5 rounded-full font-medium">
-                          {serviceUsage[service]}
-                        </span>
-                      )}
-                    </span>
+                    <span>{service.name}</span>
                     <ChevronDown size={14} className="opacity-0 group-hover:opacity-100 -rotate-90 transition-all" />
                   </button>
                 ))}
@@ -142,10 +78,10 @@ export default function Navbar({ user }: NavbarProps) {
       </div>
 
       <div className="flex justify-center">
-        <Link to="/" className="flex items-baseline gap-1 group">
+        <Link to="/" className="flex items-baseline group" aria-label="task-molly home">
           <span className={`text-rich-black font-semibold tracking-tight transition-all ${
             isPhone ? 'text-xl' : 'text-2xl'
-          }`}>task</span>
+          }`}>task-</span>
           <span className={`text-accent-gold font-light tracking-tight transition-all ${
             isPhone ? 'text-xl' : 'text-2xl'
           }`}>molly</span>

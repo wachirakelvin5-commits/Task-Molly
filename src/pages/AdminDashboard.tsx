@@ -327,7 +327,7 @@ export default function AdminDashboard() {
     }
     const rows = exportRows(scope, now);
     const stamp = formatDateTime(new Date(now)).slice(0, 10);
-    const name = tab === 'live' ? `TaskMolly_live_requests_${stamp}` : `TaskMolly_${tab}_${period.key}_${stamp}`;
+    const name = tab === 'live' ? `Task-Molly_live_requests_${stamp}` : `Task-Molly_${tab}_${period.key}_${stamp}`;
 
     if (kind === 'csv') {
       const blob = new Blob([toCSV(rows)], { type: 'text/csv;charset=utf-8' });

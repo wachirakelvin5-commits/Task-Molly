@@ -142,7 +142,7 @@ export default function AdminComplaints() {
       await addDoc(collection(db, `complaints/${selectedComplaint.id}/messages`), {
         text: chatMessage,
         senderId: 'admin',
-        senderName: 'TaskMolly Admin',
+        senderName: 'Task-Molly Admin',
         timestamp: serverTimestamp(),
         type: 'admin'
       });

@@ -161,7 +161,7 @@ export default function ClientTasks({ user }: ClientTasksProps) {
       });
       const total = completedRequests.reduce((sum, r) => sum + Number(r.clientPrice ?? r.budget ?? 0), 0);
       pdf.text(`Completed jobs total: KES ${total.toLocaleString()}`, 14, (pdf.lastAutoTable?.finalY || 40) + 10);
-      pdf.save('TaskMolly_Task_History.pdf');
+      pdf.save('Task-Molly_Task_History.pdf');
     } catch (err) {
       console.error('History PDF generation error:', err);
       toast.error('Failed to generate the PDF');

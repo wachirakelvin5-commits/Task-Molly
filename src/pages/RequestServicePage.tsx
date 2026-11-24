@@ -15,7 +15,7 @@ import { auth } from '../firebase';
 import { TIME_SLOTS, buildRequestPayload, localIsoDate, submitServiceRequest } from '../lib/requestForm';
 import { toast } from 'sonner';
 import { savePendingRequest } from '../lib/pendingRequestService';
-import { ALL_SERVICES_CATALOG, ServiceItem } from '../data/serviceCatalog';
+import { ALL_SERVICES_CATALOG, REQUEST_SERVICES, ServiceItem } from '../data/serviceCatalog';
 import LocationAutocomplete, { LocationSelection } from '../components/LocationAutocomplete';
 
 interface RequestServicePageProps {
@@ -84,7 +84,7 @@ export default function RequestServicePage({ initialServiceId, isModal = false, 
   }, [searchParams]);
 
   // Filtered services
-  const filteredServices = ALL_SERVICES_CATALOG.filter(service => {
+  const filteredServices = REQUEST_SERVICES.filter(service => {
     if (!searchQuery.trim()) return true;
     return service.name.toLowerCase().includes(searchQuery.toLowerCase());
   });

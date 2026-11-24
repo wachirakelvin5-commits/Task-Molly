@@ -431,3 +431,95 @@ export function OtherServiceIcon({ className = '', size = 56 }: IconProps) {
     </svg>
   );
 }
+
+// 28. Shopping (shopping bag with handles)
+export function ShoppingIcon({ className = '', size = 56 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <path d="M20 30H60L56 66H24L20 30Z" fill="#FDE68A" stroke="#18181B" strokeWidth="2.4" strokeLinejoin="round" />
+      <path d="M31 36V26C31 20.5 35 16 40 16C45 16 49 20.5 49 26V36" stroke="#18181B" strokeWidth="2.4" strokeLinecap="round" />
+      <circle cx="31" cy="37" r="2" fill="#18181B" />
+      <circle cx="49" cy="37" r="2" fill="#18181B" />
+      <path d="M58 14L59.5 10L61 14L65 15.5L61 17L59.5 21L58 17L54 15.5L58 14Z" fill="#F59E0B" />
+    </svg>
+  );
+}
+
+// 29. Grocery Shopping (basket with produce)
+export function GroceryIcon({ className = '', size = 56 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <circle cx="32" cy="30" r="8" fill="#F59E0B" stroke="#18181B" strokeWidth="2.2" />
+      <path d="M44 18C52 18 54 26 50 32" stroke="#18181B" strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M46 34C46 26 54 22 58 24" fill="#86EFAC" stroke="#18181B" strokeWidth="2.2" strokeLinecap="round" />
+      <path d="M12 38H68L62 64H18L12 38Z" fill="#FDE68A" stroke="#18181B" strokeWidth="2.4" strokeLinejoin="round" />
+      <path d="M28 44V58M40 44V58M52 44V58" stroke="#18181B" strokeWidth="2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// 30. Carpenter (saw over a plank)
+export function CarpenterIcon({ className = '', size = 56 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <rect x="10" y="52" width="60" height="12" rx="2" fill="#FDE68A" stroke="#18181B" strokeWidth="2.4" />
+      <path d="M18 58H30M40 58H50" stroke="#18181B" strokeWidth="1.8" strokeLinecap="round" />
+      <path d="M22 42L52 18L60 26L30 50L22 42Z" fill="white" stroke="#18181B" strokeWidth="2.4" strokeLinejoin="round" />
+      <path d="M28 44L30 46M34 39L36 41M40 34L42 36M46 29L48 31" stroke="#18181B" strokeWidth="1.8" strokeLinecap="round" />
+      <rect x="54" y="12" width="12" height="10" rx="3" transform="rotate(45 60 17)" fill="#F59E0B" stroke="#18181B" strokeWidth="2.2" />
+    </svg>
+  );
+}
+
+// 31. Driver (steering wheel)
+export function DriverIcon({ className = '', size = 56 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <circle cx="40" cy="40" r="24" fill="#FDE68A" stroke="#18181B" strokeWidth="2.4" />
+      <circle cx="40" cy="40" r="15" fill="white" stroke="#18181B" strokeWidth="2.2" />
+      <circle cx="40" cy="42" r="5" fill="#F59E0B" stroke="#18181B" strokeWidth="2" />
+      <path d="M25 38H35M45 38H55M40 47V55" stroke="#18181B" strokeWidth="2.6" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// 32. Gas (gas cylinder)
+export function GasIcon({ className = '', size = 56 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <path d="M34 14H46V22H34V14Z" fill="white" stroke="#18181B" strokeWidth="2.2" strokeLinejoin="round" />
+      <path d="M28 22H52C57 22 60 26 60 31V60C60 63 58 66 55 66H25C22 66 20 63 20 60V31C20 26 23 22 28 22Z" fill="#FDE68A" stroke="#18181B" strokeWidth="2.4" />
+      <path d="M20 36H60M20 54H60" stroke="#18181B" strokeWidth="2" />
+      <path d="M40 40C44 44 44 48 40 50C36 48 36 44 40 40Z" fill="#F59E0B" stroke="#18181B" strokeWidth="1.8" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
+// 33. Internet Installation (wi-fi router)
+export function InternetIcon({ className = '', size = 56 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <path d="M26 28C34 20 46 20 54 28" stroke="#18181B" strokeWidth="2.4" strokeLinecap="round" />
+      <path d="M31 33C36 28.5 44 28.5 49 33" stroke="#18181B" strokeWidth="2.4" strokeLinecap="round" />
+      <circle cx="40" cy="38" r="2.6" fill="#F59E0B" />
+      <rect x="14" y="46" width="52" height="16" rx="5" fill="#FDE68A" stroke="#18181B" strokeWidth="2.4" />
+      <circle cx="26" cy="54" r="2" fill="#18181B" />
+      <circle cx="34" cy="54" r="2" fill="#18181B" />
+      <path d="M46 54H56M22 62V66M58 62V66" stroke="#18181B" strokeWidth="2.2" strokeLinecap="round" />
+    </svg>
+  );
+}
+
+// 34. Make-up Professional (lipstick and brush)
+export function MakeupIcon({ className = '', size = 56 }: IconProps) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 80 80" fill="none" xmlns="http://www.w3.org/2000/svg" className={className}>
+      <path d="M24 30L30 18H34L36 30H24Z" fill="#F59E0B" stroke="#18181B" strokeWidth="2.2" strokeLinejoin="round" />
+      <rect x="22" y="30" width="16" height="10" rx="1.5" fill="white" stroke="#18181B" strokeWidth="2.2" />
+      <rect x="20" y="40" width="20" height="24" rx="3" fill="#FDE68A" stroke="#18181B" strokeWidth="2.4" />
+      <path d="M50 64L54 34" stroke="#18181B" strokeWidth="2.6" strokeLinecap="round" />
+      <path d="M50 34C50 24 54 16 58 14C62 18 62 26 58 34H50Z" fill="#FDE68A" stroke="#18181B" strokeWidth="2.2" strokeLinejoin="round" />
+      <path d="M49 38H59" stroke="#18181B" strokeWidth="2.4" strokeLinecap="round" />
+    </svg>
+  );
+}
