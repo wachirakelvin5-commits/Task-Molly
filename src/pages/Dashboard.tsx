@@ -518,7 +518,7 @@ export default function Dashboard({ user }: DashboardProps) {
             repeat: Infinity,
             ease: "easeInOut"
           }}
-          className="w-full bg-white border border-warm-gray rounded-[2rem] p-4 md:p-5 shadow-[0_15px_40px_rgba(212,175,55,0.06)] flex flex-col gap-2 border-accent-gold/15 shrink-0"
+          className="w-full bg-white border border-warm-gray rounded-[2rem] p-4 md:p-5 shadow-[0_15px_40px_rgba(226,191,54,0.08)] flex flex-col gap-2 border-accent-gold/15 shrink-0"
         >
           {/* Edit Profile */}
           <button
