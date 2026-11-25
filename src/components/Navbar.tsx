@@ -1,9 +1,8 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { ChevronDown, PenLine, LogIn, LayoutDashboard } from 'lucide-react';
+import { PenLine, LogIn, LayoutDashboard, ExternalLink } from 'lucide-react';
 import { UserProfile } from '../types';
-import { PROVIDER_LIST_SERVICES } from '../data/serviceCatalog';
 
 
 import { useDeviceType } from '../hooks/useDeviceType';
@@ -29,12 +28,6 @@ export default function Navbar({ user }: NavbarProps) {
     return () => window.removeEventListener('keydown', handleEscape);
   }, [isDropdownOpen]);
 
-  // The task-molly provider list: services in a fixed order, each opening its providers.
-  const handleServiceClick = (serviceId: string) => {
-    setIsDropdownOpen(false);
-    navigate(`/providers?service=${encodeURIComponent(serviceId)}`);
-  };
-
   const dashboardPath = user?.role === 'tasker' ? '/provider-dashboard' : '/dashboard';
 
   return (
@@ -58,19 +51,19 @@ export default function Navbar({ user }: NavbarProps) {
                 initial={{ opacity: 0, y: 10 }}
                 animate={{ opacity: 1, y: 0 }}
                 exit={{ opacity: 0, y: 10 }}
-                className="absolute top-full left-0 mt-2 w-72 bg-white border border-warm-gray rounded-2xl shadow-xl overflow-hidden py-2 max-h-[70vh] overflow-y-auto no-scrollbar"
+                className="absolute top-full left-0 mt-2 w-60 bg-white border border-warm-gray rounded-2xl shadow-xl overflow-hidden py-2"
               >
-                <p className="px-6 pt-2 pb-1 text-[10px] uppercase tracking-[0.25em] font-bold text-accent-gold">task-molly providers</p>
-                {PROVIDER_LIST_SERVICES.map((service) => (
-                  <button
-                    key={service.id}
-                    className="w-full text-left px-6 py-3 text-sm hover:bg-warm-gray/10 transition-colors flex items-center justify-between group"
-                    onClick={() => handleServiceClick(service.id)}
-                  >
-                    <span>{service.name}</span>
-                    <ChevronDown size={14} className="opacity-0 group-hover:opacity-100 -rotate-90 transition-all" />
-                  </button>
-                ))}
+                {/* Opens the Premium packages page in a new tab */}
+                <a
+                  href="/premium"
+                  target="_blank"
+                  rel="noopener"
+                  onClick={() => setIsDropdownOpen(false)}
+                  className="w-full px-5 py-3 text-sm font-semibold text-rich-black hover:bg-warm-gray/10 hover:text-accent-gold transition-colors flex items-center justify-between gap-3 group"
+                >
+                  <span>task-molly providers</span>
+                  <ExternalLink size={14} className="text-accent-gold shrink-0" />
+                </a>
               </motion.div>
             )}
           </AnimatePresence>
