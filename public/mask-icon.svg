@@ -1,4 +1,6 @@
 <svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512">
   <rect width="512" height="512" fill="#AE9573"/>
-  <text x="50%" y="50%" dominant-baseline="middle" text-anchor="middle" font-family="Arial, sans-serif" font-weight="900" font-size="280" fill="white">M</text>
+  <!-- White M drawn as a shape (not text) so it is the same everywhere, centred exactly on 256,256:
+       x 126-386, y 146-366, well inside the circle Google crops favicons to. -->
+  <path fill="#FFFFFF" d="M126 366V146H190L256 262L322 146H386V366H330V240L276 334H236L182 240V366Z"/>
 </svg>
