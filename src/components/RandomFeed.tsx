@@ -13,7 +13,7 @@ import {
   reactionChange, countOf, Reaction, RANDOM_MAX_LENGTH, COMMENT_MAX_LENGTH,
 } from '../lib/randomPosts';
 
-// The "Random" tab: anonymous posts. Nothing about the person posting is stored or shown.
+// The "Open Forum" tab (formerly "Random"): anonymous posts. Nothing about the person posting is stored or shown.
 // Open to everyone: no sign-in or sign-up needed to read, post, react or comment.
 // This is the only part of the app that works without an account.
 
@@ -112,7 +112,7 @@ export default function RandomFeed() {
     }
     setPosting(false);
     handleFirestoreError(lastError, OperationType.CREATE, 'forum');
-    toast.error('Could not post your Random. Please try again.');
+    toast.error('Could not post to the Open Forum. Please try again.');
   };
 
   const handleReact = async (post: RandomPost, tapped: Reaction) => {
@@ -140,12 +140,12 @@ export default function RandomFeed() {
 
   return (
     <div className="flex flex-col h-full w-full bg-white overflow-hidden">
-      {/* New Random */}
+      {/* New post */}
       <form onSubmit={handlePost} className="p-3 md:p-4 border-b border-warm-gray/50 shrink-0 space-y-2">
         <textarea
           value={draft}
           onChange={(e) => setDraft(e.target.value.slice(0, RANDOM_MAX_LENGTH))}
-          placeholder="Share a Random. It's posted with its own ID, never your name."
+          placeholder="Share with the Open Forum. Posts get their own ID, never your name."
           rows={2}
           className="w-full resize-none bg-primary-bg/70 focus:bg-white border border-warm-gray/60 focus:border-accent-gold rounded-2xl px-3.5 py-2.5 text-xs text-rich-black placeholder:text-rich-black/40 focus:outline-none transition-all"
         />
@@ -157,16 +157,16 @@ export default function RandomFeed() {
             className="px-4 py-1.5 rounded-full bg-accent-gold text-white text-xs font-bold disabled:opacity-40 hover:bg-accent-gold/90 transition-all flex items-center gap-1.5 cursor-pointer active:scale-95"
           >
             <Send size={12} />
-            {posting ? 'Posting…' : 'Post Random'}
+            {posting ? 'Posting…' : 'Post'}
           </button>
         </div>
       </form>
 
       {/* Feed */}
       <div className="flex-1 overflow-y-auto px-3 md:px-4 py-3 space-y-3 no-scrollbar min-h-0">
-        {loading && <p className="text-center text-xs text-rich-black/40 py-10">Loading Randoms…</p>}
+        {loading && <p className="text-center text-xs text-rich-black/40 py-10">Loading the Open Forum…</p>}
         {!loading && posts.length === 0 && (
-          <p className="text-center text-xs text-rich-black/40 py-10">No Randoms yet. Be the first to post one.</p>
+          <p className="text-center text-xs text-rich-black/40 py-10">No posts yet. Be the first to post.</p>
         )}
         {posts.map((post) => (
           <div key={post.id}>

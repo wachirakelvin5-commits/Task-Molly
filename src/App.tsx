@@ -19,7 +19,7 @@ const ProviderServices = lazy(() => import('./pages/ProviderServices'));
 const ProviderMyServices = lazy(() => import('./pages/ProviderMyServices'));
 const AuthPage = lazy(() => import('./pages/AuthPage'));
 const ChatPage = lazy(() => import('./pages/ChatPage'));
-const ProviderListing = lazy(() => import('./pages/ProviderListing'));
+const PremiumPage = lazy(() => import('./pages/PremiumPage'));
 const BlogPage = lazy(() => import('./pages/BlogPage'));
 const ClientTasks = lazy(() => import('./pages/ClientTasks'));
 const RequestServicePage = lazy(() => import('./pages/RequestServicePage'));
@@ -156,10 +156,9 @@ export default function App() {
                 path="/my-services" 
                 element={user ? <ProviderMyServices user={user} /> : <Navigate to="/auth" />} 
               />
-              <Route 
-                path="/providers" 
-                element={<ProviderListing />} 
-              />
+              {/* task-molly providers: Premium monthly packages (opened from the pen icon) */}
+              <Route path="/premium" element={<PremiumPage />} />
+              <Route path="/providers" element={<Navigate to="/premium" replace />} />
               <Route 
                 path="/chat/:jobId" 
                 element={user ? <ChatPage user={user} /> : <Navigate to="/auth" />} 
