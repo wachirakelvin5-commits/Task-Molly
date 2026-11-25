@@ -1,7 +1,7 @@
 import { useState, useEffect } from 'react';
 import { Link, useNavigate } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { PenLine, LogIn, LayoutDashboard, ExternalLink } from 'lucide-react';
+import { PenLine, LogIn, LayoutDashboard, ChevronRight } from 'lucide-react';
 import { UserProfile } from '../types';
 
 
@@ -53,17 +53,15 @@ export default function Navbar({ user }: NavbarProps) {
                 exit={{ opacity: 0, y: 10 }}
                 className="absolute top-full left-0 mt-2 w-60 bg-white border border-warm-gray rounded-2xl shadow-xl overflow-hidden py-2"
               >
-                {/* Opens the Premium packages page in a new tab */}
-                <a
-                  href="/premium"
-                  target="_blank"
-                  rel="noopener"
+                {/* Opens the Premium page (same tab) */}
+                <Link
+                  to="/premium"
                   onClick={() => setIsDropdownOpen(false)}
                   className="w-full px-5 py-3 text-sm font-semibold text-rich-black hover:bg-warm-gray/10 hover:text-accent-gold transition-colors flex items-center justify-between gap-3 group"
                 >
                   <span>task-molly providers</span>
-                  <ExternalLink size={14} className="text-accent-gold shrink-0" />
-                </a>
+                  <ChevronRight size={14} className="text-accent-gold shrink-0" />
+                </Link>
               </motion.div>
             )}
           </AnimatePresence>

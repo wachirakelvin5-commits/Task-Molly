@@ -15,9 +15,11 @@ const BOX = 'w-full px-3.5 py-3 bg-primary-bg/50 border border-warm-gray rounded
 interface TaskRequestModalProps {
   onClose: () => void;
   initialService?: string;
+  /** Pre-fills the first box (e.g. what was curated on the Premium page). */
+  initialDescription?: string;
 }
 
-export default function TaskRequestModal({ onClose, initialService }: TaskRequestModalProps) {
+export default function TaskRequestModal({ onClose, initialService, initialDescription = '' }: TaskRequestModalProps) {
   const navigate = useNavigate();
 
   // Find initial service if provided
@@ -45,7 +47,7 @@ export default function TaskRequestModal({ onClose, initialService }: TaskReques
   });
   const [unitOrApartment, setUnitOrApartment] = useState('');
 
-  const [taskDescription, setTaskDescription] = useState('');
+  const [taskDescription, setTaskDescription] = useState(initialDescription);
 
   // Scheduling (ASAP removed, schedule date kept)
   const [scheduledDate, setScheduledDate] = useState(() => localIsoDate());
