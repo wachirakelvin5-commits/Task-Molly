@@ -1,8 +1,6 @@
-import { useState, useMemo, useEffect } from 'react';
+import { useState, useEffect } from 'react';
 import { motion, AnimatePresence } from 'motion/react';
 import { 
-  Search, 
-  Filter, 
   Droplets, 
   Zap, 
   Sparkles, 
@@ -42,18 +40,7 @@ const ICON_MAP: Record<string, any> = {
   Leaf, Droplet, Cpu, Calendar, Star, Package, Wind, FileCheck, Map, Activity
 };
 
-const CATEGORIES = [
-  { id: 'all', label: 'All Facts', icon: Filter },
-  { id: 'plumbing', label: 'Plumbing', icon: Droplets },
-  { id: 'electrical', label: 'Electrical', icon: Zap },
-  { id: 'cleaning', label: 'Cleaning', icon: Sparkles },
-  { id: 'laundry', label: 'Laundry', icon: Shirt },
-  { id: 'firesafety', label: 'Fire Safety', icon: Flame },
-];
-
 export default function FunFactsView() {
-  const [activeCategory, setActiveCategory] = useState('all');
-  const [searchQuery, setSearchQuery] = useState('');
   const [viewedFacts, setViewedFacts] = useState<number[]>([]);
   const [selectedPost, setSelectedPost] = useState<BlogPost | null>(null);
 
@@ -72,15 +59,6 @@ export default function FunFactsView() {
     }
   };
 
-  const filteredFacts = useMemo(() => {
-    return FUN_FACTS.filter(fact => {
-      const matchesCategory = activeCategory === 'all' || fact.category === activeCategory;
-      const matchesSearch = fact.text.toLowerCase().includes(searchQuery.toLowerCase()) ||
-                           fact.source.toLowerCase().includes(searchQuery.toLowerCase());
-      return matchesCategory && matchesSearch;
-    });
-  }, [activeCategory, searchQuery]);
-
   if (selectedPost) {
     return (
       <div className="h-full">
@@ -91,49 +69,16 @@ export default function FunFactsView() {
 
   return (
     <div className="h-full overflow-y-auto no-scrollbar bg-primary-bg/30">
-      {/* Priority Intelligence (published articles), in place of the old Fact Master header */}
+      {/* Priority Intelligence (published articles), then straight into the fun facts */}
       <div className="border-b border-warm-gray">
         <PriorityIntelligence onSelect={setSelectedPost} />
-      </div>
-
-      <div className="p-4 md:p-6 bg-white border-b border-warm-gray sticky top-0 z-20">
-        {/* Search & Filters */}
-        <div className="space-y-3">
-          <div className="relative">
-            <Search className="absolute left-3.5 top-1/2 -translate-y-1/2 text-rich-black/30" size={16} />
-            <input 
-              type="text"
-              placeholder="Search facts..."
-              value={searchQuery}
-              onChange={(e) => setSearchQuery(e.target.value)}
-              className="w-full pl-10 pr-4 py-2.5 bg-warm-gray/10 border border-warm-gray rounded-xl focus:outline-none focus:border-accent-gold transition-colors text-xs"
-            />
-          </div>
-          
-          <div className="flex items-center gap-2 overflow-x-auto pb-1 no-scrollbar">
-            {CATEGORIES.map((cat) => (
-              <button
-                key={cat.id}
-                onClick={() => setActiveCategory(cat.id)}
-                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-[10px] font-bold whitespace-nowrap transition-all uppercase tracking-wider ${
-                  activeCategory === cat.id 
-                    ? 'bg-rich-black text-white shadow-md shadow-rich-black/20' 
-                    : 'bg-white border border-warm-gray text-rich-black/60 hover:border-accent-gold'
-                }`}
-              >
-                <cat.icon size={12} />
-                {cat.label}
-              </button>
-            ))}
-          </div>
-        </div>
       </div>
 
       {/* Facts Grid */}
       <div className="p-4 md:p-6">
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
           <AnimatePresence mode="popLayout">
-            {filteredFacts.map((fact) => {
+            {FUN_FACTS.map((fact) => {
               const Icon = ICON_MAP[fact.icon] || CheckCircle2;
               const isViewed = viewedFacts.includes(fact.id);
               
@@ -196,16 +141,6 @@ export default function FunFactsView() {
             })}
           </AnimatePresence>
         </div>
-
-        {filteredFacts.length === 0 && (
-          <div className="flex flex-col items-center justify-center py-20 text-center">
-            <div className="w-20 h-20 bg-warm-gray/10 rounded-full flex items-center justify-center mb-4">
-              <Search size={32} className="text-rich-black/20" />
-            </div>
-            <h3 className="text-lg font-medium text-rich-black">No facts found</h3>
-            <p className="text-sm text-rich-black/50">Try searching for something else or change the category.</p>
-          </div>
-        )}
 
         {/* Footer Info */}
         <div className="mt-20 pt-10 border-t border-warm-gray text-center max-w-2xl mx-auto">
