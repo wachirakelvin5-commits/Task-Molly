@@ -1,7 +1,7 @@
 import { useState } from 'react';
-import { useSearchParams } from 'react-router-dom';
+import { useSearchParams, Link } from 'react-router-dom';
 import { motion, AnimatePresence } from 'motion/react';
-import { Star, MapPin, BadgeCheck, Send } from 'lucide-react';
+import { Star, MapPin, BadgeCheck, Send, ArrowLeft } from 'lucide-react';
 import { PROVIDER_LIST_SERVICES, findService, ServiceItem } from '../data/serviceCatalog';
 import { SAMPLE_PROVIDERS, SampleProvider, posterHeadline, formatKes } from '../data/sampleProviders';
 import TaskRequestModal from '../components/TaskRequestModal';
@@ -17,7 +17,11 @@ export default function ProviderListing() {
   const [askMollyFor, setAskMollyFor] = useState<string | null>(null);
 
   return (
-    <div className="min-h-[100dvh] pt-24 md:pt-28 pb-20 px-4 md:px-6 max-w-6xl mx-auto">
+    <div className="min-h-[100dvh] pt-8 md:pt-10 pb-20 px-4 md:px-6 max-w-6xl mx-auto">
+      <Link to="/" className="inline-flex items-center gap-1.5 text-xs font-semibold text-rich-black/60 hover:text-accent-gold mb-6 transition-colors">
+        <ArrowLeft size={14} /> Home
+      </Link>
+
       {/* Service picker */}
       <div className="flex gap-2 overflow-x-auto no-scrollbar pb-3 mb-6 -mx-1 px-1">
         {PROVIDER_LIST_SERVICES.map((s) => (

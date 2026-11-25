@@ -200,7 +200,7 @@ export default function AdminAnalytics() {
           {/* Community: live from the forum */}
           <Card>
             <div className="flex flex-wrap items-start justify-between gap-3">
-              <Title icon={MessageSquare} title="Community" subtitle="Randoms posted in this period" />
+              <Title icon={MessageSquare} title="Community" subtitle="Open Forum posts in this period" />
               <select
                 value={range}
                 onChange={(e) => setRange(e.target.value as RangeKey)}
@@ -217,7 +217,7 @@ export default function AdminAnalytics() {
             <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
               <div className="grid grid-cols-2 gap-2 content-start">
                 {[
-                  { label: 'Randoms', value: community.posts },
+                  { label: 'Posts', value: community.posts },
                   { label: 'Comments', value: community.comments },
                   { label: 'Likes', value: community.likes },
                   { label: 'Hates', value: community.hates },
@@ -242,7 +242,7 @@ export default function AdminAnalytics() {
                     ))}
                   </ul>
                 ) : (
-                  <p className="text-xs text-rich-black/45">No liked Randoms in this period.</p>
+                  <p className="text-xs text-rich-black/45">No liked posts in this period.</p>
                 )}
               </div>
             </div>
