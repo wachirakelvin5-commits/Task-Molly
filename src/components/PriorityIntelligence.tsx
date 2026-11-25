@@ -5,7 +5,7 @@ import ReactMarkdown from 'react-markdown';
 import { BLOG_POSTS, BlogPost } from '../constants/blogData';
 import { useSwipe } from '../hooks/useSwipe';
 
-// Priority Intelligence: the published-articles carousel and archive (shown in Fun Facts).
+// Priority Intelligence: the published-articles carousel (shown in Fun Facts).
 export default function PriorityIntelligence({
   onSelect,
   paused = false,
@@ -199,29 +199,6 @@ export default function PriorityIntelligence({
         </div>
       </div>
 
-      {/* Full archive list */}
-      <div className="px-4 md:px-6 pt-2 pb-4">
-        <div className="text-[9px] text-rich-black/30 uppercase tracking-[0.2em] font-bold mb-3">Data Archive Explorer</div>
-        <div className="flex gap-4 overflow-x-auto no-scrollbar pb-2 snap-x">
-          {BLOG_POSTS.map((post) => (
-            <motion.button
-              key={`archive-${post.id}`}
-              onClick={() => onSelect(post)}
-              className="min-w-[180px] aspect-video rounded-2xl overflow-hidden border border-warm-gray bg-primary-bg/30 hover:border-accent-gold/30 transition-all snap-start relative group"
-              whileHover={{ y: -4 }}
-            >
-              <img
-                src={post.image}
-                alt=""
-                className="w-full h-full object-cover opacity-80 group-hover:opacity-100 transition-all"
-              />
-              <div className="absolute inset-0 flex flex-col justify-end p-3 bg-gradient-to-t from-white to-transparent">
-                <h4 className="text-[9px] text-rich-black/60 font-medium line-clamp-2 leading-tight text-left">{post.title}</h4>
-              </div>
-            </motion.button>
-          ))}
-        </div>
-      </div>
     </div>
   );
 }
