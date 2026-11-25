@@ -1,9 +1,6 @@
-import { useState, useEffect } from 'react';
-import { Link, useNavigate } from 'react-router-dom';
-import { motion, AnimatePresence } from 'motion/react';
-import { ChevronDown, PenLine, LogIn, LayoutDashboard } from 'lucide-react';
+import { Link } from 'react-router-dom';
+import { PenLine, LogIn, LayoutDashboard } from 'lucide-react';
 import { UserProfile } from '../types';
-import { PROVIDER_LIST_SERVICES } from '../data/serviceCatalog';
 
 
 import { useDeviceType } from '../hooks/useDeviceType';
@@ -14,27 +11,6 @@ interface NavbarProps {
 
 export default function Navbar({ user }: NavbarProps) {
   const { isPhone, isTablet, isLaptop } = useDeviceType();
-  const [isDropdownOpen, setIsDropdownOpen] = useState(false);
-  const navigate = useNavigate();
-
-  useEffect(() => {
-    const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
-        setIsDropdownOpen(false);
-      }
-    };
-    if (isDropdownOpen) {
-      window.addEventListener('keydown', handleEscape);
-    }
-    return () => window.removeEventListener('keydown', handleEscape);
-  }, [isDropdownOpen]);
-
-  // The task-molly provider list: services in a fixed order, each opening its providers.
-  const handleServiceClick = (serviceId: string) => {
-    setIsDropdownOpen(false);
-    navigate(`/providers?service=${encodeURIComponent(serviceId)}`);
-  };
-
   const dashboardPath = user?.role === 'tasker' ? '/provider-dashboard' : '/dashboard';
 
   return (
@@ -42,39 +18,15 @@ export default function Navbar({ user }: NavbarProps) {
       isPhone ? 'flex justify-between px-4 py-3' : 'grid grid-cols-3 px-6 py-4'
     }`}>
       <div className="flex items-center">
-        {/* Hand holding pen icon dropdown */}
-        <div className="relative">
-          <button 
-            onClick={() => setIsDropdownOpen(!isDropdownOpen)}
-            className="flex items-center justify-center p-2 hover:bg-warm-gray/10 rounded-lg transition-colors group text-accent-gold"
-            aria-label="Services Menu"
-          >
-            <PenLine size={28} className="transform rotate-[-15deg]" />
-          </button>
-
-          <AnimatePresence>
-            {isDropdownOpen && (
-              <motion.div
-                initial={{ opacity: 0, y: 10 }}
-                animate={{ opacity: 1, y: 0 }}
-                exit={{ opacity: 0, y: 10 }}
-                className="absolute top-full left-0 mt-2 w-72 bg-white border border-warm-gray rounded-2xl shadow-xl overflow-hidden py-2 max-h-[70vh] overflow-y-auto no-scrollbar"
-              >
-                <p className="px-6 pt-2 pb-1 text-[10px] uppercase tracking-[0.25em] font-bold text-accent-gold">task-molly providers</p>
-                {PROVIDER_LIST_SERVICES.map((service) => (
-                  <button
-                    key={service.id}
-                    className="w-full text-left px-6 py-3 text-sm hover:bg-warm-gray/10 transition-colors flex items-center justify-between group"
-                    onClick={() => handleServiceClick(service.id)}
-                  >
-                    <span>{service.name}</span>
-                    <ChevronDown size={14} className="opacity-0 group-hover:opacity-100 -rotate-90 transition-all" />
-                  </button>
-                ))}
-              </motion.div>
-            )}
-          </AnimatePresence>
-        </div>
+        {/* Pen icon: opens the task-molly providers page */}
+        <Link
+          to="/providers"
+          className="flex items-center justify-center p-2 hover:bg-warm-gray/10 rounded-lg transition-colors text-accent-gold"
+          aria-label="task-molly providers"
+          title="task-molly providers"
+        >
+          <PenLine size={28} className="transform rotate-[-15deg]" />
+        </Link>
       </div>
 
       <div className="flex justify-center">
