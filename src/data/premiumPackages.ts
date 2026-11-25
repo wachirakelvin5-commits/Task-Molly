@@ -121,10 +121,13 @@ export const ESTIMATE_MINUTES = 30;
  */
 export function checkBackTime(askedAt: Date, minutes: number = ESTIMATE_MINUTES): string {
   const due = new Date(askedAt.getTime() + minutes * 60_000);
-  return new Intl.DateTimeFormat('en-KE', {
-    timeZone: 'Africa/Nairobi',
-    hour: 'numeric',
-    minute: '2-digit',
-    hour12: true,
-  }).format(due).replace(/\s?(am|pm)$/i, (m) => ` ${m.trim().toUpperCase()}`);
+  // Read the hour and minute in Kenya time, then write "h:mm AM/PM" ourselves, so the result
+  // doesn't depend on how a browser or Node version formats Kenyan times (some give "0:15 am").
+  const parts = new Intl.DateTimeFormat('en-GB', {
+    timeZone: 'Africa/Nairobi', hour: '2-digit', minute: '2-digit', hourCycle: 'h23',
+  }).formatToParts(due);
+  const hour24 = Number(parts.find((p) => p.type === 'hour')?.value ?? 0) % 24;
+  const minute = parts.find((p) => p.type === 'minute')?.value ?? '00';
+  const hour12 = hour24 % 12 === 0 ? 12 : hour24 % 12;
+  return `${hour12}:${minute} ${hour24 < 12 ? 'AM' : 'PM'}`;
 }
