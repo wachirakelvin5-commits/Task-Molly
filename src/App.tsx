@@ -63,18 +63,9 @@ export default function App() {
     };
     testConnection();
 
-    // Check for mock user first (for testing bypass)
-    const mockUserStr = localStorage.getItem('taskmolly_mock_user');
-    if (mockUserStr) {
-      try {
-        const mockUser = JSON.parse(mockUserStr);
-        setUser(mockUser);
-        setLoading(false);
-        return;
-      } catch (e) {
-        localStorage.removeItem('taskmolly_mock_user');
-      }
-    }
+    // Only real Firebase sign-ins count. Clear any old pretend session left by the removed
+    // "Sign in with Apple" shortcut so it can't stand in for a real account.
+    try { localStorage.removeItem('taskmolly_mock_user'); } catch { /* storage unavailable */ }
 
     const unsubscribe = onAuthStateChanged(auth, async (firebaseUser) => {
       try {
