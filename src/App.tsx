@@ -147,7 +147,7 @@ export default function App() {
                 path="/my-services" 
                 element={user ? <ProviderMyServices user={user} /> : <Navigate to="/auth" />} 
               />
-              {/* task-molly providers: Premium monthly packages (opened from the pen icon) */}
+              {/* task-molly premium: the concierge placard (opened from the pen icon) */}
               <Route path="/premium" element={<PremiumPage />} />
               <Route path="/providers" element={<Navigate to="/premium" replace />} />
               <Route 

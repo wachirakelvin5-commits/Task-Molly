@@ -9,7 +9,7 @@ import { createServiceRequest } from '../lib/serviceRequests';
 import { savePendingRequest } from '../lib/pendingRequestService';
 import { CONCIERGE_TAGLINE, buildConciergeRequest, tasksLink } from '../lib/conciergeRequest';
 
-// task-molly providers: a single "task-molly concierge" placard (opened from the pen icon).
+// task-molly premium: a single "task-molly concierge" placard (opened from the pen icon).
 // Top: the pen (same as the home page) and "Premium Requests (a month +)". Middle: a notepad.
 // Bottom: Ask Molly logs the task (signed in: straight to Tasks → New Tasks; signed out: kept
 // in the browser until they sign up / sign in), says when to check back, then
