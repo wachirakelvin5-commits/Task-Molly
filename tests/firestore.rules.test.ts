@@ -29,6 +29,7 @@ import {
   writeBatch,
 } from 'firebase/firestore';
 import { buildRandomComment, buildRandomPost, generateRandomId } from '../src/lib/randomPosts';
+import { buildConciergeRequest } from '../src/lib/conciergeRequest';
 
 let env: RulesTestEnvironment;
 const REQ = 'serviceRequests/req1';
@@ -121,6 +122,13 @@ describe('creating requests', () => {
 
   test('cannot backdate timestamps', async () => {
     await assertFails(setDoc(doc(db('alice'), REQ), newRequest('alice', { createdAt: Timestamp.fromDate(new Date('2020-01-01')) })));
+  });
+  // The task-molly concierge placard (/premium): the same record the app builds.
+  test('a signed-in client can log a task-molly concierge request', async () => {
+    const concierge = { ...buildConciergeRequest('Weekly house help, Saturdays'), clientId: 'alice', budget: 0,
+      status: 'pending', createdAt: serverTimestamp(), postedAt: serverTimestamp(), updatedAt: serverTimestamp() };
+    await assertSucceeds(setDoc(doc(db('alice'), REQ), concierge));
+    await assertFails(setDoc(doc(db(), 'serviceRequests/req2'), concierge));
   });
 });
 

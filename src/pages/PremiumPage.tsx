@@ -1,27 +1,30 @@
 import { useEffect, useRef, useState } from 'react';
-import { Link } from 'react-router-dom';
+import { Link, useNavigate } from 'react-router-dom';
 import { AnimatePresence, motion } from 'motion/react';
-import { ChevronLeft, Check, Clock, Send, PenLine } from 'lucide-react';
-import { PROVIDER_LIST_SERVICES } from '../data/serviceCatalog';
+import { ChevronLeft, Clock, Send, PenLine, ArrowRight } from 'lucide-react';
+import { toast } from 'sonner';
+import { auth } from '../firebase';
 import { ESTIMATE_MINUTES, checkBackTime } from '../lib/checkBackTime';
-import TaskRequestModal from '../components/TaskRequestModal';
+import { createServiceRequest } from '../lib/serviceRequests';
+import { savePendingRequest } from '../lib/pendingRequestService';
+import { CONCIERGE_TAGLINE, buildConciergeRequest, tasksLink } from '../lib/conciergeRequest';
 
 // task-molly providers: a single "task-molly concierge" placard (opened from the pen icon).
-// Top: the pen (same as the home page). Middle: a notepad to curate the need (tap services,
-// write notes). Bottom: Ask Molly, which says when to check back for the estimate.
+// Top: the pen (same as the home page) and "Premium Requests (a month +)". Middle: a notepad.
+// Bottom: Ask Molly logs the task (signed in: straight to Tasks → New Tasks; signed out: kept
+// in the browser until they sign up / sign in), says when to check back, then
+// "Go to tasks & requests" (through sign-up / sign-in if needed).
 // The page itself doesn't scroll.
 
 const GOLD_DARK = '#8f7a5a'; // darker brand gold for buttons and text on gold
-const REQUEST_SERVICE = 'errand_runner'; // "Errand Runner & Concierge" on the request form
 
 type CalcState = 'idle' | 'calculating' | 'done';
 
 export default function PremiumPage() {
-  const [picked, setPicked] = useState<string[]>([]);
+  const navigate = useNavigate();
   const [notes, setNotes] = useState('');
   const [calc, setCalc] = useState<CalcState>('idle');
   const [checkBack, setCheckBack] = useState('');
-  const [askOpen, setAskOpen] = useState(false);
   const timer = useRef<ReturnType<typeof setTimeout> | null>(null);
 
   useEffect(() => {
@@ -35,27 +38,35 @@ export default function PremiumPage() {
   }, []);
 
   const changed = () => { if (calc !== 'idle') setCalc('idle'); };
-  const toggle = (name: string) => {
-    setPicked((prev) => (prev.includes(name) ? prev.filter((n) => n !== name) : [...prev, name]));
-    changed();
-  };
+  const hasNeed = notes.trim().length > 0;
 
-  const hasNeed = picked.length > 0 || notes.trim().length > 0;
-
-  // Ask Molly: note the time now (Kenya time) and show when to check back.
-  const askMolly = () => {
-    if (!hasNeed) return;
-    setCheckBack(checkBackTime(new Date()));
+  // Ask Molly: log the task, note the time now (Kenya time) and show when to check back.
+  const askMolly = async () => {
+    if (!hasNeed || calc === 'calculating') return;
+    const askedAt = new Date();
     setCalc('calculating');
-    if (timer.current) clearTimeout(timer.current);
-    timer.current = setTimeout(() => setCalc('done'), 1600);
-  };
+    const started = Date.now();
 
-  const description = [
-    'task-molly concierge',
-    ...picked.map((n) => `- ${n}`),
-    notes.trim() ? `\n${notes.trim()}` : '',
-  ].filter(Boolean).join('\n');
+    const request = buildConciergeRequest(notes, askedAt);
+    const user = auth.currentUser;
+    try {
+      if (user) {
+        await createServiceRequest(user.uid, { ...request, clientName: user.displayName || undefined });
+      } else {
+        // No account yet: keep it in this browser; it's saved to their account after sign-up / sign-in.
+        savePendingRequest(request);
+      }
+    } catch (err) {
+      console.error('[Concierge] Could not log the task:', err);
+      toast.error('Molly could not log your task. Please try again.');
+      setCalc('idle');
+      return;
+    }
+
+    setCheckBack(checkBackTime(askedAt));
+    if (timer.current) clearTimeout(timer.current);
+    timer.current = setTimeout(() => setCalc('done'), Math.max(0, 1600 - (Date.now() - started)));
+  };
 
   return (
     <div className="h-[100dvh] overflow-hidden flex flex-col pt-5 md:pt-7 pb-5 bg-primary-bg">
@@ -76,39 +87,23 @@ export default function PremiumPage() {
             <div className="shrink-0 w-14 h-14 rounded-full bg-[#FFFBEB] flex items-center justify-center ring-2 ring-white/60 text-rich-black">
               <PenLine size={26} className="transform rotate-[-15deg]" />
             </div>
-            <h1 className="text-[17px] font-semibold text-white leading-tight drop-shadow-sm">task-molly concierge</h1>
+            <div className="min-w-0">
+              <h1 className="text-[17px] font-semibold text-white leading-tight drop-shadow-sm">task-molly concierge</h1>
+              <p className="text-[12px] text-white/85 leading-snug mt-0.5">{CONCIERGE_TAGLINE}</p>
+            </div>
           </header>
 
           {/* Middle: notepad to curate the need */}
-          <div className="flex-1 min-h-0 rounded-2xl bg-[#FFFBEB] p-3 flex flex-col gap-2">
-            <div className="flex flex-wrap gap-1.5 max-h-[50%] overflow-y-auto no-scrollbar shrink-0">
-              {PROVIDER_LIST_SERVICES.map((s) => {
-                const on = picked.includes(s.name);
-                return (
-                  <button
-                    key={s.id}
-                    type="button"
-                    onClick={() => toggle(s.name)}
-                    aria-pressed={on}
-                    className={`text-left text-[11px] leading-tight px-2.5 py-1.5 rounded-xl border transition-all cursor-pointer flex items-start gap-1 ${
-                      on ? 'bg-accent-gold text-white border-accent-gold' : 'bg-white/70 text-rich-black/70 border-accent-gold/30 hover:border-accent-gold'
-                    }`}
-                  >
-                    {on && <Check size={12} className="mt-px shrink-0" />}
-                    <span>{s.name}</span>
-                  </button>
-                );
-              })}
-            </div>
+          <div className="flex-1 min-h-0 rounded-2xl bg-[#FFFBEB] p-3 flex flex-col">
             <textarea
               value={notes}
               onChange={(e) => { setNotes(e.target.value.slice(0, 1000)); changed(); }}
-              placeholder="Write what you need…"
+              placeholder="What you need…"
               aria-label="What you need"
-              className="flex-1 min-h-[4.5rem] w-full resize-none bg-transparent text-xs text-rich-black placeholder:text-rich-black/35 focus:outline-none"
+              className="flex-1 min-h-0 w-full resize-none bg-transparent text-sm text-rich-black placeholder:text-rich-black/35 focus:outline-none"
               style={{
-                lineHeight: '24px',
-                backgroundImage: 'repeating-linear-gradient(to bottom, transparent 0, transparent 23px, rgba(181,157,122,0.35) 23px, rgba(181,157,122,0.35) 24px)',
+                lineHeight: '28px',
+                backgroundImage: 'repeating-linear-gradient(to bottom, transparent 0, transparent 27px, rgba(181,157,122,0.35) 27px, rgba(181,157,122,0.35) 28px)',
                 backgroundAttachment: 'local',
               }}
             />
@@ -124,7 +119,7 @@ export default function PremiumPage() {
                   type="button"
                   onClick={askMolly}
                   disabled={!hasNeed}
-                  title={hasNeed ? undefined : 'Pick or write what you need first'}
+                  title={hasNeed ? undefined : 'Write what you need first'}
                   className="w-full h-[52px] rounded-xl text-white text-sm font-bold tracking-wide flex items-center justify-center gap-2 transition-all active:scale-98 cursor-pointer disabled:opacity-40 disabled:cursor-not-allowed"
                   style={{ background: GOLD_DARK }}
                 >
@@ -150,11 +145,11 @@ export default function PremiumPage() {
                   </p>
                   <button
                     type="button"
-                    onClick={() => setAskOpen(true)}
+                    onClick={() => navigate(tasksLink(!!auth.currentUser))}
                     className="mt-2.5 w-full h-[40px] rounded-xl text-white text-xs font-bold flex items-center justify-center gap-1.5 active:scale-98 cursor-pointer"
                     style={{ background: GOLD_DARK }}
                   >
-                    <Send size={12} /> Send my details to Molly
+                    Go to tasks &amp; requests <ArrowRight size={13} />
                   </button>
                 </motion.div>
               )}
@@ -163,11 +158,6 @@ export default function PremiumPage() {
         </section>
       </div>
 
-      <AnimatePresence>
-        {askOpen && (
-          <TaskRequestModal initialService={REQUEST_SERVICE} initialDescription={description} onClose={() => setAskOpen(false)} />
-        )}
-      </AnimatePresence>
     </div>
   );
 }
