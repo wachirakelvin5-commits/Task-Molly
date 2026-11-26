@@ -59,7 +59,7 @@ export default function Navbar({ user }: NavbarProps) {
                   onClick={() => setIsDropdownOpen(false)}
                   className="w-full px-5 py-3 text-sm font-semibold text-rich-black hover:bg-warm-gray/10 hover:text-accent-gold transition-colors flex items-center justify-between gap-3 group"
                 >
-                  <span>task-molly providers</span>
+                  <span>task-molly premium</span>
                   <ChevronRight size={14} className="text-accent-gold shrink-0" />
                 </Link>
               </motion.div>

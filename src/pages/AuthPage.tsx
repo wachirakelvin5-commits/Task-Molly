@@ -2,6 +2,7 @@ import { useState, useEffect } from 'react';
 import { auth, db } from '../firebase';
 import { 
   GoogleAuthProvider, 
+  OAuthProvider,
   signInWithPopup, 
   RecaptchaVerifier, 
   signInWithPhoneNumber,
@@ -19,6 +20,7 @@ import { UserRole, UserProfile } from '../types';
 import { Phone, Mail, ArrowRight, CheckCircle2, User, ChevronLeft, Lock, UserPlus, Sparkles, X } from 'lucide-react';
 import { toast } from 'sonner';
 import { finalizePendingRequest as syncPendingRequestService } from '../lib/pendingRequestService';
+import { nameFromEmail } from '../lib/authNames';
 
 declare global {
   interface Window {
@@ -199,20 +201,17 @@ export default function AuthPage() {
       toast.error("Password must be at least 6 characters");
       return;
     }
-    if (authMode === 'signup' && !displayName.trim()) {
-      toast.error("Please enter your name to create an account");
-      return;
-    }
 
     setLoading(true);
     try {
       if (authMode === 'signup') {
         const result = await createUserWithEmailAndPassword(auth, email.trim(), password);
-        await handleUserCreation(result.user, selectedRole!, displayName.trim());
+        // No name box: start with a name from the email; they can change it in their profile.
+        await handleUserCreation(result.user, selectedRole!, nameFromEmail(email));
       } else {
         try {
           const result = await signInWithEmailAndPassword(auth, email.trim(), password);
-          await handleUserCreation(result.user, selectedRole!, displayName.trim() || undefined);
+          await handleUserCreation(result.user, selectedRole!);
         } catch (signInErr: any) {
           if (
             signInErr?.code === 'auth/user-not-found' || 
@@ -285,70 +284,6 @@ export default function AuthPage() {
     }
   };
 
-  const [socialAuthModal, setSocialAuthModal] = useState<{
-    isOpen: boolean;
-    provider: 'google' | 'apple';
-  }>({ isOpen: false, provider: 'google' });
-  const [customSocialEmail, setCustomSocialEmail] = useState('');
-  const [customSocialName, setCustomSocialName] = useState('');
-  const [showCustomEmailInput, setShowCustomEmailInput] = useState(false);
-
-  const handleDirectSocialLogin = async (
-    userEmail: string,
-    userName: string,
-    provider: 'google' | 'apple'
-  ) => {
-    setLoading(true);
-    try {
-      const emailToUse = userEmail.trim().toLowerCase();
-      const nameToUse = userName.trim() || emailToUse.split('@')[0];
-      const cleanUid = `client_${emailToUse.replace(/[^a-zA-Z0-9]/g, '_')}`;
-
-      const clientProfile: UserProfile = {
-        uid: cleanUid,
-        email: emailToUse,
-        displayName: nameToUse,
-        photoURL: provider === 'google'
-          ? `https://lh3.googleusercontent.com/a/default-user=s96-c`
-          : `https://picsum.photos/seed/${cleanUid}/200`,
-        role: 'client',
-        isVerified: true,
-        createdAt: new Date().toISOString(),
-      };
-
-      console.log(`[Social Login] Logging in as ${provider} user:`, clientProfile);
-      // Persist mock user session so App.tsx loads dashboard instantly
-      localStorage.setItem('taskmolly_mock_user', JSON.stringify(clientProfile));
-
-      // Attempt Firestore write (graceful failure in sandbox/preview)
-      try {
-        await Promise.race([
-          setDoc(doc(db, 'users', cleanUid), clientProfile),
-          new Promise((_, reject) => setTimeout(() => reject(new Error('Firestore timeout')), 3000))
-        ]);
-      } catch (err) {
-        console.warn("[Social Login] Firestore sync bypassed (using local session):", err);
-      }
-
-      // Check if pending request exists
-      const pendingData = sessionStorage.getItem('pending_service_request');
-      if (pendingData) {
-        await finalizePendingRequest(cleanUid, nameToUse);
-        await new Promise(res => setTimeout(res, 800));
-      }
-
-      toast.success(`Signed in as ${nameToUse}!`);
-      setSocialAuthModal({ isOpen: false, provider: 'google' });
-
-      // Direct to client dashboard
-      window.location.href = '/dashboard';
-    } catch (err: any) {
-      console.error("Direct social login error:", err);
-      toast.error("Sign-in failed. Please try again.");
-      setLoading(false);
-    }
-  };
-
   const handleGoogleLogin = async () => {
     if (!selectedRole) return;
     setLoading(true);
@@ -366,8 +301,27 @@ export default function AuthPage() {
     }
   };
 
-  const handleAppleLogin = () => {
-    setSocialAuthModal({ isOpen: true, provider: 'apple' });
+  // Real Sign in with Apple through Firebase (same as Google). Needs the Apple provider turned on
+  // in Firebase Authentication; until then Firebase answers operation-not-allowed.
+  const handleAppleLogin = async () => {
+    if (!selectedRole) return;
+    setLoading(true);
+    const provider = new OAuthProvider('apple.com');
+    provider.addScope('email');
+    provider.addScope('name');
+    try {
+      const result = await signInWithPopup(auth, provider);
+      await handleUserCreation(result.user, selectedRole);
+    } catch (err: any) {
+      console.warn('Apple sign-in failed:', err);
+      if (err?.code === 'auth/operation-not-allowed' || err?.code === 'auth/invalid-oauth-provider') {
+        toast.error('Sign in with Apple is not available yet. Please continue with Google or Email.');
+      } else if (err?.code !== 'auth/popup-closed-by-user' && err?.code !== 'auth/cancelled-popup-request') {
+        toast.error('Apple sign-in failed. Please allow pop-ups and try again.');
+      }
+    } finally {
+      setLoading(false);
+    }
   };
 
   const handleSendOtp = async () => {
@@ -540,13 +494,17 @@ export default function AuthPage() {
               className="space-y-4"
             >
               <div className="grid grid-cols-1 gap-4">
-                {selectedRole === 'client' ? (
-                  <>
+                {/* Same options for clients and service providers: Google, Email, Apple */}
+                <>
                     <div className="text-center pb-2">
                       <p className="text-xs text-rich-black/50 font-medium">
-                        {authMode === 'signin'
-                          ? 'Select your preferred sign-in method to continue to your dashboard'
-                          : 'Select your preferred method to create your account'}
+                        {selectedRole === 'tasker'
+                          ? (authMode === 'signin'
+                            ? 'Sign in to access your Service Provider workspace'
+                            : 'Register as a Service Provider to start accepting jobs')
+                          : (authMode === 'signin'
+                            ? 'Select your preferred sign-in method to continue to your dashboard'
+                            : 'Select your preferred method to create your account')}
                       </p>
                     </div>
 
@@ -582,49 +540,9 @@ export default function AuthPage() {
                     </div>
 
                     <p className="text-[11px] text-center text-rich-black/40 mt-3 leading-relaxed">
-                      By continuing, you agree to our Terms of Service & Privacy Policy. Fast-track entry to your client dashboard.
+                      By continuing, you agree to our Terms of Service & Privacy Policy.
                     </p>
-                  </>
-                ) : (
-                  <>
-                    <div className="text-center pb-2">
-                      <p className="text-xs text-rich-black/50 font-medium">
-                        {authMode === 'signin'
-                          ? 'Sign in to access your Service Provider workspace'
-                          : 'Register as a Service Provider to start accepting jobs'}
-                      </p>
-                    </div>
-
-                    <div className="grid grid-cols-2 gap-4">
-                      <button 
-                        onClick={handleGoogleLogin}
-                        disabled={loading}
-                        className="w-full flex items-center justify-center gap-3 border border-warm-gray/60 py-4 rounded-2xl hover:bg-primary-bg transition-all group disabled:opacity-50 font-medium text-sm cursor-pointer"
-                      >
-                        <img src="https://www.google.com/favicon.ico" alt="Google" className="w-4 h-4" />
-                        Google
-                      </button>
-
-                      <button 
-                        onClick={() => setStep('email-input')}
-                        disabled={loading}
-                        className="w-full flex items-center justify-center gap-3 border border-warm-gray/60 py-4 rounded-2xl hover:bg-primary-bg transition-all group disabled:opacity-50 font-medium text-sm cursor-pointer"
-                      >
-                        <Mail size={18} className="text-rich-black/40" />
-                        Email
-                      </button>
-                    </div>
-
-                    <button 
-                      onClick={() => setStep('phone-input')}
-                      disabled={loading}
-                      className="w-full flex items-center justify-center gap-4 bg-rich-black text-white py-5 rounded-2xl hover:bg-rich-black/90 transition-all shadow-xl shadow-rich-black/10 disabled:opacity-50 font-semibold cursor-pointer"
-                    >
-                      <Phone size={20} className="text-accent-gold" />
-                      Continue with Phone
-                    </button>
-                  </>
-                )}
+                </>
               </div>
             </motion.div>
           )}
@@ -652,35 +570,15 @@ export default function AuthPage() {
               </div>
 
               <form onSubmit={handleEmailSubmit} className="space-y-4">
-                {/* 1. Full Name (on the same page) */}
+                {/* Email address: the label is inside the box */}
                 <div className="text-left">
-                  <div className="flex items-center justify-between mb-1.5 ml-1">
-                    <label className="text-[10px] uppercase tracking-widest text-rich-black/50 font-bold">
-                      Full Name {authMode === 'signup' ? <span className="text-accent-gold">*</span> : <span className="text-rich-black/35 font-normal lowercase">(optional for sign in)</span>}
-                    </label>
-                  </div>
-                  <div className="relative">
-                    <User className="absolute left-4 top-1/2 -translate-y-1/2 text-rich-black/30" size={18} />
-                    <input 
-                      type="text" 
-                      placeholder="e.g. Kelvin Wachira"
-                      value={displayName}
-                      onChange={(e) => setDisplayName(e.target.value)}
-                      className="w-full bg-primary-bg border border-warm-gray rounded-2xl py-3.5 pl-12 pr-4 text-xs md:text-sm text-rich-black focus:outline-none focus:border-accent-gold transition-all"
-                    />
-                  </div>
-                </div>
-
-                {/* 2. Email Address (on the same page) */}
-                <div className="text-left">
-                  <label className="text-[10px] uppercase tracking-widest text-rich-black/50 font-bold ml-1 mb-1.5 block">
-                    Email Address <span className="text-accent-gold">*</span>
-                  </label>
                   <div className="relative">
                     <Mail className="absolute left-4 top-1/2 -translate-y-1/2 text-rich-black/30" size={18} />
                     <input 
                       type="email" 
-                      placeholder="name@example.com"
+                      placeholder="Email address"
+                      aria-label="Email address"
+                      autoComplete="email"
                       value={email}
                       onChange={(e) => setEmail(e.target.value)}
                       required
@@ -689,16 +587,15 @@ export default function AuthPage() {
                   </div>
                 </div>
 
-                {/* 3. Password (on the same page) */}
+                {/* Password: the label is inside the box */}
                 <div className="text-left">
-                  <label className="text-[10px] uppercase tracking-widest text-rich-black/50 font-bold ml-1 mb-1.5 block">
-                    Password <span className="text-accent-gold">*</span>
-                  </label>
                   <div className="relative">
                     <Lock className="absolute left-4 top-1/2 -translate-y-1/2 text-rich-black/30" size={18} />
                     <input 
                       type={showPassword ? "text" : "password"} 
-                      placeholder="••••••••"
+                      placeholder="Password"
+                      aria-label="Password"
+                      autoComplete={authMode === 'signup' ? 'new-password' : 'current-password'}
                       value={password}
                       onChange={(e) => setPassword(e.target.value)}
                       required
@@ -717,7 +614,7 @@ export default function AuthPage() {
                 {/* Submit Action */}
                 <button 
                   type="submit"
-                  disabled={loading || !email || !password || (authMode === 'signup' && !displayName)}
+                  disabled={loading || !email || !password}
                   className="w-full mt-2 bg-rich-black hover:bg-black text-white hover:text-accent-gold py-4 rounded-full font-bold uppercase tracking-wider text-xs shadow-lg transition-all disabled:opacity-40 flex items-center justify-center gap-2 cursor-pointer"
                 >
                   {loading ? (
@@ -951,127 +848,6 @@ export default function AuthPage() {
         </p>
       </motion.div>
 
-      {/* Google / Apple Account Picker Modal */}
-      <AnimatePresence>
-        {socialAuthModal.isOpen && (
-          <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/60 backdrop-blur-sm">
-            <motion.div
-              initial={{ opacity: 0, scale: 0.95, y: 10 }}
-              animate={{ opacity: 1, scale: 1, y: 0 }}
-              exit={{ opacity: 0, scale: 0.95, y: 10 }}
-              className="w-full max-w-md bg-white rounded-[2.5rem] p-7 md:p-9 shadow-2xl border border-warm-gray relative overflow-hidden"
-            >
-              {/* Header */}
-              <div className="text-center mb-6">
-                <div className="w-14 h-14 mx-auto rounded-2xl flex items-center justify-center mb-3 bg-primary-bg border border-warm-gray/60 shadow-sm">
-                  {socialAuthModal.provider === 'google' ? (
-                    <img src="https://www.google.com/favicon.ico" alt="Google" className="w-7 h-7" />
-                  ) : (
-                    <svg className="w-7 h-7 fill-rich-black" viewBox="0 0 170 170">
-                      <path d="M150.37 130.25c-2.45 5.66-5.35 10.87-8.71 15.66-4.58 6.53-8.33 11.05-11.22 13.56-4.48 4.12-9.28 6.23-14.42 6.35-3.69 0-8.14-1.05-13.32-3.18-5.19-2.12-9.97-3.17-14.34-3.17-4.58 0-9.49 1.05-14.75 3.17-5.26 2.13-9.5 3.24-12.74 3.35-4.35.13-9.16-1.9-14.42-6.08-3.7-3.04-7.58-7.7-11.64-13.98-5.78-9.01-10.36-19.34-13.73-31.02-3.37-11.68-5.06-22.7-5.06-33.06 0-14.28 3.59-25.96 10.77-35.03 7.18-9.07 16.14-13.68 26.89-13.84 5.37 0 11.16 1.41 17.37 4.23 6.21 2.82 10.15 4.3 11.82 4.44 1.34-.14 5.48-1.7 12.42-4.69 6.94-2.99 12.83-4.3 17.67-3.93 13.55.98 24.28 5.76 32.2 14.34-11.77 7.14-17.51 16.92-17.21 29.35.3 9.68 4.13 17.74 11.49 24.18 4.26 3.75 9.07 6.47 14.42 8.16-2.5 7.42-5.59 15.02-9.26 22.81zM119.22 31.86c0-7.38 2.65-14.28 7.95-20.7 5.31-6.42 11.87-10.47 19.69-12.16.22 1.32.33 2.51.33 3.57 0 7.37-2.73 14.32-8.19 20.85-5.46 6.53-12.04 10.51-19.78 11.94z" />
-                    </svg>
-                  )}
-                </div>
-                <h3 className="text-xl font-bold text-rich-black tracking-tight">
-                  Sign in with {socialAuthModal.provider === 'google' ? 'Google' : 'Apple'}
-                </h3>
-                <p className="text-xs text-rich-black/50 mt-1">
-                  Choose your account to enter your client dashboard
-                </p>
-              </div>
-
-              {/* Account Selection */}
-              <div className="space-y-3 mb-6">
-                <button
-                  onClick={() => handleDirectSocialLogin(
-                    socialAuthModal.provider === 'google' ? 'wachirakelvin5@gmail.com' : 'wachirakelvin5@gmail.com',
-                    'Kelvin Wachira',
-                    socialAuthModal.provider
-                  )}
-                  disabled={loading}
-                  className="w-full flex items-center gap-3.5 p-3.5 rounded-2xl bg-primary-bg hover:bg-accent-gold/10 border-2 border-warm-gray/60 hover:border-accent-gold transition-all text-left group active:scale-[0.99]"
-                >
-                  <div className="w-11 h-11 rounded-full bg-accent-gold/15 text-accent-gold font-black flex items-center justify-center text-base border border-accent-gold/30 shrink-0">
-                    K
-                  </div>
-                  <div className="min-w-0 flex-1">
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-bold text-rich-black truncate">Kelvin Wachira</p>
-                      <span className="text-[9px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded bg-accent-gold/15 text-accent-gold shrink-0">Default</span>
-                    </div>
-                    <p className="text-xs text-rich-black/60 truncate font-mono">wachirakelvin5@gmail.com</p>
-                  </div>
-                  <ArrowRight size={16} className="text-warm-gray group-hover:text-accent-gold group-hover:translate-x-1 transition-all shrink-0" />
-                </button>
-
-                {!showCustomEmailInput ? (
-                  <button
-                    onClick={() => setShowCustomEmailInput(true)}
-                    className="w-full text-center text-xs font-semibold text-rich-black/50 hover:text-accent-gold py-2 transition-colors"
-                  >
-                    + Use a different email address
-                  </button>
-                ) : (
-                  <motion.div
-                    initial={{ opacity: 0, height: 0 }}
-                    animate={{ opacity: 1, height: 'auto' }}
-                    className="pt-2 space-y-3 border-t border-warm-gray/40"
-                  >
-                    <div>
-                      <label className="text-[10px] uppercase tracking-widest text-rich-black/40 font-bold block mb-1.5">
-                        Your Email
-                      </label>
-                      <input
-                        type="email"
-                        placeholder="you@domain.com"
-                        value={customSocialEmail}
-                        onChange={(e) => setCustomSocialEmail(e.target.value)}
-                        className="w-full bg-primary-bg border border-warm-gray rounded-xl py-3 px-4 text-xs text-rich-black focus:outline-none focus:border-accent-gold"
-                      />
-                    </div>
-                    <div>
-                      <label className="text-[10px] uppercase tracking-widest text-rich-black/40 font-bold block mb-1.5">
-                        Your Name (Optional)
-                      </label>
-                      <input
-                        type="text"
-                        placeholder="e.g. Kelvin W."
-                        value={customSocialName}
-                        onChange={(e) => setCustomSocialName(e.target.value)}
-                        className="w-full bg-primary-bg border border-warm-gray rounded-xl py-3 px-4 text-xs text-rich-black focus:outline-none focus:border-accent-gold"
-                      />
-                    </div>
-                    <button
-                      onClick={() => {
-                        if (!customSocialEmail || !customSocialEmail.includes('@')) {
-                          toast.error("Please enter a valid email");
-                          return;
-                        }
-                        handleDirectSocialLogin(customSocialEmail, customSocialName, socialAuthModal.provider);
-                      }}
-                      disabled={loading || !customSocialEmail}
-                      className="w-full py-3 bg-rich-black text-white text-xs font-bold uppercase tracking-wider rounded-xl hover:bg-black transition-all disabled:opacity-50"
-                    >
-                      {loading ? 'Authenticating...' : `Continue with ${socialAuthModal.provider === 'google' ? 'Google' : 'Apple'}`}
-                    </button>
-                  </motion.div>
-                )}
-              </div>
-
-              {/* Cancel Button */}
-              <button
-                onClick={() => {
-                  setSocialAuthModal({ isOpen: false, provider: 'google' });
-                  setShowCustomEmailInput(false);
-                }}
-                className="w-full py-3 text-center text-xs font-bold uppercase tracking-wider text-rich-black/40 hover:text-rich-black transition-colors"
-              >
-                Cancel
-              </button>
-            </motion.div>
-          </div>
-        )}
-      </AnimatePresence>
     </div>
   );
 }
